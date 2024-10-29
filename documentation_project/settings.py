@@ -83,6 +83,9 @@ DATABASES = {
         'PASSWORD': 'Ocealia31520',
         'HOST' : 'localhost',
         'PORT' : '5432',
+        'TEST': {
+            'NAME': 'test_documentationocealia',  # Nom spécifique pour la base de test
+        },
     }
 }
 
@@ -145,6 +148,8 @@ REST_FRAMEWORK = {
 
 import os
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -158,7 +163,7 @@ LOGGING = {
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs/connections.log'),
+            'filename': os.path.join(BASE_DIR, 'logs', 'connections.log'),
             'formatter': 'verbose',
         },
     },
