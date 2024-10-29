@@ -34,7 +34,7 @@ jobs:
       
     - name: Show directory structure
       run: |
-        pwd
+        echo "Working Directory: $(pwd)"
         ls -R
 
     - name: Set up Python
