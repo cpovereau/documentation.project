@@ -22,7 +22,7 @@ jobs:
           --health-retries=5
 
     env:
-      DATABASE_URL: postgres://user:password@localhost:5432/test_documentationocealia
+      DATABASE_URL: postgres://admin:Ocealia31520@localhost:5432/test_documentationocealia
 
     steps:
     - name: Checkout repository
