@@ -44,10 +44,6 @@ jobs:
 
     - name: Create logs directory
       run: mkdir -p documentation.project/logs
-      
-    - name: Check database connection
-      run: |
-       python manage.py dbshell -c "SELECT 1;"
 
     - name: Apply migrations
       run: python manage.py migrate
@@ -55,9 +51,9 @@ jobs:
     - name: Reset test database
       run: python manage.py test --keepdb
       
-    - name: List database tables after migration
+    - name: Check database tables
       run: |
-       python manage.py dbshell -c "\dt"
+       echo "from django.db import connection; print(connection.introspection.table_names())" | python manage.py shell
 
     - name: Run tests
       run: python manage.py test
