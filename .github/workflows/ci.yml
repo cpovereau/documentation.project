@@ -45,7 +45,7 @@ jobs:
     - name: Create logs directory
       run: mkdir -p documentation.project/logs
 
-    - name: Run migrations
+    - name: Apply migrations
       run: python manage.py migrate
 
     - name: Run tests
