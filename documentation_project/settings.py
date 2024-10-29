@@ -78,17 +78,13 @@ WSGI_APPLICATION = 'documentation_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'documentationocealia',
-        'USER' : 'admin',
-        'PASSWORD': 'Ocealia31520',
-        'HOST' : 'localhost',
-        'PORT' : '5432',
-        'TEST': {
-            'NAME': 'test_documentationocealia',  # Nom spécifique pour la base de test
-        },
+        'NAME': os.environ.get('POSTGRES_DB', 'documentationocealia'),
+        'USER': os.environ.get('POSTGRES_USER', 'admin'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'Ocealia31520'),
+        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
