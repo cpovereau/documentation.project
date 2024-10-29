@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   test:
     docker:
-      - image: cimg/python:3.11  # Nouvelle image officielle
+      - image: cimg/python:3.11
       - image: postgres:latest
         environment:
           POSTGRES_DB: documentationocealia
@@ -17,21 +17,12 @@ jobs:
             python -m pip install --upgrade pip
             pip install -r requirements.txt
       - run:
-          name: Apply migrations
-          command: python manage.py migrate
-      - run:
-          name: Reset test database
-          command: python manage.py test --keepdb
-      - run:
-          name: Check database tables
-          command: |
-            echo "from django.db import connection; print(connection.introspection.table_names())" | python manage.py shell
+          name: Apply migrations to the test database
+          command: python manage.py migrate --no-input
       - run:
           name: Run tests
           command: python manage.py test
-
-workflows:
-  version: 2
-  test:
-    jobs:
-      - test
+      - run:
+          name: Check if auth_user table exists
+          command: |
+            python manage.py dbshell -c "SELECT * FROM auth_user LIMIT 1;"
