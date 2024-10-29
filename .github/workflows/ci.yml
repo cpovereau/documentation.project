@@ -10,8 +10,8 @@ jobs:
       postgres:
         image: postgres:latest
         env:
-          POSTGRES_DB: test_documentationocealia
-          POSTGRES_USER: admin
+          POSTGRES_DB: documentationocealia
+          POSTGRES_USER: gitadmin
           POSTGRES_PASSWORD: Ocealia31520
         ports:
           - 5432:5432
@@ -22,8 +22,8 @@ jobs:
           --health-retries=5
 
     env:
-      POSTGRES_DB: test_documentationocealia
-      POSTGRES_USER: admin
+      POSTGRES_DB: documentationocealia
+      POSTGRES_USER: gitadmin
       POSTGRES_PASSWORD: Ocealia31520
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
