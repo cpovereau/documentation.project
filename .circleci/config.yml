@@ -4,8 +4,19 @@ jobs:
   build:
     docker:
       - image: python:3.11-buster
+      - image: postgres:latest
+        environment:
+          POSTGRES_USER: gitadmin
+          POSTGRES_PASSWORD: Ocealia31520
+          POSTGRES_DB: test_documentationocealia
     steps:
       - checkout
+      - run:
+          name: Install PostgreSQL Client
+          command: |
+            apt-get update
+            apt-get install -y postgresql-client
+
       - run:
           name: Set up Python
           command: |
@@ -15,15 +26,13 @@ jobs:
       - run:
           name: Database Preparation
           command: |
-            psql -c "DROP DATABASE IF EXISTS test_documentationocealia;"
-            psql -c "CREATE DATABASE test_documentationocealia;"
+            psql -h 127.0.0.1 -U gitadmin -d test_documentationocealia -c "DROP DATABASE IF EXISTS test_documentationocealia;"
+            psql -h 127.0.0.1 -U gitadmin -d test_documentationocealia -c "CREATE DATABASE test_documentationocealia;"
 
       - run:
           name: Apply Migrations
-          command: |
-            python manage.py migrate
+          command: python manage.py migrate
 
       - run:
           name: Run Tests
-          command: |
-            python manage.py test --keepdb
+          command: python manage.py test --keepdb
