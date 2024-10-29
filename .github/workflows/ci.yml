@@ -28,8 +28,8 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
       
-    - name: Debug DATABASE_URL
-      run: echo $DATABASE_URL
+    - name: Install dj-database-url
+      run: pip install dj-database-url
 
     - name: Set up Python
       uses: actions/setup-python@v2
