@@ -44,9 +44,20 @@ jobs:
 
     - name: Create logs directory
       run: mkdir -p documentation.project/logs
+      
+    - name: Check database connection
+      run: |
+       python manage.py dbshell -c "SELECT 1;"
 
     - name: Apply migrations
       run: python manage.py migrate
+
+    - name: Reset test database
+      run: python manage.py test --keepdb
+      
+    - name: List database tables after migration
+      run: |
+       python manage.py dbshell -c "\dt"
 
     - name: Run tests
       run: python manage.py test
