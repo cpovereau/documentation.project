@@ -81,7 +81,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('POSTGRES_DB', 'documentationocealia'),
-        'USER': os.environ.get('POSTGRES_USER', 'admin'),
+        'USER': os.environ.get('POSTGRES_USER', 'gitadmin'),
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'Ocealia31520'),
         'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
