@@ -1,0 +1,30 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: circleci/python:3.11
+      - image: postgres:latest
+        environment:
+          POSTGRES_DB: documentationocealia
+          POSTGRES_USER: gitadmin
+          POSTGRES_PASSWORD: Ocealia31520
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+      - run:
+          name: Apply migrations
+          command: python manage.py migrate
+      - run:
+          name: Run tests
+          command: python manage.py test
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test
