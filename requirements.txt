@@ -1,3 +1,2 @@
 djangorestframework==3.14.0
-dj-database-url==0.5.0
 psycopg==3.1.8

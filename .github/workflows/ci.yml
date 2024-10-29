@@ -51,6 +51,9 @@ jobs:
        pip install -r requirements.txt
        pip install dj-database-url
 
+    - name: Navigate to project directory
+      run: cd documentation.project
+
     - name: Create logs directory
       run: mkdir -p documentation.project/logs
 
