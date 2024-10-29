@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   test:
     docker:
-      - image: circleci/python:3.11.5
+      - image: cimg/python:3.11  # Nouvelle image officielle
       - image: postgres:latest
         environment:
           POSTGRES_DB: documentationocealia
@@ -19,6 +19,13 @@ jobs:
       - run:
           name: Apply migrations
           command: python manage.py migrate
+      - run:
+          name: Reset test database
+          command: python manage.py test --keepdb
+      - run:
+          name: Check database tables
+          command: |
+            echo "from django.db import connection; print(connection.introspection.table_names())" | python manage.py shell
       - run:
           name: Run tests
           command: python manage.py test
