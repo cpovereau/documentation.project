@@ -150,6 +150,11 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Assurez-vous que le dossier de log existe
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -163,7 +168,7 @@ LOGGING = {
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'connections.log'),
+            'filename': os.path.join(LOG_DIR, 'connections.log'),
             'formatter': 'verbose',
         },
     },
