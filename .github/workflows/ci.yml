@@ -27,14 +27,19 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-      
-    - name: Install dj-database-url
-      run: pip install dj-database-url
 
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.11'
+        
+    - name: Clear Python Cache
+      run: |
+        python -m pip cache purge
+        rm -rf ~/.cache/pip
+
+    - name: Install dj-database-url
+      run: pip install dj-database-url
         
     - name: Install psycopg2-binary
       run: |
