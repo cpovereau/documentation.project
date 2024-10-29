@@ -1,3 +1,4 @@
+#test
 name: Django CI
 
 on: [push, pull_request]
