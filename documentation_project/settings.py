@@ -144,8 +144,6 @@ REST_FRAMEWORK = {
 
 # settings.py
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 # Assurez-vous que le dossier de log existe
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 if not os.path.exists(LOG_DIR):
@@ -176,6 +174,3 @@ LOGGING = {
         },
     },
 }
-
-#import dj_database_url
-#DATABASES['default'] = dj_database_url.config(default=os.environ.get('DATABASE_URL'))
