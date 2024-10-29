@@ -1,0 +1,17 @@
+# Environnements Python
+env/
+__pycache__/
+
+# Fichiers de configuration
+*.py[cod]
+.DS_Store
+
+# Fichiers Django
+db.sqlite3
+/logs/
+
+# Migrations
+*/migrations/
+
+# Fichiers de configurations de l'IDE
+.vscode/
