@@ -10,7 +10,7 @@ jobs:
   test:
     executor: python-executor
     environment:
-      POSTGRES_DB: test_documentationocealia
+      POSTGRES_DB: documentationocealia
       POSTGRES_USER: gitadmin
       POSTGRES_PASSWORD: Ocealia31520
       POSTGRES_HOST: localhost
