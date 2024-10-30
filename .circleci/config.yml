@@ -1,38 +1,42 @@
 version: 2.1
 
-jobs:
-  build:
+executors:
+  python-executor:
     docker:
-      - image: python:3.11-buster
-      - image: postgres:latest
-        environment:
-          POSTGRES_USER: gitadmin
-          POSTGRES_PASSWORD: Ocealia31520
-          POSTGRES_DB: test_documentationocealia
+      - image: circleci/python:3.11
+    working_directory: ~/project
+
+jobs:
+  test:
+    executor: python-executor
+    environment:
+      POSTGRES_DB: test_documentationocealia
+      POSTGRES_USER: gitadmin
+      POSTGRES_PASSWORD: Ocealia31520
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
     steps:
       - checkout
       - run:
-          name: Install PostgreSQL Client
-          command: |
-            apt-get update
-            apt-get install -y postgresql-client
-
-      - run:
-          name: Set up Python
+          name: Install dependencies
           command: |
             python -m pip install --upgrade pip
             pip install -r requirements.txt
-
       - run:
-          name: Database Preparation
+          name: Wait for DB
           command: |
-            psql -h 127.0.0.1 -U gitadmin -d postgres -c "DROP DATABASE IF EXISTS test_documentationocealia;"
-            psql -h 127.0.0.1 -U gitadmin -d postgres -c "CREATE DATABASE test_documentationocealia;"
-
+            dockerize -wait tcp://localhost:5432 -timeout 60s
       - run:
-          name: Apply Migrations
-          command: python manage.py migrate
-
+          name: Run Migrations
+          command: |
+            python manage.py migrate
       - run:
           name: Run Tests
-          command: python manage.py test --keepdb
+          command: |
+            python manage.py test
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test
