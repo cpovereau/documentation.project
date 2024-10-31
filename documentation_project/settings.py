@@ -85,6 +85,9 @@ DATABASES = {
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'Ocealia31520'),
         'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        'OPTIONS': {
+            'options': '-c search_path=public',
+        },
         'TEST': {
             'NAME': 'documentationocealia',
         },
@@ -160,6 +163,10 @@ LOGGING = {
             'format': '{asctime} {levelname} {message}',
             'style': '{',
         },
+        'error': {  # Formatteur pour les erreurs
+            'format': '{asctime} {levelname} {message} {pathname} {lineno}',
+            'style': '{',
+        },
     },
     'handlers': {
         'file': {
@@ -168,10 +175,16 @@ LOGGING = {
             'filename': os.path.join(LOG_DIR, 'connections.log'),
             'formatter': 'verbose',
         },
+        'error_file': {  # Nouveau gestionnaire pour les erreurs
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'errors.log'),
+            'formatter': 'error',
+        },
     },
     'loggers': {
         'django': {
-            'handlers': ['file'],
+            'handlers': ['file', 'error_file'],  # Utilise les deux gestionnaires
             'level': 'INFO',
             'propagate': True,
         },

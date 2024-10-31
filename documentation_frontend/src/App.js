@@ -1,24 +1,21 @@
-import logo from './logo.svg';
-import './App.css';
+// frontend/src/App.js
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import 'react-toastify/dist/ReactToastify.css';
+// eslint-disable-next-line
+import ErrorBoundary from './components/ErrorBoundary';
+import ProjetList from './components/ProjetList';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/projets" element={<ProjetList />} />
+          {/* Ajoutez d'autres routes pour modules et rubriques */}
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
