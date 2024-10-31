@@ -1,6 +1,5 @@
 version: 2.1
 
-
 jobs:
   test:
     docker:
@@ -14,12 +13,12 @@ jobs:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
     steps:
-       - checkout
-       - run:
+      - checkout
+      - run:
           name: Wait for DB
           command: |
             dockerize -wait tcp://localhost:5432 -timeout 60s
-       - run:
+      - run:
           name: Install dependencies
           command: |
             python -m pip install --upgrade pip
