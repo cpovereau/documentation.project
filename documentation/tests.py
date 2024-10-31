@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 
 class AuthenticationTests(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='gitadmin', password='Ocealia31520')
+        self.user = User.objects.create_user(username='gitadmin', password='Ocealia31520', first_name='Test', last_name='Mon', is_superuser=False, is_staff=False, is_active=True)
 
     def test_login(self):
         url = reverse('login')
