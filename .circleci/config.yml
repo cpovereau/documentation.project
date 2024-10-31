@@ -5,14 +5,14 @@ jobs:
   test:
     docker:
       - image: cimg/python:3.11
-      - image: cimg/postgres:16.4  # PostgreSQL version as per your needs
+      - image: cimg/postgres:16.4
         environment:
-      POSTGRES_DB: documentationocealia
-      POSTGRES_USER: gitadmin
-      POSTGRES_PASSWORD: Ocealia31520
-      POSTGRES_HOST_AUTH_METHOD: trust
-      POSTGRES_HOST: localhost
-      POSTGRES_PORT: 5432
+          POSTGRES_DB: documentationocealia
+          POSTGRES_USER: gitadmin
+          POSTGRES_PASSWORD: Ocealia31520
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
     steps:
       - checkout
        - run:
