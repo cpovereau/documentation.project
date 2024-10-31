@@ -1,15 +1,12 @@
 version: 2.1
 
-executors:
-  python-executor:
-    docker:
-      - image: cimg/python:3.11
-    working_directory: ~/project
 
 jobs:
   test:
-    executor: python-executor
-    environment:
+    docker:
+      - image: cimg/python:3.11
+      - image: cimg/postgres:16.4  # PostgreSQL version as per your needs
+        environment:
       POSTGRES_DB: documentationocealia
       POSTGRES_USER: gitadmin
       POSTGRES_PASSWORD: Ocealia31520
@@ -18,15 +15,15 @@ jobs:
       POSTGRES_PORT: 5432
     steps:
       - checkout
-      - run:
+       - run:
+          name: Wait for DB
+          command: |
+            dockerize -wait tcp://localhost:5432 -timeout 60s
+       - run:
           name: Install dependencies
           command: |
             python -m pip install --upgrade pip
             pip install -r requirements.txt
-      - run:
-          name: Wait for DB
-          command: |
-            dockerize -wait tcp://localhost:5432 -timeout 60s
       - run:
           name: Run Migrations
           command: |
