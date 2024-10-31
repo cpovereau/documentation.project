@@ -10,7 +10,7 @@ class AuthenticationTests(APITestCase):
     def test_login(self):
         url = reverse('login')
         data = {'username': 'gitadmin', 'password': 'Ocealia31520'}
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('username', response.data)
 
