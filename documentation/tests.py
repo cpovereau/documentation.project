@@ -11,6 +11,7 @@ class AuthenticationTests(APITestCase):
         url = reverse('login')
         data = {'username': 'gitadmin', 'password': 'Ocealia31520'}
         response = self.client.post(url, data, content_type='application/json')
+        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('username', response.data)
 
