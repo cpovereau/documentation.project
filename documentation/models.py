@@ -5,6 +5,8 @@
 #   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
+import xml.etree.ElementTree as ET
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -293,6 +295,17 @@ class Rubrique(models.Model):
     class Meta:
         managed = False
         db_table = 'rubrique'
+
+    def clean(self):
+        # Validation de la structure XML pour le champ contenu_xml
+        if self.contenu_xml:
+            try:
+                ET.fromstring(self.contenu_xml)
+            except ET.ParseError as e:
+                raise ValidationError(f"Le contenu XML est mal structuré : {e}")
+
+    def __str__(self):
+        return f"{self.titre} ({self.type_rubrique})"
 
 
 class RubriqueProfil(models.Model):
