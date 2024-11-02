@@ -15,6 +15,17 @@ LOG_DIR = os.path.join(BASE_DIR, 'logs')
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'documentationocealia'),
+        'USER': os.getenv('POSTGRES_USER', 'gitadmin'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'Ocealia31520'),
+        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+    }
+}
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
