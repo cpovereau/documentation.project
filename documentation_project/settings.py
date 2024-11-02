@@ -4,6 +4,9 @@ from pathlib import Path
 # Chemin de base du projet
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Clé secrète pour la sécurité
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'default-insecure-secret-key')
+
 # Applications installées
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -16,7 +19,7 @@ INSTALLED_APPS = [
     'documentation',  # Votre application principale
 ]
 
-# Middlewares requis
+# Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -26,6 +29,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Définit la racine des URLs
+ROOT_URLCONF = 'documentation_project.urls'
 
 # Configuration des templates
 TEMPLATES = [
@@ -38,6 +44,8 @@ TEMPLATES = [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.static',
                 'django.contrib.messages.context_processors.messages',
             ],
         },
@@ -47,25 +55,25 @@ TEMPLATES = [
 # Configuration de la base de données
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',  # Moteur pour PostgreSQL
-        'NAME': os.getenv('POSTGRES_DB', 'documentationocealia'),  # Nom de la base de données
-        'USER': os.getenv('POSTGRES_USER', 'gitadmin'),           # Utilisateur PostgreSQL
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'Ocealia31520'),  # Mot de passe de l'utilisateur
-        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),          # Hôte PostgreSQL (ex: localhost)
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),               # Port PostgreSQL par défaut
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'documentationocealia'),
+        'USER': os.getenv('POSTGRES_USER', 'gitadmin'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'Ocealia31520'),
+        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
 
-# Clé primaire automatique par défaut
+# Clé primaire automatique
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Configurations statiques
+# URL pour les fichiers statiques
 STATIC_URL = '/static/'
 
-# Définissez ALLOWED_HOSTS pour la production
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']  # À adapter pour le déploiement
+# Hôtes autorisés
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
-# Autres configurations utiles
+# Paramètres régionaux
 LANGUAGE_CODE = 'fr-fr'
 TIME_ZONE = 'Europe/Paris'
 USE_I18N = True
