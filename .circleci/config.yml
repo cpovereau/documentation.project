@@ -33,7 +33,6 @@ jobs:
             python manage.py test --keepdb --noinput
 
 workflows:
-  version: 2
-  test:
+  testcircle:
     jobs:
       - test

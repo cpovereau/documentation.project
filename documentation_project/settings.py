@@ -3,6 +3,17 @@
 import os
 from pathlib import Path
 
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',          # Nécessaire pour le modèle User
+    'django.contrib.contenttypes',   # Nécessaire pour ContentType
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'rest_framework',               # Si vous utilisez Django REST Framework
+    'documentation',                # Votre application
+]
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 ALLOWED_HOSTS = [
