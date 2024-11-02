@@ -23,7 +23,8 @@ class AuthenticationTests(APITestCase):
         print(response.data)  # Affiche la réponse pour débogage
         # Vérifie le statut HTTP et la présence du nom d'utilisateur dans la réponse
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('username', response.data)
+        self.assertIn('username', response.data['user'])
+        self.assertIn('token', response.data)
 
     def test_logout(self):
         self.client.login(username='gitadmin', password='Ocealia31520')
