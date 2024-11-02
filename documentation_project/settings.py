@@ -78,6 +78,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 # Configuration CORS
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
 # Paramètres régionaux
