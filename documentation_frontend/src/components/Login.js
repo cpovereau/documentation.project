@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
-const Login = ({ setAuthToken }) => {
+const Login = ({ setAuthToken, setUser }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -18,43 +18,62 @@ const Login = ({ setAuthToken }) => {
         },
         body: JSON.stringify({ username, password }),
       });
+
+      console.log("Status de la réponse:", response.status);
+
       if (response.ok) {
         const data = await response.json();
-        setAuthToken(data.token);  // Assignez le token ou session
-        localStorage.setItem('authToken', data.token);  // Stocker le token
-        toast.success('Connexion réussie !');
-        navigate('/');  // Redirection après connexion
+        console.log("Data reçue:", data);
+
+        if (data.token) {
+          setAuthToken(data.token);
+          localStorage.setItem('authToken', data.token);
+          setUser({ name: data.user.last_name, firstName: data.user.first_name, email: data.user.email });
+          toast.success('Connexion réussie !');
+          navigate('/');
+        } else {
+          toast.error("Le token est manquant dans la réponse.");
+        }
       } else {
-        toast.error('Nom d’utilisateur ou mot de passe incorrect');
+        toast.error("Nom d’utilisateur ou mot de passe incorrect");
       }
     } catch (error) {
       toast.error("Erreur lors de la connexion");
-      console.error(error);
+      console.error("Erreur dans handleLogin:", error);
     }
   };
 
   return (
-    <div className="login">
-      <h2>Connexion</h2>
-      <form onSubmit={handleLogin}>
-        <div>
-          <label>Nom d’utilisateur</label>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
+    <div className="login-page">
+      <div className="auth-container">
+        <div className="auth-logo">
+          <img src="../assets/logo.jpg" alt="Logo" />
         </div>
-        <div>
-          <label>Mot de passe</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+        <div className="auth-form">
+          <h2>Connexion</h2>
+          <form onSubmit={handleLogin}>
+            <div>
+              <label htmlFor="username">Nom d’utilisateur</label>
+              <input
+                type="text"
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="password">Mot de passe</label>
+              <input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <button type="submit">Se connecter</button>
+          </form>
         </div>
-        <button type="submit">Se connecter</button>
-      </form>
+      </div>
     </div>
   );
 };

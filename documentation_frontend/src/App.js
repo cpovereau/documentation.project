@@ -1,15 +1,20 @@
 // src/App.js
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate, Link } from 'react-router-dom';
+import { Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import Login from './components/Login';
-import ProjetList from './components/ProjetList';
-import RubriqueForm from './components/RubriqueForm';
+import TopBar from './components/Topbar';
+import SidebarLeft from './components/SidebarLeft';
+import SidebarRight from './components/SidebarRight';
+import RichTextEditor from './components/RichTextEditor.js';
+import BottomBar from './components/BottomBar';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import './App.css';  // Importez le fichier CSS
+import './App.css';
 
 function App() {
   const [authToken, setAuthToken] = useState(localStorage.getItem('authToken'));
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (authToken) {
@@ -23,44 +28,41 @@ function App() {
     setAuthToken(null);
     localStorage.removeItem('authToken');
     toast.success('Déconnexion réussie !');
+    navigate('/login');
   };
 
   return (
-    <Router>
-      <div className="App">
-        <ToastContainer />
+    <div className="app">
+      <ToastContainer />
 
-        {/* Affichage conditionnel de l'interface */}
-        {authToken ? (
-          <>
-            <nav className="navbar">
-              <Link to="/projets">Projets</Link>
-              <Link to="/rubriques">Rubriques</Link>
-              <button onClick={handleLogout}>Déconnexion</button>
-            </nav>
-
-            <Routes>
-              <Route path="/projets" element={<ProjetList />} />
-              <Route path="/rubriques" element={<RubriqueForm />} />
-              <Route path="/" element={<Navigate to="/projets" />} />
-              <Route path="/login" element={<Navigate to="/projets" />} />
-            </Routes>
-          </>
-        ) : (
-          <div className="auth-container">
-            <div className="auth-logo">
-              <img src="/assets/logo.jpg" alt="Océalia Informatique" />
-            </div>
-            <div className="auth-form">
-              <Routes>
-                <Route path="/login" element={<Login setAuthToken={setAuthToken} />} />
-                <Route path="*" element={<Navigate to="/login" />} />
-              </Routes>
-            </div>
+      {authToken ? (
+        <>
+          {/* Barre de navigation avec le bouton de déconnexion */}
+          <TopBar user={user} onLogout={handleLogout} />
+          
+          {/* Structure principale de l'application */}
+          <div className="main-content">
+            <SidebarLeft />
+            <RichTextEditor />
+            <SidebarRight />
           </div>
-        )}
-      </div>
-    </Router>
+          
+          <BottomBar />
+        </>
+      ) : (
+        <div className="auth-container">
+          <div className="auth-logo">
+            <img src="/assets/logo.jpg" alt="Océalia Informatique" />
+          </div>
+          <div className="auth-form">
+            <Routes>
+              <Route path="/login" element={<Login setAuthToken={setAuthToken} setUser={setUser} />} />
+              <Route path="*" element={<Navigate to="/login" />} />
+            </Routes>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
