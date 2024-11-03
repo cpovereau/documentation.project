@@ -35,10 +35,21 @@
 }
 
 .main-content {
-  display: grid;
-  grid-template-columns: 250px 1fr 250px;
-  grid-template-rows: auto 1fr auto; /* Ajout d'une rangée pour le bas */
-  height: 100%; /* Pour remplir tout l’espace restant */
+  display: flex;
+  flex: 1;
+  transition: width 0.3s ease;
+}
+
+.sidebar-left.collapsed + .editor-container {
+  flex: 1;
+}
+
+.sidebar-left {
+  transition: width 0.3s ease;
+}
+
+.sidebar-left.collapsed {
+  width: 60px;
 }
 
 .sidebar-left,
@@ -47,9 +58,9 @@
   overflow-y: auto;
 }
 
-.RichTextEditor {
-  background-color: #ffffff;
-  padding: 20px;
+.editor-container {
+  flex: 1;
+  transition: flex 0.3s ease;
 }
 
 .bottom-bar {

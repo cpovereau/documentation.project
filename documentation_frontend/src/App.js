@@ -15,6 +15,10 @@ function App() {
   const [authToken, setAuthToken] = useState(localStorage.getItem('authToken'));
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
+  
+  // Collapsible state for sidebars
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isSidebarRightCollapsed, setSidebarRightCollapsed] = useState(true);
 
   useEffect(() => {
     if (authToken) {
@@ -31,23 +35,40 @@ function App() {
     navigate('/login');
   };
 
+  // Sample questions state for BottomBar
+  const [questions, setQuestions] = useState([
+    {
+      label: "Exemple de question",
+      answers: [
+        { text: "Réponse A", isCorrect: false },
+        { text: "Réponse B", isCorrect: true },
+      ]
+    }
+  ]);
+
   return (
     <div className="app">
       <ToastContainer />
 
       {authToken ? (
         <>
-          {/* Barre de navigation avec le bouton de déconnexion */}
+          {/* Top Navigation Bar */}
           <TopBar user={user} onLogout={handleLogout} />
           
-          {/* Structure principale de l'application */}
+          {/* Main Layout with Sidebars, Editor, and BottomBar */}
           <div className="main-content">
-            <SidebarLeft />
-            <RichTextEditor />
-            <SidebarRight />
+            <SidebarLeft isCollapsed={isSidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+            
+            {/* Editor and BottomBar Container */}
+            <div className={`editor-container ${isSidebarCollapsed ? 'expanded' : ''}`}>
+              <RichTextEditor />
+              <BottomBar questions={questions} />
+            </div>
+            
+            {!isSidebarRightCollapsed && window.innerWidth > 768 && (
+            <SidebarRight isCollapsed={isSidebarRightCollapsed} setCollapsed={setSidebarRightCollapsed} />
+          )}
           </div>
-          
-          <BottomBar />
         </>
       ) : (
         <div className="auth-container">

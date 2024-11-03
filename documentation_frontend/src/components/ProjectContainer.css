@@ -1,0 +1,14 @@
+.project-container {
+    padding: 10px;
+  }
+
+  .project-container .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  
+  .content {
+    padding : 5px;
+  }
+  

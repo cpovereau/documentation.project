@@ -1,0 +1,29 @@
+.maps-container {
+    padding: 10px;
+  }
+  
+  .maps-container .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  
+  .maps-container .tree-content {
+    padding: 5px;
+  }
+  
+  .maps-container ul {
+    list-style-type: none;
+    padding-left: 0;
+  }
+
+  .maps-container li {
+    padding-left: 20px;
+    margin: 4px 0;
+    cursor: pointer;
+}
+  
+  .maps-container li:hover {
+    background-color: #f0f0f0;
+  }
+  

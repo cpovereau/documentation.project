@@ -1,0 +1,49 @@
+/* src/components/SidebarLeft.css */
+.sidebar-left {
+  width: 250px;
+  background-color: #e9ecef;
+  padding: 10px;
+  transition: width 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.sidebar-left.collapsed {
+  width: 60px;
+}
+
+.toggle-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  align-self: flex-start;
+}
+
+.sidebar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: background 0.2s;
+}
+
+.sidebar-item-header {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+.sidebar-item-header:hover {
+  background-color: #d3d3d3;
+}
+
+.icon {
+  margin-right: 8px;
+}
+
+.sidebar-left.collapsed .icon + span {
+  display: none;
+}
