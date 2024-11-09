@@ -23,7 +23,7 @@ function App() {
   
   // États pour gérer la rétractation des barres latérales
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);       // Barre de gauche
-  const [isSidebarRightCollapsed, setSidebarRightCollapsed] = useState(true); // Barre de droite
+  const [isSidebarRightCollapsed, setSidebarRightCollapsed] = useState(false); // Barre de droite
 
   // Effet pour synchroniser le jeton d'authentification dans le localStorage
   useEffect(() => {

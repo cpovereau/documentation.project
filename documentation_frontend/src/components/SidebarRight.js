@@ -1,20 +1,23 @@
-import React, { useCallback } from 'react';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa'; 
+import React, { useEffect } from 'react';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import './SidebarRight.css';
 
-
 const SidebarRight = ({ isCollapsed, setCollapsed }) => {
-  const toggleCollapsed = useCallback(() => setCollapsed(prev => !prev), [setCollapsed]);
+  useEffect(() => {
+    console.log('SidebarRight is rendered');
+  }, []);
 
   return (
-    <div className={`sidebar-right ${isCollapsed ? 'collapsed' : ''}`}>
-      <button className="toggle-button" onClick={toggleCollapsed}>
-        {isCollapsed ? < FaChevronLeft/> : <FaChevronRight />}
+    <div 
+      className={`sidebar-right ${isCollapsed ? 'collapsed' : ''}`} 
+      style={{ right: 0 }}
+    >
+      <button className="toggle-button" onClick={() => setCollapsed(!isCollapsed)}>
+        {isCollapsed ? <FaChevronLeft /> : <FaChevronRight />}
       </button>
 
       {!isCollapsed && (
         <div className="content">
-          {/* Contenu de SidebarRight */}
           <div className="sidebar-section">
             <div className="sidebar-section-header">
               <span>Attributs</span>

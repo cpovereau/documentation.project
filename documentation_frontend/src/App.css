@@ -10,13 +10,6 @@
   overflow: hidden;
 }
 
-/* Composants principaux sans effets de style spécifiques */
-.main-layout, .editor-container, .bottom-bar, .topbar, .sidebar-left, .sidebar-right {
-  box-shadow: none;
-  border-radius: 0;
-  background-image: none;
-}
-
 /* Barre du haut */
 .topbar {
   height: 50px; /* Hauteur de la barre supérieure */
@@ -83,10 +76,11 @@
   overflow-y: auto;
   transition: transform 0.3s ease;
   transform: translateX(0); /* Barre visible par défaut */
+  z-index: 9999;
 }
 
 .sidebar-right.collapsed {
-  transform: translateX(100%); /* Cache la barre quand elle est rétractée */
+  transform: none;
 }
 
 /* Conteneur de l'éditeur */
