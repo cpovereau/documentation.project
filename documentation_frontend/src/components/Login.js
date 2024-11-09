@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import logo from '../assets/logo.jpg';
 
 const Login = ({ setAuthToken, setUser }) => {
   const [username, setUsername] = useState('');
@@ -10,6 +11,10 @@ const Login = ({ setAuthToken, setUser }) => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (!username || !password) {
+      toast.error("Veuillez remplir tous les champs.");
+      return;
+    }
     try {
       const response = await fetch('http://localhost:8000/api/login/', {
         method: 'POST',
@@ -22,17 +27,22 @@ const Login = ({ setAuthToken, setUser }) => {
       console.log("Status de la réponse:", response.status);
 
       if (response.ok) {
-        const data = await response.json();
-        console.log("Data reçue:", data);
+        try {
+          const data = await response.json();
+          console.log("Data reçue:", data);
 
-        if (data.token) {
-          setAuthToken(data.token);
-          localStorage.setItem('authToken', data.token);
-          setUser({ name: data.user.last_name, firstName: data.user.first_name, email: data.user.email });
-          toast.success('Connexion réussie !');
-          navigate('/');
-        } else {
-          toast.error("Le token est manquant dans la réponse.");
+          if (data.token) {
+            setAuthToken(data.token);
+            localStorage.setItem('authToken', data.token);
+            setUser({ name: data.user.last_name, firstName: data.user.first_name, email: data.user.email });
+            toast.success('Connexion réussie !');
+            navigate('/');
+          } else {
+            toast.error("Le token est manquant dans la réponse.");
+          }
+        } catch (jsonError) {
+          toast.error("Erreur de décodage de la réponse JSON");
+          console.error("Erreur JSON:", jsonError);
         }
       } else {
         toast.error("Nom d’utilisateur ou mot de passe incorrect");
@@ -44,35 +54,33 @@ const Login = ({ setAuthToken, setUser }) => {
   };
 
   return (
-    <div className="login-page">
-      <div className="auth-container">
-        <div className="auth-logo">
-          <img src="../assets/logo.jpg" alt="Logo" />
-        </div>
-        <div className="auth-form">
-          <h2>Connexion</h2>
-          <form onSubmit={handleLogin}>
-            <div>
-              <label htmlFor="username">Nom d’utilisateur</label>
-              <input
-                type="text"
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="password">Mot de passe</label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <button type="submit">Se connecter</button>
-          </form>
-        </div>
+    <div className="auth-container">
+      <div className="auth-logo">
+        <img src={logo} alt="Logo" />
+      </div>
+      <div className="auth-form">
+        <h2>Connexion</h2>
+        <form onSubmit={handleLogin}>
+          <div>
+            <label htmlFor="username">Nom d’utilisateur</label>
+            <input
+              type="text"
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="password">Mot de passe</label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <button type="submit">Se connecter</button>
+        </form>
       </div>
     </div>
   );

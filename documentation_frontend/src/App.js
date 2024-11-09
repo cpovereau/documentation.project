@@ -12,14 +12,20 @@ import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
 function App() {
+  // État pour le jeton d'authentification de l'utilisateur
   const [authToken, setAuthToken] = useState(localStorage.getItem('authToken'));
+  
+  // État pour les informations de l'utilisateur connecté
   const [user, setUser] = useState(null);
+  
+  // Navigation pour rediriger l'utilisateur
   const navigate = useNavigate();
   
-  // Collapsible state for sidebars
-  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isSidebarRightCollapsed, setSidebarRightCollapsed] = useState(true);
+  // États pour gérer la rétractation des barres latérales
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);       // Barre de gauche
+  const [isSidebarRightCollapsed, setSidebarRightCollapsed] = useState(true); // Barre de droite
 
+  // Effet pour synchroniser le jeton d'authentification dans le localStorage
   useEffect(() => {
     if (authToken) {
       localStorage.setItem('authToken', authToken);
@@ -28,6 +34,7 @@ function App() {
     }
   }, [authToken]);
 
+  // Fonction de déconnexion : réinitialise le jeton, supprime du localStorage et redirige vers la page de connexion
   const handleLogout = () => {
     setAuthToken(null);
     localStorage.removeItem('authToken');
@@ -35,7 +42,7 @@ function App() {
     navigate('/login');
   };
 
-  // Sample questions state for BottomBar
+  // Exemple de données pour la barre de questions en bas
   const [questions, setQuestions] = useState([
     {
       label: "Exemple de question",
@@ -48,36 +55,57 @@ function App() {
 
   return (
     <div className="app">
-      <ToastContainer />
+      <ToastContainer /> {/* Composant pour afficher les notifications de type "toast" */}
 
+      {/* Vérification de l'authentification : si l'utilisateur est connecté, on affiche l'interface principale */}
       {authToken ? (
         <>
-          {/* Top Navigation Bar */}
+          {/* Barre du haut avec les informations de l'utilisateur et un bouton de déconnexion */}
           <TopBar user={user} onLogout={handleLogout} />
           
-          {/* Main Layout with Sidebars, Editor, and BottomBar */}
-          <div className="main-content">
-            <SidebarLeft isCollapsed={isSidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+          {/* Disposition principale qui contient les barres latérales, l'éditeur et la barre de questions en bas */}
+          <div className="main-layout">
+            {/* Barre latérale gauche, avec un bouton pour rétracter ou étendre */}
+            <SidebarLeft 
+              isCollapsed={isSidebarCollapsed} 
+              setCollapsed={setSidebarCollapsed} 
+            />
             
-            {/* Editor and BottomBar Container */}
-            <div className={`editor-container ${isSidebarCollapsed ? 'expanded' : ''}`}>
+            {/* Conteneur de l'éditeur avec la barre de questions en bas */}
+            <div className={`editor-container ${isSidebarCollapsed ? 'expanded' : ''} ${isSidebarRightCollapsed ? '' : 'right-expanded'}`}>
+              {/* Éditeur de texte */}
               <RichTextEditor />
-              <BottomBar questions={questions} />
+              
+              {/* Barre de questions en bas de la page */}
+              <BottomBar 
+                questions={questions} 
+                isSidebarCollapsed={isSidebarCollapsed}
+                isSidebarRightCollapsed={isSidebarRightCollapsed}
+              />
             </div>
             
-            {!isSidebarRightCollapsed && window.innerWidth > 768 && (
-            <SidebarRight isCollapsed={isSidebarRightCollapsed} setCollapsed={setSidebarRightCollapsed} />
-          )}
+            {/* Barre latérale droite, avec un bouton pour rétracter ou étendre */}
+            <SidebarRight 
+              isCollapsed={isSidebarRightCollapsed} 
+              setCollapsed={setSidebarRightCollapsed} 
+            />
           </div>
         </>
       ) : (
+        // Page d'authentification : affichée uniquement lorsque l'utilisateur n'est pas authentifié
         <div className="auth-container">
+          {/* Logo pour la page d'authentification */}
           <div className="auth-logo">
             <img src="/assets/logo.jpg" alt="Océalia Informatique" />
           </div>
+          
+          {/* Formulaire de connexion */}
           <div className="auth-form">
             <Routes>
+              {/* Route pour la page de connexion */}
               <Route path="/login" element={<Login setAuthToken={setAuthToken} setUser={setUser} />} />
+              
+              {/* Redirection vers /login si l'utilisateur tente d'accéder à une autre page sans être connecté */}
               <Route path="*" element={<Navigate to="/login" />} />
             </Routes>
           </div>

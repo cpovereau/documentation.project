@@ -1,71 +1,74 @@
 /* src/components/SidebarRight.css */
 .sidebar-right {
-    width: 250px;
-    /* background-color: #e9ecef; */
-    background-color: #f8d7da;
-    padding: 10px;
-    transition: width 0.3s;
-    position: relative;
+  position: fixed;
+  right: 0;
+  top: 50px; /* Ajuste la hauteur pour ne pas chevaucher la TopBar */
+  bottom: 0; /* Couvre toute la hauteur restante */
+  width: 250px;
+  background-color: #f8d7da;
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+  z-index: 5; /* S'assurer qu'elle est au-dessus de l'éditeur */
+}
+
+.sidebar-right.collapsed {
+  transform: translateX(100%); /* Cache complètement quand elle est rétractée */
+}
+
+/* Bouton pour rétracter/étendre la barre latérale */
+.toggle-button {
+  position: absolute;
+  left: -15px;
+  top: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 5px;
+  color: #333;
+  background-color: #e9ecef;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Style pour chaque section dans SidebarRight */
+.sidebar-section {
+  background-color: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.sidebar-section-header {
+  background-color: #f5f5f5;
+  padding: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  border-bottom: 1px solid #ddd;
+}
+
+.sidebar-section-header:hover {
+  background-color: #e0e0e0;
+}
+
+.sidebar-section-content {
+  padding: 10px;
+}
+
+/* Responsive pour petits écrans */
+@media (max-width: 768px) {
+  .sidebar-right {
+    width: 200px; /* Réduit la largeur au lieu de cacher */
+    transform: translateX(100%); /* La rétracte complètement */
   }
-  
+
   .sidebar-right.collapsed {
-    width: 0;
-    padding: 0;
-    overflow: hidden;
+    transform: translateX(100%);
   }
-  
-  .toggle-button {
-    position: absolute;
-    left: -15px;
-    top: 10px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.2rem;
-    padding: 5px;
-    color: #333;
-    background-color: #e9ecef;
-    border-radius: 50%;
-    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
-  }
-  
-  .content {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  /* Style pour chaque section dans SidebarRight */
-  .sidebar-section {
-    background-color: #ffffff;
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-  }
-  
-  .sidebar-section-header {
-    background-color: #f5f5f5;
-    padding: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .sidebar-section-header:hover {
-    background-color: #e0e0e0;
-  }
-  
-  .sidebar-section-content {
-    padding: 10px;
-  }
-  
-  /* Pour l'alignement réactif */
-  @media (max-width: 768px) {
-    .sidebar-right {
-      display: none;
-    }
-    .sidebar-right.collapsed {
-        display: none;
-      }
-  }
-  
+}

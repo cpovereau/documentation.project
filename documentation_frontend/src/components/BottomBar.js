@@ -3,11 +3,15 @@ import React, { useState } from 'react';
 import { FaChevronUp, FaChevronDown } from 'react-icons/fa';
 import './BottomBar.css';
 
-const BottomBar = ({ questions }) => {
-  const [isExpanded, setExpanded] = useState(false);
+const BottomBar = ({ questions, isSidebarCollapsed, isSidebarRightCollapsed }) => {
+  const [isExpanded, setExpanded] = useState(true);
 
   return (
-    <div className={`bottom-bar ${isExpanded ? 'expanded' : ''}`}>
+    <div
+      className={`bottom-bar ${isExpanded ? 'expanded' : 'collapsed'} ${
+        isSidebarCollapsed ? 'left-expanded' : ''
+      } ${isSidebarRightCollapsed ? '' : 'right-expanded'}`}
+    >
       <button className="toggle-button" onClick={() => setExpanded(!isExpanded)}>
         {isExpanded ? <FaChevronDown /> : <FaChevronUp />}
       </button>

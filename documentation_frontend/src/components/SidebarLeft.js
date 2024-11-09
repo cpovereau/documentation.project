@@ -1,5 +1,5 @@
 // src/components/SidebarLeft.js
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import ProjectContainer from './ProjectContainer';
 import MapsContainer from './MapsContainer';
 import { FaFolder, FaSitemap, FaBars } from 'react-icons/fa';

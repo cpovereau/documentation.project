@@ -1,19 +1,20 @@
-// src/components/SidebarRight.js
-import React from 'react';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import React, { useCallback } from 'react';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa'; 
 import './SidebarRight.css';
 
+
 const SidebarRight = ({ isCollapsed, setCollapsed }) => {
+  const toggleCollapsed = useCallback(() => setCollapsed(prev => !prev), [setCollapsed]);
+
   return (
     <div className={`sidebar-right ${isCollapsed ? 'collapsed' : ''}`}>
-      {/* Bouton de repli pour masquer ou afficher la SidebarRight */}
-      <button className="toggle-button" onClick={() => setCollapsed(!isCollapsed)}>
-        {isCollapsed ? <FaChevronLeft /> : <FaChevronRight />}
+      <button className="toggle-button" onClick={toggleCollapsed}>
+        {isCollapsed ? < FaChevronLeft/> : <FaChevronRight />}
       </button>
 
-      {/* Contenu de SidebarRight */}
       {!isCollapsed && (
         <div className="content">
+          {/* Contenu de SidebarRight */}
           <div className="sidebar-section">
             <div className="sidebar-section-header">
               <span>Attributs</span>

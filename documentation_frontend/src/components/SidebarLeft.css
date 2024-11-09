@@ -1,6 +1,7 @@
 /* src/components/SidebarLeft.css */
 .sidebar-left {
   width: 250px;
+  top: 50px;
   background-color: #e9ecef;
   padding: 10px;
   transition: width 0.3s;

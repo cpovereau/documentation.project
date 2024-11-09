@@ -1,21 +1,34 @@
 /* src/App.css */
 
 /* Structure générale */
+
 .app {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 
+/* Composants principaux sans effets de style spécifiques */
+.main-layout, .editor-container, .bottom-bar, .topbar, .sidebar-left, .sidebar-right {
+  box-shadow: none;
+  border-radius: 0;
+  background-image: none;
+}
+
+/* Barre du haut */
 .topbar {
-  height: 50px;
+  height: 50px; /* Hauteur de la barre supérieure */
   background-color: #f8f9fa;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
+  z-index: 100; /* Assure que la barre est au-dessus du contenu */
 }
 
+/* Informations utilisateur et bouton de déconnexion */
 .user-info {
   display: flex;
   align-items: center;
@@ -34,42 +47,74 @@
   background-color: #c82333;
 }
 
-.main-content {
+/* Disposition principale */
+.main-layout {
   display: flex;
-  flex: 1;
-  transition: width 0.3s ease;
+  height: calc(100vh - 50px); /* Remplit l'espace en dessous de la topbar */
+  position: relative;
 }
 
-.sidebar-left.collapsed + .editor-container {
+/* Conteneur principal pour l'éditeur et la barre de questions */
+.main-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  transition: margin-right 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
+/* Barre latérale gauche */
 .sidebar-left {
+  width: 250px;
+  background-color: #e9ecef;
+  overflow-y: auto;
   transition: width 0.3s ease;
 }
 
 .sidebar-left.collapsed {
-  width: 60px;
+  width: 60px; /* Réduction de la largeur en mode rétracté */
 }
 
-.sidebar-left,
+/* Barre latérale droite */
 .sidebar-right {
-  background-color: #e9ecef;
+  width: 250px;
+  background-color: #f8d7da;
   overflow-y: auto;
+  transition: transform 0.3s ease;
+  transform: translateX(0); /* Barre visible par défaut */
 }
 
+.sidebar-right.collapsed {
+  transform: translateX(100%); /* Cache la barre quand elle est rétractée */
+}
+
+/* Conteneur de l'éditeur */
 .editor-container {
   flex: 1;
-  transition: flex 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.3s ease, margin-right 0.3s ease;
+  overflow: hidden;
 }
 
+/* Ajustement du conteneur de l'éditeur en fonction des barres latérales */
+.editor-container.expanded {
+  margin-left: 60px; /* Réduction de la marge gauche si la barre de gauche est rétractée */
+}
+
+.editor-container.right-expanded {
+  margin-right: 250px; /* Ajoute de l'espace à droite quand la barre de droite est visible */
+}
+
+/* Barre du bas */
 .bottom-bar {
-  grid-column: 1 / -1;
   height: 200px;
   background-color: #f8f9fa;
   overflow-y: auto;
 }
 
+/* Contenu de la barre de questions */
 .questions-content {
   padding: 10px;
 }
@@ -84,6 +129,10 @@
 }
 
 .auth-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   background-color: #fff;
   width: 600px;
@@ -93,6 +142,7 @@
   overflow: hidden;
 }
 
+/* Logo de la page de connexion */
 .auth-logo {
   flex: 1;
   background-color: #f0f0f0;
@@ -108,6 +158,7 @@
   object-fit: contain;
 }
 
+/* Formulaire de connexion */
 .auth-form {
   flex: 1;
   padding: 2rem;
