@@ -10,7 +10,6 @@ const SidebarRight = ({ isCollapsed, setCollapsed }) => {
   return (
     <div 
       className={`sidebar-right ${isCollapsed ? 'collapsed' : ''}`} 
-      style={{ right: 0 }}
     >
       <button className="toggle-button" onClick={() => setCollapsed(!isCollapsed)}>
         {isCollapsed ? <FaChevronLeft /> : <FaChevronRight />}

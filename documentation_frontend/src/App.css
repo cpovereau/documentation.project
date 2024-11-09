@@ -1,7 +1,6 @@
-/* src/App.css */
+/* App.css */
 
 /* Structure générale */
-
 .app {
   display: flex;
   flex-direction: column;
@@ -10,18 +9,17 @@
   overflow: hidden;
 }
 
-/* Barre du haut */
+/* Topbar */
 .topbar {
-  height: 50px; /* Hauteur de la barre supérieure */
+  height: 50px;
   background-color: #f8f9fa;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  z-index: 100; /* Assure que la barre est au-dessus du contenu */
+  z-index: 100;
 }
 
-/* Informations utilisateur et bouton de déconnexion */
 .user-info {
   display: flex;
   align-items: center;
@@ -40,86 +38,35 @@
   background-color: #c82333;
 }
 
-/* Disposition principale */
-.main-layout {
-  display: flex;
-  height: calc(100vh - 50px); /* Remplit l'espace en dessous de la topbar */
-  position: relative;
-}
-
-/* Conteneur principal pour l'éditeur et la barre de questions */
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  transition: margin-right 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Barre latérale gauche */
-.sidebar-left {
-  width: 250px;
-  background-color: #e9ecef;
-  overflow-y: auto;
-  transition: width 0.3s ease;
-}
-
-.sidebar-left.collapsed {
-  width: 60px; /* Réduction de la largeur en mode rétracté */
-}
-
-/* Barre latérale droite */
-.sidebar-right {
-  width: 250px;
-  background-color: #f8d7da;
-  overflow-y: auto;
-  transition: transform 0.3s ease;
-  transform: translateX(0); /* Barre visible par défaut */
-  z-index: 9999;
-}
-
-.sidebar-right.collapsed {
-  transform: none;
-}
-
-/* Conteneur de l'éditeur */
+/* Editor-container */
 .editor-container {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  transition: margin-left 0.3s ease, margin-right 0.3s ease;
-  overflow: hidden;
+  flex: 1;
+  transition: margin 0.3s ease; /* Transition douce pour le décalage */
+  overflow-y: auto;
 }
 
-/* Ajustement du conteneur de l'éditeur en fonction des barres latérales */
+/* Marge minimale pour la barre de gauche compactée */
+.editor-container.compact {
+  margin-left: 60px;
+}
+
 .editor-container.expanded {
-  margin-left: 60px; /* Réduction de la marge gauche si la barre de gauche est rétractée */
+  padding-left: 250px; /* Ajuste cet espace selon la largeur de la sidebar déployée */
 }
 
 .editor-container.right-expanded {
-  margin-right: 250px; /* Ajoute de l'espace à droite quand la barre de droite est visible */
+  padding-right: 250px; /* Ajuste cet espace selon la largeur de la sidebar droite */
 }
 
-/* Barre du bas */
-.bottom-bar {
-  height: 200px;
-  background-color: #f8f9fa;
-  overflow-y: auto;
-}
-
-/* Contenu de la barre de questions */
-.questions-content {
-  padding: 10px;
-}
-
-/* Style de la page de connexion */
+/* Page de connexion */
 .login-page {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background-color: #f2f2f2; /* Couleur de fond de la page, facultatif */
+  background-color: #f2f2f2;
 }
 
 .auth-container {

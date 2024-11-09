@@ -1,20 +1,22 @@
 .sidebar-right {
-  position: relative;
-  z-index: 2; /* Assure l'affichage au-dessus d'autres éléments */
+  position: fixed;
+  background-color: #f8f9fa;
+  z-index: 2000; /* Assure l'affichage au-dessus d'autres éléments */
+  overflow-y: auto;
   right: 0;
   top: 50px;
   bottom: 0;
   width: 250px;
-  background-color: #f8d7da;
-  overflow-y: auto;
   transition: transform 0.3s ease;
 }
 
 .sidebar-right.collapsed {
-  transform: translateX(100%); /* Cache la barre entière à droite */
+  width: 60px;
+  padding: 0;
+  transform: translateX(0);
 }
 
-.toggle-button {
+.sidebar-right.toggle-button {
   position: static;
   top: 10px;
   left: -20px; /* Positionné un peu plus vers la gauche */

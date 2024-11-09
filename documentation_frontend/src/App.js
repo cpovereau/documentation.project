@@ -12,20 +12,13 @@ import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
 function App() {
-  // État pour le jeton d'authentification de l'utilisateur
   const [authToken, setAuthToken] = useState(localStorage.getItem('authToken'));
-  
-  // État pour les informations de l'utilisateur connecté
   const [user, setUser] = useState(null);
-  
-  // Navigation pour rediriger l'utilisateur
   const navigate = useNavigate();
-  
-  // États pour gérer la rétractation des barres latérales
-  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);       // Barre de gauche
-  const [isSidebarRightCollapsed, setSidebarRightCollapsed] = useState(false); // Barre de droite
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [isSidebarRightCollapsed, setSidebarRightCollapsed] = useState(false);
+  const [isBottomBarExpanded, setBottomBarExpanded] = useState(true); // État pour contrôler BottomBar
 
-  // Effet pour synchroniser le jeton d'authentification dans le localStorage
   useEffect(() => {
     if (authToken) {
       localStorage.setItem('authToken', authToken);
@@ -34,7 +27,6 @@ function App() {
     }
   }, [authToken]);
 
-  // Fonction de déconnexion : réinitialise le jeton, supprime du localStorage et redirige vers la page de connexion
   const handleLogout = () => {
     setAuthToken(null);
     localStorage.removeItem('authToken');
@@ -42,7 +34,6 @@ function App() {
     navigate('/login');
   };
 
-  // Exemple de données pour la barre de questions en bas
   const [questions, setQuestions] = useState([
     {
       label: "Exemple de question",
@@ -53,59 +44,61 @@ function App() {
     }
   ]);
 
+  // Styles dynamiques pour editor-container et bottom-bar
+  const editorContainerStyle = {
+    marginLeft: isSidebarCollapsed ? '60px' : '250px',
+    marginRight: isSidebarRightCollapsed ? '0px' : '250px',
+  };
+
+  const bottomBarStyle = {
+    height: isBottomBarExpanded ? '25vh' : '40px', // Hauteur en fonction de l'état de BottomBar
+    transition: 'height 0.3s ease', // Transition douce pour le changement de hauteur
+  };
+
   return (
     <div className="app">
-      <ToastContainer /> {/* Composant pour afficher les notifications de type "toast" */}
+      <ToastContainer />
 
-      {/* Vérification de l'authentification : si l'utilisateur est connecté, on affiche l'interface principale */}
       {authToken ? (
         <>
-          {/* Barre du haut avec les informations de l'utilisateur et un bouton de déconnexion */}
           <TopBar user={user} onLogout={handleLogout} />
           
-          {/* Disposition principale qui contient les barres latérales, l'éditeur et la barre de questions en bas */}
           <div className="main-layout">
-            {/* Barre latérale gauche, avec un bouton pour rétracter ou étendre */}
             <SidebarLeft 
-              isCollapsed={isSidebarCollapsed} 
-              setCollapsed={setSidebarCollapsed} 
+              isCollapsed={isSidebarCollapsed}
+              setCollapsed={setSidebarCollapsed}
+              className={`sidebar-left ${isSidebarCollapsed ? '' : 'expanded'}`}
             />
-            
-            {/* Conteneur de l'éditeur avec la barre de questions en bas */}
-            <div className={`editor-container ${isSidebarCollapsed ? 'expanded' : ''} ${isSidebarRightCollapsed ? '' : 'right-expanded'}`}>
-              {/* Éditeur de texte */}
+
+            <div className="editor-container" style={editorContainerStyle}>
               <RichTextEditor />
-              
-              {/* Barre de questions en bas de la page */}
+
+              {/* BottomBar avec un style conditionnel pour ajuster la hauteur */}
               <BottomBar 
                 questions={questions} 
                 isSidebarCollapsed={isSidebarCollapsed}
                 isSidebarRightCollapsed={isSidebarRightCollapsed}
+                isBottomBarExpanded={isBottomBarExpanded}
+                setBottomBarExpanded={setBottomBarExpanded}
+                style={bottomBarStyle} // Application du style dynamique
               />
             </div>
             
-            {/* Barre latérale droite, avec un bouton pour rétracter ou étendre */}
             <SidebarRight 
-              isCollapsed={isSidebarRightCollapsed} 
-              setCollapsed={setSidebarRightCollapsed} 
+              isCollapsed={isSidebarRightCollapsed}
+              setCollapsed={setSidebarRightCollapsed}
             />
           </div>
         </>
       ) : (
-        // Page d'authentification : affichée uniquement lorsque l'utilisateur n'est pas authentifié
         <div className="auth-container">
-          {/* Logo pour la page d'authentification */}
           <div className="auth-logo">
             <img src="/assets/logo.jpg" alt="Océalia Informatique" />
           </div>
           
-          {/* Formulaire de connexion */}
           <div className="auth-form">
             <Routes>
-              {/* Route pour la page de connexion */}
               <Route path="/login" element={<Login setAuthToken={setAuthToken} setUser={setUser} />} />
-              
-              {/* Redirection vers /login si l'utilisateur tente d'accéder à une autre page sans être connecté */}
               <Route path="*" element={<Navigate to="/login" />} />
             </Routes>
           </div>
