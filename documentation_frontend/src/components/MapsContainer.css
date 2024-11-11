@@ -3,34 +3,10 @@
 }
 
 .maps-container .toolbar {
-  display: flex; /* Aligne les icônes horizontalement */
-  align-items: left; /* Centre les icônes verticalement */
+  display: flex; /* Assure l'alignement horizontal des icônes */
+  align-items: center;
+  gap: 8px;
   margin-bottom: 10px;
-  flex-wrap: nowrap; /* Empêche les icônes de passer à la ligne */
-  justify-content: left; /* Aligne les icônes à gauche */
-  width: 100%; /* Assure que le conteneur occupe toute la largeur disponible */
-  max-width: 250px; /* Limite à la largeur de la sidebar-left déployée */
-  overflow-x: auto; /* Empêche le débordement horizontal */
-}
-
-.maps-container .toolbar > * {
-  flex-shrink: 10; /* Empêche les icônes de se réduire */
-  font-size: 1.2rem; /* Taille uniforme pour toutes les icônes */
-  cursor: pointer; /* Curseur en forme de main */
-  color: #333; /* Couleur des icônes */
-  flex-grow: 1; /* Permet aux icônes de se distribuer dans l’espace */
-  transition: transform 0.2s ease; /* Ajoute un effet de survol */
-}
-
-.maps-container .toolbar > *:hover {
-  transform: scale(1.1); /* Effet d’agrandissement léger au survol */
-}
-
-/* S'assure que les icônes SVG héritent bien de la taille définie */
-.maps-container .toolbar svg {
-  width: 1.2em;
-  height: 1.2em;
-  flex-shrink: 0;
 }
 
 .maps-container .tree-content {

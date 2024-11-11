@@ -9,7 +9,6 @@
   transition: width 0.3s;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   overflow: visible;
 }
 
@@ -22,7 +21,7 @@
   position: static;
   top: 50px;
   right: 100px;
-  z-index: 2; /* Assurez-vous qu'il reste au-dessus du contenu */
+  z-index: 2;
   cursor: pointer;
   font-size: 1.2rem;
   color: black;
@@ -39,23 +38,17 @@
 .sidebar-item {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   transition: background 0.2s;
 }
 
 .sidebar-item-header {
   display: flex;
-  align-items: center;
   cursor: pointer;
   padding: 8px 0;
 }
 
 .sidebar-item-header:hover {
   background-color: #d3d3d3;
-}
-
-.icon {
-  margin-right: 8px;
 }
 
 .sidebar-left.collapsed .icon + span {
