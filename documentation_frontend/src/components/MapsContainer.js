@@ -1,6 +1,7 @@
 // src/components/MapsContainer.js
 import React, { useState } from 'react';
 import { FaPlus, FaFolder, FaArrowRight, FaArrowLeft, FaTrash, FaBook } from 'react-icons/fa';
+import './MapsContainer.css';
 
 const MapsContainer = ({ isProjectLoaded }) => {
   const [treeData, setTreeData] = useState([{ id: 1, name: 'Root', children: [] }]);
