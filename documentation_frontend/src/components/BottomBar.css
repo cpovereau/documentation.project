@@ -1,8 +1,10 @@
 /* src/components/BottomBar.css */
 .bottom-bar {
-  position: relative;
+  position: fixed;
   z-index: 2;
   bottom: 0;
+  left: auto;
+  width: 100%;
   background-color: #f8f9fa;
   border-top: 1px solid #ddd;
   overflow-y: auto;

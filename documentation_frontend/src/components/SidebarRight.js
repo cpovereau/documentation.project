@@ -1,53 +1,49 @@
-import React, { useEffect } from 'react';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+// src/components/SidebarRight.js
+import React, { useState } from 'react';
+import { FaSearch, FaImage, FaVideo, FaBars } from 'react-icons/fa';
+import AttributesContainer from './AttributesContainer';
+import ImagesContainer from './ImagesContainer';
+import VideosContainer from './VideosContainer';
 import './SidebarRight.css';
 
 const SidebarRight = ({ isCollapsed, setCollapsed }) => {
-  useEffect(() => {
-    console.log('SidebarRight is rendered');
-  }, []);
+  const [isAttributesOpen, setAttributesOpen] = useState(false);
+  const [isImagesOpen, setImagesOpen] = useState(false);
+  const [isVideosOpen, setVideosOpen] = useState(false);
 
   return (
-    <div 
-      className={`sidebar-right ${isCollapsed ? 'collapsed' : ''}`} 
-    >
+    <div className={`sidebar-right ${isCollapsed ? 'collapsed' : ''}`}>
+      {/* Bouton burger dans la barre latérale */}
       <button className="toggle-button" onClick={() => setCollapsed(!isCollapsed)}>
-        {isCollapsed ? <FaChevronLeft /> : <FaChevronRight />}
+        <FaBars />
       </button>
 
-      {!isCollapsed && (
-        <div className="content">
-          <div className="sidebar-section">
-            <div className="sidebar-section-header">
-              <span>Attributs</span>
-            </div>
-            <div className="sidebar-section-content">
-              <p>Attribut 1 : Valeur</p>
-              <p>Attribut 2 : Valeur</p>
-            </div>
-          </div>
-
-          <div className="sidebar-section">
-            <div className="sidebar-section-header">
-              <span>Images</span>
-            </div>
-            <div className="sidebar-section-content">
-              <p>Image 1</p>
-              <p>Image 2</p>
-            </div>
-          </div>
-
-          <div className="sidebar-section">
-            <div className="sidebar-section-header">
-              <span>Vidéos</span>
-            </div>
-            <div className="sidebar-section-content">
-              <p>Vidéo 1</p>
-              <p>Vidéo 2</p>
-            </div>
-          </div>
+      {/* Container "Attributs" */}
+      <div className="sidebar-item">
+        <div className="sidebar-item-header" onClick={() => setAttributesOpen(!isAttributesOpen)}>
+          <FaSearch className="icon" />
+          {!isCollapsed && <span>Attributs</span>}
         </div>
-      )}
+        {isAttributesOpen && !isCollapsed && <AttributesContainer />}
+      </div>
+
+      {/* Container "Images" */}
+      <div className="sidebar-item">
+        <div className="sidebar-item-header" onClick={() => setImagesOpen(!isImagesOpen)}>
+          <FaImage className="icon" />
+          {!isCollapsed && <span>Images</span>}
+        </div>
+        {isImagesOpen && !isCollapsed && <ImagesContainer />}
+      </div>
+
+      {/* Container "Vidéos" */}
+      <div className="sidebar-item">
+        <div className="sidebar-item-header" onClick={() => setVideosOpen(!isVideosOpen)}>
+          <FaVideo className="icon" />
+          {!isCollapsed && <span>Vidéos</span>}
+        </div>
+        {isVideosOpen && !isCollapsed && <VideosContainer />}
+      </div>
     </div>
   );
 };

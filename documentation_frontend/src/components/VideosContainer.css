@@ -1,0 +1,17 @@
+/* src/components/VideosContainer.css */
+.images-container, .videos-container {
+    margin-top: 10px;
+  }
+  
+  .images-container select, .videos-container select {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  .image-list, .video-list {
+    border: 1px solid #ddd;
+    padding: 10px;
+    background-color: #fff;
+    min-height: 100px; /* Taille minimale pour afficher le contenu */
+  }
+  
