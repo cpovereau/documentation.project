@@ -1,6 +1,6 @@
 // src/components/SidebarRight.js
 import React, { useState } from 'react';
-import { FaSearch, FaImage, FaVideo, FaBars } from 'react-icons/fa';
+import { FaSearch, FaImage, FaVideo, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import AttributesContainer from './AttributesContainer';
 import ImagesContainer from './ImagesContainer';
 import VideosContainer from './VideosContainer';
@@ -13,14 +13,20 @@ const SidebarRight = ({ isCollapsed, setCollapsed }) => {
 
   return (
     <div className={`sidebar-right ${isCollapsed ? 'collapsed' : ''}`}>
-      {/* Bouton burger dans la barre latérale */}
+      {/* Bouton de flèche pour étendre/rétracter la barre */}
       <button className="toggle-button" onClick={() => setCollapsed(!isCollapsed)}>
-        <FaBars />
+        {isCollapsed ? <FaChevronLeft /> : <FaChevronRight />} {/* Flèche pour déployer/rétracter */}
       </button>
 
       {/* Container "Attributs" */}
       <div className="sidebar-item">
-        <div className="sidebar-item-header" onClick={() => setAttributesOpen(!isAttributesOpen)}>
+        <div
+          className="sidebar-item-header"
+          onClick={() => {
+            setAttributesOpen(!isAttributesOpen);
+            if (isCollapsed) setCollapsed(false); // Déploie la barre si compacte
+          }}
+        >
           <FaSearch className="icon" />
           {!isCollapsed && <span>Attributs</span>}
         </div>
@@ -29,7 +35,13 @@ const SidebarRight = ({ isCollapsed, setCollapsed }) => {
 
       {/* Container "Images" */}
       <div className="sidebar-item">
-        <div className="sidebar-item-header" onClick={() => setImagesOpen(!isImagesOpen)}>
+        <div
+          className="sidebar-item-header"
+          onClick={() => {
+            setImagesOpen(!isImagesOpen);
+            if (isCollapsed) setCollapsed(false); // Déploie la barre si compacte
+          }}
+        >
           <FaImage className="icon" />
           {!isCollapsed && <span>Images</span>}
         </div>
@@ -38,7 +50,13 @@ const SidebarRight = ({ isCollapsed, setCollapsed }) => {
 
       {/* Container "Vidéos" */}
       <div className="sidebar-item">
-        <div className="sidebar-item-header" onClick={() => setVideosOpen(!isVideosOpen)}>
+        <div
+          className="sidebar-item-header"
+          onClick={() => {
+            setVideosOpen(!isVideosOpen);
+            if (isCollapsed) setCollapsed(false); // Déploie la barre si compacte
+          }}
+        >
           <FaVideo className="icon" />
           {!isCollapsed && <span>Vidéos</span>}
         </div>

@@ -159,6 +159,11 @@ class FeedbackRelecture(models.Model):
         managed = False
         db_table = 'feedback_relecture'
 
+class Gamme(models.Model):
+    nom = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.nom
 
 class HistoriqueExport(models.Model):
     map = models.ForeignKey('Map', models.DO_NOTHING, blank=True, null=True)
@@ -202,23 +207,25 @@ class Map(models.Model):
         managed = False
         db_table = 'map'
 
-
-class Media(models.Model):
-    TYPE_MEDIA_CHOICES = [
-        ('image', 'Image'),
-        ('video', 'Vidéo'),
-    ]
-    
-    rubrique = models.ForeignKey('Rubrique', models.DO_NOTHING, blank=True, null=True)
-    type_media = models.CharField(max_length=50, blank=True, null=True)
-    nom_fichier = models.CharField(max_length=255)
+class Projet(models.Model):
+    nom = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    chemin_acces = models.TextField()
+    date_creation = models.DateTimeField(blank=True, null=True)
+    date_mise_a_jour = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = False
-        db_table = 'media'
+        db_table = 'projet'
 
+    def __str__(self):
+        return self.nom
+
+class Produit(models.Model):
+    nom = models.CharField(max_length=100)
+    gamme = models.ForeignKey(Gamme, on_delete=models.CASCADE, related_name="produits")
+
+    def __str__(self):
+        return f"{self.gamme} - {self.nom}"
 
 class Module(models.Model):
     projet = models.ForeignKey('Projet', models.DO_NOTHING, blank=True, null=True)
@@ -231,6 +238,48 @@ class Module(models.Model):
         managed = False
         db_table = 'module'
 
+class Rubrique(models.Model):
+    TYPE_RUBRIQUE_CHOICES = [
+        ('concept', 'Concept'),
+        ('tache', 'Tâche'),
+        ('reference', 'Référence'),
+        ('question', 'Question'),
+    ]
+    
+    module = models.ForeignKey(Module, models.DO_NOTHING, blank=True, null=True)
+    type_rubrique = models.CharField(max_length=50, blank=True, null=True)
+    titre = models.CharField(max_length=255)
+    contenu_xml = models.TextField(blank=True, null=True)  # This field type is a guess.
+    auteur = models.CharField(max_length=100, blank=True, null=True)
+    date_creation = models.DateTimeField(blank=True, null=True)
+    date_mise_a_jour = models.DateTimeField(blank=True, null=True)
+    projet = models.ForeignKey(Projet, on_delete=models.CASCADE, related_name="rubriques")
+    produit = models.ForeignKey(Produit, on_delete=models.CASCADE, related_name="rubriques")
+    id_fonctionnalite = models.CharField(max_length=50, blank=True, null=True)
+    audience = models.CharField(max_length=100, blank=True, null=True)
+    revision_numero = models.IntegerField(blank=True, null=True)
+
+class Media(models.Model):
+    TYPE_MEDIA_CHOICES = [
+        ('image', 'Image'),
+        ('video', 'Vidéo'),
+    ]
+    
+    rubrique = models.ForeignKey('Rubrique', models.DO_NOTHING, blank=True, null=True)
+    type_media = models.CharField(max_length=50, blank=True, null=True)
+    nom_fichier = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    rubrique = models.ForeignKey(Rubrique, on_delete=models.CASCADE, related_name="medias")
+    produit = models.ForeignKey(Produit, on_delete=models.CASCADE, related_name="medias")
+    chemin_acces = models.TextField()
+
+    class Meta:
+        managed = False
+        db_table = 'media'
+      
+    def __str__(self):
+        return f"{self.nom} - {self.type_media} - {self.rubrique.nom} - {self.produit.nom}"
+
 
 class ProfilUtilisateur(models.Model):
     nom_profil = models.CharField(unique=True, max_length=50)
@@ -239,18 +288,6 @@ class ProfilUtilisateur(models.Model):
     class Meta:
         managed = False
         db_table = 'profil_utilisateur'
-
-
-class Projet(models.Model):
-    nom = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
-    date_creation = models.DateTimeField(blank=True, null=True)
-    date_mise_a_jour = models.DateTimeField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'projet'
-
 
 class QuestionReponse(models.Model):
     rubrique = models.ForeignKey('Rubrique', models.DO_NOTHING, blank=True, null=True)
@@ -273,25 +310,6 @@ class ReferenceExterne(models.Model):
         db_table = 'reference_externe'
 
 
-class Rubrique(models.Model):
-    TYPE_RUBRIQUE_CHOICES = [
-        ('concept', 'Concept'),
-        ('tache', 'Tâche'),
-        ('reference', 'Référence'),
-        ('question', 'Question'),
-    ]
-    
-    module = models.ForeignKey(Module, models.DO_NOTHING, blank=True, null=True)
-    type_rubrique = models.CharField(max_length=50, blank=True, null=True)
-    titre = models.CharField(max_length=255)
-    contenu_xml = models.TextField(blank=True, null=True)  # This field type is a guess.
-    auteur = models.CharField(max_length=100, blank=True, null=True)
-    date_creation = models.DateTimeField(blank=True, null=True)
-    date_mise_a_jour = models.DateTimeField(blank=True, null=True)
-    id_fonctionnalite = models.CharField(max_length=50, blank=True, null=True)
-    audience = models.CharField(max_length=100, blank=True, null=True)
-    revision_numero = models.IntegerField(blank=True, null=True)
-
     class Meta:
         managed = False
         db_table = 'rubrique'
@@ -305,7 +323,7 @@ class Rubrique(models.Model):
                 raise ValidationError(f"Le contenu XML est mal structuré : {e}")
 
     def __str__(self):
-        return f"{self.titre} ({self.type_rubrique})"
+        return f"{self.titre} ({self.type_rubrique} - {self.projet.nom} - {self.produit.nom})"
 
 
 class RubriqueProfil(models.Model):
