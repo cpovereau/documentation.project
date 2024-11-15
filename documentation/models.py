@@ -7,6 +7,7 @@
 # Feel free to rename the models, but don't rename db_table values or field names.
 import xml.etree.ElementTree as ET
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User
 from django.db import models
 
 
@@ -161,6 +162,7 @@ class FeedbackRelecture(models.Model):
 
 class Gamme(models.Model):
     nom = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.nom
@@ -208,86 +210,71 @@ class Map(models.Model):
         db_table = 'map'
 
 class Projet(models.Model):
-    nom = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
-    date_creation = models.DateTimeField(blank=True, null=True)
-    date_mise_a_jour = models.DateTimeField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'projet'
-
-    def __str__(self):
-        return self.nom
+    nom = models.CharField(max_length=200)
+    description = models.TextField()
+    auteur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_mise_a_jour = models.DateTimeField(auto_now=True)
+    version_numero = models.CharField(max_length=20, blank=True, null=True)
+    date_lancement = models.DateTimeField(blank=True, null=True)
+    notes_version = models.TextField(blank=True, null=True)
 
 class Produit(models.Model):
     nom = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
     gamme = models.ForeignKey(Gamme, on_delete=models.CASCADE, related_name="produits")
 
     def __str__(self):
         return f"{self.gamme} - {self.nom}"
 
-class Module(models.Model):
-    projet = models.ForeignKey('Projet', models.DO_NOTHING, blank=True, null=True)
-    nom = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
-    date_creation = models.DateTimeField(blank=True, null=True)
-    date_mise_a_jour = models.DateTimeField(blank=True, null=True)
+class TypeRubrique(models.Model):
+    nom = models.CharField(max_length=100)
+    description = models.TextField()
+    dtd = models.TextField()
 
-    class Meta:
-        managed = False
-        db_table = 'module'
+    def __str__(self):
+        return self.nom
 
 class Rubrique(models.Model):
-    TYPE_RUBRIQUE_CHOICES = [
-        ('concept', 'Concept'),
-        ('tache', 'Tâche'),
-        ('reference', 'Référence'),
-        ('question', 'Question'),
-    ]
-    
-    module = models.ForeignKey(Module, models.DO_NOTHING, blank=True, null=True)
-    type_rubrique = models.CharField(max_length=50, blank=True, null=True)
-    titre = models.CharField(max_length=255)
-    contenu_xml = models.TextField(blank=True, null=True)  # This field type is a guess.
-    auteur = models.CharField(max_length=100, blank=True, null=True)
-    date_creation = models.DateTimeField(blank=True, null=True)
-    date_mise_a_jour = models.DateTimeField(blank=True, null=True)
-    projet = models.ForeignKey(Projet, on_delete=models.CASCADE, related_name="rubriques")
-    produit = models.ForeignKey(Produit, on_delete=models.CASCADE, related_name="rubriques")
-    id_fonctionnalite = models.CharField(max_length=50, blank=True, null=True)
-    audience = models.CharField(max_length=100, blank=True, null=True)
-    revision_numero = models.IntegerField(blank=True, null=True)
+    type_rubrique = models.ForeignKey('TypeRubrique', on_delete=models.CASCADE)
+    titre = models.CharField(max_length=200)
+    contenu_xml = models.TextField()
+    auteur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    date_creation = models.DateField(auto_now_add=True)
+    date_mise_a_jour = models.DateField(auto_now=True)
+    audience = models.CharField(max_length=200)
+    revision_numero = models.IntegerField()
+    projet = models.ForeignKey(Projet, on_delete=models.CASCADE)
+    version = models.IntegerField()
+    version_precedente = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
 
 class Media(models.Model):
     TYPE_MEDIA_CHOICES = [
         ('image', 'Image'),
         ('video', 'Vidéo'),
     ]
-    
-    rubrique = models.ForeignKey('Rubrique', models.DO_NOTHING, blank=True, null=True)
-    type_media = models.CharField(max_length=50, blank=True, null=True)
-    nom_fichier = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
+
     rubrique = models.ForeignKey(Rubrique, on_delete=models.CASCADE, related_name="medias")
     produit = models.ForeignKey(Produit, on_delete=models.CASCADE, related_name="medias")
+    type_media = models.CharField(max_length=50, choices=TYPE_MEDIA_CHOICES)
+    nom_fichier = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
     chemin_acces = models.TextField()
 
     class Meta:
-        managed = False
+        managed = True  
         db_table = 'media'
-      
+
     def __str__(self):
-        return f"{self.nom} - {self.type_media} - {self.rubrique.nom} - {self.produit.nom}"
+        return f"{self.nom_fichier} - {self.type_media} - {self.rubrique} - {self.produit}"
 
 
 class ProfilUtilisateur(models.Model):
-    nom_profil = models.CharField(unique=True, max_length=50)
+    nom_profil = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
 
-    class Meta:
-        managed = False
-        db_table = 'profil_utilisateur'
+    def __str__(self):
+        return self.nom_profil
 
 class QuestionReponse(models.Model):
     rubrique = models.ForeignKey('Rubrique', models.DO_NOTHING, blank=True, null=True)
@@ -345,7 +332,6 @@ class RubriqueTag(models.Model):
         db_table = 'rubrique_tag'
         unique_together = (('rubrique', 'tag'),)
 
-
 class Tag(models.Model):
     nom = models.CharField(unique=True, max_length=50)
 
@@ -363,3 +349,13 @@ class VersionProjet(models.Model):
     class Meta:
         managed = False
         db_table = 'version_projet'
+
+class LogModification(models.Model):
+    rubrique = models.ForeignKey(Rubrique, on_delete=models.CASCADE, related_name='modifications')
+    projet = models.ForeignKey(Projet, on_delete=models.CASCADE, related_name='modifications')
+    utilisateur = models.CharField(max_length=100)
+    date_modification = models.DateTimeField(auto_now=True)
+    description = models.TextField()
+
+    def __str__(self):
+        return f"Modification de {self.rubrique} par {self.utilisateur} le {self.date_modification}"

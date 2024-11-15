@@ -1,10 +1,8 @@
+# Chemin de base du projet et clé secrète
 import os
 from pathlib import Path
 
-# Chemin de base du projet
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Clé secrète pour la sécurité
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'default-insecure-secret-key')
 
 # Applications installées
@@ -16,11 +14,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',  
     'corsheaders',
-    'documentation',  # Votre application principale
+    'documentation',
 ]
 
-# Middleware
+# Configuration des middlewares
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -66,10 +65,18 @@ DATABASES = {
     }
 }
 
-# Clé primaire automatique
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# Configuration Django REST Framework pour l'authentification
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',  # Utilisation des jetons
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',  # Limite l'accès aux utilisateurs authentifiés
+    ],
+}
 
-# URL pour les fichiers statiques
+# Clé primaire automatique et URL statique
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATIC_URL = '/static/'
 
 # Hôtes autorisés
@@ -80,6 +87,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+
+# Mode debug
+DEBUG = False
 
 # Paramètres régionaux
 LANGUAGE_CODE = 'fr-fr'

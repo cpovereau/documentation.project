@@ -1,7 +1,7 @@
 # documentation/serializers.py
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Projet, Module, Rubrique
+from .models import Projet, Gamme, Rubrique
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -12,10 +12,16 @@ class ProjetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Projet
         fields = '__all__'
+        extra_kwargs = {'auteur': {'read_only': True}}
+
+    def create(self, validated_data):
+        auteur = self.context['request'].user  # Obtenez l'utilisateur connecté
+        projet = Projet.objects.create(**validated_data, auteur=auteur)
+        return projet
 
 class ModuleSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Module
+        model = Gamme
         fields = '__all__'
 
 class RubriqueSerializer(serializers.ModelSerializer):

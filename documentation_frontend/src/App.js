@@ -22,8 +22,10 @@ function App() {
   useEffect(() => {
     if (authToken) {
       localStorage.setItem('authToken', authToken);
+      console.log('Token stocké dans localStorage :', authToken);
     } else {
       localStorage.removeItem('authToken');
+      console.log('Token supprimé de localStorage');
     }
   }, [authToken]);
 

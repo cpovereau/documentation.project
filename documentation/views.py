@@ -1,16 +1,19 @@
 # documentation/views.py
-from rest_framework import viewsets
-from .models import Projet, Module, Rubrique
-import uuid  # Utilisé ici pour générer un token unique de test (illustration uniquement)
+import pdb
+from rest_framework import viewsets, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from .models import Projet, Rubrique
+import uuid  # Utilisé pour générer un token unique
 import logging
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
-from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.authtoken.models import Token
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.exceptions import NotFound
-from .serializers import ProjetSerializer, ModuleSerializer, RubriqueSerializer, UserSerializer
+from rest_framework.permissions import IsAuthenticated
+from .serializers import ProjetSerializer, RubriqueSerializer, UserSerializer
 from django.utils.timezone import now
 
 # Initialisation du logger
@@ -28,19 +31,27 @@ class ProjetViewSet(viewsets.ModelViewSet):
     queryset = Projet.objects.all()
     serializer_class = ProjetSerializer
 
-# ViewSet pour les modules
-class ModuleViewSet(viewsets.ModelViewSet):
-    queryset = Module.objects.all()
-    serializer_class = ModuleSerializer
-
 # ViewSet pour les rubriques
 class RubriqueViewSet(viewsets.ModelViewSet):
     queryset = Rubrique.objects.all()
     serializer_class = RubriqueSerializer
 
+# Classe pour la création de projet
+class CreateProjectAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        #pdb.set_trace()
+        serializer = ProjetSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 # Vue pour la connexion
 @csrf_exempt
 @api_view(['POST'])
+@permission_classes([AllowAny])  # Permet l'accès sans authentification préalable
 def login_view(request):
     username = request.data.get("username")
     password = request.data.get("password")
@@ -53,12 +64,12 @@ def login_view(request):
         logger.info(f"{timestamp} - User '{username}' logged in from IP {user_ip}.")
         
         # Génération d'un token temporaire pour la connexion (UUID)
-        token = str(uuid.uuid4())  # À remplacer par une gestion réelle de token JWT ou autre
+        token, _ = Token.objects.get_or_create(user=user)
         
         serializer = UserSerializer(user)
         return Response({
             "user": serializer.data,
-            "token": token  # Token temporaire de connexion
+            "token": token.key
         }, status=status.HTTP_200_OK)
     else:
         logger.warning(f"Failed login attempt for user '{username}' from IP {request.META.get('REMOTE_ADDR', 'IP not found')}")
@@ -67,6 +78,7 @@ def login_view(request):
 # Vue pour la déconnexion
 @csrf_exempt
 @api_view(['POST'])
+@permission_classes([AllowAny])  # Permet l'accès sans authentification préalable
 def logout_view(request):
     user = request.user
     if user.is_authenticated:
