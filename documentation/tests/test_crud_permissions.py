@@ -1,6 +1,5 @@
 from django.test import TestCase
 from django.contrib.auth.models import User, Group
-from documentation.models import Projet
 from rest_framework.authtoken.models import Token
 
 class CRUDPermissionTests(TestCase):

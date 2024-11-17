@@ -3,6 +3,8 @@
 import os
 import sys
 
+# Ajouter le dossier racine du projet au PYTHONPATH
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 def main():
     """Run administrative tasks."""
