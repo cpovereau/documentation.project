@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { FaPlus, FaFolderOpen, FaTrash } from 'react-icons/fa';
 import CreateProjectModal from './CreateProjectModal';
 import { notify } from '../utils/notifications';
+import { toast } from 'react-toastify';
 import { createProject } from '../services/projectService';
 import './ProjectContainer.css';
+
+console.log('Toast Positions:', toast.POSITION);
 
 const ProjectContainer = () => {
   const [isProjectOpen, setIsProjectOpen] = useState(false);
