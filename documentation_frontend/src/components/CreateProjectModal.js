@@ -1,12 +1,29 @@
 // src/components/CreateProjectModal.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchGammes } from '../services/projectService';
 import './CreateProjectModal.css';
 
 const CreateProjectModal = ({ onClose, onCreate }) => {
   const [nom, setNom] = useState('');
   const [description, setDescription] = useState('');
   const [gamme, setGamme] = useState('Hébergement');
+  const [gammes, setGammes] = useState([]);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const loadGammes = async () => {
+      try {
+        const data = await fetchGammes();
+        console.log('Gammes chargées :', data);
+        setGammes(data);
+        setGamme(data[0]?.id || '');
+      } catch (err) {
+        console.error('Erreur lors du chargement des gammes :', err);
+        setError("Impossible de charger les gammes. Veuillez réessayer.");
+      }
+    };
+    loadGammes();
+  }, []);
 
 const handleCreate = async () => {
   if (!nom.trim() || !description.trim() || !gamme) {
@@ -14,7 +31,7 @@ const handleCreate = async () => {
     return;
   }
   try {
-    await onCreate({ nom, description, gamme });
+    await onCreate({ nom, description, gamme_id: gamme });
     setError(null);
     onClose();
   } catch (err) {
@@ -34,9 +51,9 @@ const handleCreate = async () => {
 
         <label>Gamme</label>
         <select value={gamme} onChange={(e) => setGamme(e.target.value)}>
-          <option value="Hébergement">Hébergement</option>
-          <option value="Usager">Usager</option>
-          <option value="Planning">Planning</option>
+          {gammes.map((g) => (
+            <option key={g.id} value={g.id}>{g.nom}</option>
+          ))}
         </select>
 
         {error && <p className="error-message">{error}</p>}

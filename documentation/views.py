@@ -3,17 +3,17 @@ import pdb
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from .models import Projet, Rubrique
+from .models import Projet, Rubrique, Gamme
 import uuid  # Utilisé pour générer un token unique
 import logging
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .serializers import ProjetSerializer, RubriqueSerializer, UserSerializer
+from .serializers import GammeSerializer, ProjetSerializer, RubriqueSerializer, UserSerializer
 from django.utils.timezone import now
 
 # Initialisation du logger
@@ -26,9 +26,14 @@ def custom_404(request):
 def custom_500(request):
     return render(request, "500.html", status=500)
 
+#ViewSet pour les gammes
+class GammeViewSet(viewsets.ModelViewSet):
+    queryset = Gamme.objects.all()  # Récupère toutes les gammes
+    serializer_class = GammeSerializer
+
 # ViewSet pour les projets
 class ProjetViewSet(viewsets.ModelViewSet):
-    queryset = Projet.objects.all()
+    queryset = Projet.objects.select_related('gamme').all()
     serializer_class = ProjetSerializer
 
 # ViewSet pour les rubriques
@@ -47,6 +52,13 @@ class CreateProjectAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Vue pour la consultation des projets
+@api_view(['GET'])
+def get_project_details(request, pk):
+    projet = get_object_or_404(Projet.objects.select_related('gamme'), pk=pk)
+    serializer = ProjetSerializer(projet)
+    return Response(serializer.data)
 
 # Vue pour la connexion
 @csrf_exempt

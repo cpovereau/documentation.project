@@ -2,6 +2,26 @@ import axios from 'axios';
 
 const baseURL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 
+export const fetchGammes = async () => {
+  const token = localStorage.getItem('authToken'); // Récupère le token utilisateur
+  const headers = {
+    Authorization: `Token ${token}`,
+    'Content-Type': 'application/json',
+  };
+
+  try {
+    const response = await axios.get(`${baseURL}/api/gammes/`, { headers });
+    console.log('Gammes récupérées :', response.data);
+    return response.data; // Retourne la liste des gammes
+  } catch (error) {
+    console.error('Erreur lors de la récupération des gammes :', error);
+    if (error.response) {
+      console.error('Détails de l\'erreur :', error.response.data);
+    }
+    throw error; // Propager l'erreur pour gestion dans le frontend
+  }
+};
+
 export const createProject = async (data) => {
   const token = localStorage.getItem('authToken'); // Récupération du token utilisateur
   const headers = {
@@ -12,6 +32,7 @@ export const createProject = async (data) => {
   // Ajoutez les logs ici pour afficher le token et les en-têtes
   console.log('Token récupéré du localStorage :', token);
   console.log('En-têtes envoyés dans la requête :', headers);
+  console.log('Données envoyées au backend :', data);
 
   try {
     const response = await axios.post(`${baseURL}/api/projet/create/`, data, { headers });
