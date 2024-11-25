@@ -11,7 +11,7 @@ const ProjetList = ({ projects, onSelectProject, activeProject }) => {
           className={`project-item ${activeProject?.id === project.id ? 'active' : ''}`} 
           onClick={() => onSelectProject(project)}
         >
-          {project.nom} <span className="project-gamme">({project.gamme})</span>
+          {project.nom} <span className="project-gamme">({project.gammeNom})</span>
         </div>
       ))}
     </div>
