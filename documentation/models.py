@@ -218,6 +218,15 @@ class Projet(models.Model):
     version_numero = models.CharField(max_length=20, blank=True, null=True)
     date_lancement = models.DateTimeField(blank=True, null=True)
     notes_version = models.TextField(blank=True, null=True)
+    gamme = models.ForeignKey(Gamme, on_delete=models.SET_NULL, null=True)
+
+    def get_detailed_info(self):
+        version = VersionProjet.objects.filter(projet=self).order_by('-date_lancement').first()
+        return {
+            "projet": self,
+            "gamme": self.gamme,
+            "version": version
+        }
 
 class Produit(models.Model):
     nom = models.CharField(max_length=100)

@@ -1,7 +1,7 @@
 .sidebar-right {
   position: fixed;
   background-color: #f8f9fa;
-  z-index: 2000; /* Assure l'affichage au-dessus d'autres éléments */
+  z-index: 900; /* Assure l'affichage au-dessus d'autres éléments */
   overflow-y: auto;
   right: 0;
   padding:10px;

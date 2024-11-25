@@ -11,6 +11,8 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
+console.log('Toast Positions disponibles au chargement :', toast.POSITION);
+
 function App() {
   const [authToken, setAuthToken] = useState(localStorage.getItem('authToken'));
   const [user, setUser] = useState(null);

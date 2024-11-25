@@ -6,7 +6,6 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
   const [nom, setNom] = useState('');
   const [description, setDescription] = useState('');
   const [gamme, setGamme] = useState('Hébergement');
-
   const [error, setError] = useState(null);
 
 const handleCreate = async () => {

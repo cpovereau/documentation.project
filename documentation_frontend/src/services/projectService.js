@@ -26,3 +26,26 @@ export const createProject = async (data) => {
     throw error; // Pour que l'erreur soit gérée dans le composant appelant
   }
 };
+
+export const fetchProjects = async () => {
+  const token = localStorage.getItem('authToken'); // Récupère le token utilisateur
+  const headers = {
+    Authorization: `Token ${token}`,
+    'Content-Type': 'application/json',
+  };
+
+  console.log('Token récupéré du localStorage :', token);
+
+  try {
+    const response = await axios.get(`${baseURL}/api/projets/`, { headers });
+    console.log('Projets récupérés :', response.data);
+    return response.data; // Retourne la liste des projets
+  } catch (error) {
+    console.error('Erreur lors de la récupération des projets :', error);
+    if (error.response) {
+      console.error('Détails de l\'erreur :', error.response.data);
+    }
+    throw error; // Propager l'erreur pour gestion dans le frontend
+  }
+};
+

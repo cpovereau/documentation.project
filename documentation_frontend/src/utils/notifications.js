@@ -8,8 +8,8 @@ import { toast } from 'react-toastify';
 export const notify = (message, type = "success") => {
   toast(message, {
     type, // Type de notification : success, error, info, warning
-    position: toast.POSITION.TOP_RIGHT,
-    autoClose: 3000, // Délai avant fermeture (en ms)
+    position: "top-right",
+    autoClose: 2000, // Délai avant fermeture (en ms)
     hideProgressBar: false,
     closeOnClick: true,
     pauseOnHover: true,
