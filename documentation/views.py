@@ -3,17 +3,19 @@ import pdb
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from .models import Projet, Rubrique, Gamme
-import uuid  # Utilisé pour générer un token unique
+from .models import Projet, Rubrique, Gamme, Map
+#import uuid  # Utilisé pour générer un token unique
 import logging
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
+from django.db import transaction
 from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
+#from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .serializers import GammeSerializer, ProjetSerializer, RubriqueSerializer, UserSerializer
+from .serializers import GammeSerializer, ProjetSerializer, RubriqueSerializer, UserSerializer, MapSerializer
 from django.utils.timezone import now
 
 # Initialisation du logger
@@ -35,6 +37,14 @@ class GammeViewSet(viewsets.ModelViewSet):
 class ProjetViewSet(viewsets.ModelViewSet):
     queryset = Projet.objects.select_related('gamme').all()
     serializer_class = ProjetSerializer
+    permission_classes = [IsAuthenticated] 
+ 
+    def list(self, request, *args, **kwargs):
+        print(f"Headers reçus : {request.headers}")
+        print(f"Query Params : {request.query_params}")
+        print(f"Utilisateur authentifié : {request.user}")
+        print(f"Permissions utilisateur : {request.user.get_all_permissions()}")
+        return super().list(request, *args, **kwargs)
 
 # ViewSet pour les rubriques
 class RubriqueViewSet(viewsets.ModelViewSet):
@@ -45,12 +55,39 @@ class RubriqueViewSet(viewsets.ModelViewSet):
 class CreateProjectAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic  # Assure que toutes les opérations sont atomiques
     def post(self, request, *args, **kwargs):
-        #pdb.set_trace()
+        # Création du projet
         serializer = ProjetSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            projet = serializer.save()  # Sauvegarde le projet
+
+            # Vérifie s'il existe déjà une Map associée à ce projet
+            if not Map.objects.filter(projet=projet).exists():
+                # Création d'une Map par défaut associée au projet
+                map_data = {
+                    "nom": "Carte par défaut",
+                    "projet": projet.id,
+                    "is_master": True
+                }
+                map_serializer = MapSerializer(data=map_data)
+                if map_serializer.is_valid():
+                    map = map_serializer.save()  # Sauvegarde la Map
+                    return Response({
+                        "projet": serializer.data,
+                        "map": MapSerializer(map).data
+                    }, status=status.HTTP_201_CREATED)
+                else:
+                    # Supprime le projet si la création de la Map échoue
+                    projet.delete()
+                    return Response(map_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            # Si une Map existe déjà, retourne quand même la réponse de création du projet
+            return Response({
+                "projet": serializer.data,
+                "map": "Une map par défaut est déjà associée à ce projet."
+            }, status=status.HTTP_201_CREATED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Vue pour la consultation des projets
@@ -59,6 +96,17 @@ def get_project_details(request, pk):
     projet = get_object_or_404(Projet.objects.select_related('gamme'), pk=pk)
     serializer = ProjetSerializer(projet)
     return Response(serializer.data)
+
+#Classe pour la gestion des maps
+class CreateMapView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = MapSerializer(data=request.data)
+        if serializer.is_valid():
+            map_instance = serializer.save()
+            return Response(MapSerializer(map_instance).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Vue pour la connexion
 @csrf_exempt

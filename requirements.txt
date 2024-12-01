@@ -1,3 +1,4 @@
 djangorestframework==3.14.0
 django-cors-headers
-psycopg==3.1.8
+psycopg2-binary
+python-decouple

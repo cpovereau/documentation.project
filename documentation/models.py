@@ -189,26 +189,6 @@ class HistoriqueModification(models.Model):
         managed = False
         db_table = 'historique_modification'
 
-
-class Map(models.Model):
-    TYPE_MAP_CHOICES = [
-        ('maitre', 'Maître'),
-        ('fille', 'Fille'),
-        ('documentation', 'Documentation'),
-        ('aide_en_ligne', 'Aide en ligne'),
-        ('fiche_pratique', 'Fiche pratique'),
-        ('cours', 'Cours'),
-    ]
-    
-    nom = models.CharField(max_length=255)
-    type_map = models.CharField(max_length=50, blank=True, null=True)
-    projet = models.ForeignKey('Projet', models.DO_NOTHING, blank=True, null=True)
-    structure_xml = models.TextField(blank=True, null=True)  # This field type is a guess.
-
-    class Meta:
-        managed = False
-        db_table = 'map'
-
 class Projet(models.Model):
     nom = models.CharField(max_length=200)
     description = models.TextField()
@@ -256,6 +236,53 @@ class Rubrique(models.Model):
     projet = models.ForeignKey(Projet, on_delete=models.CASCADE)
     version = models.IntegerField()
     version_precedente = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
+
+class MapRubrique(models.Model):
+    map = models.ForeignKey('Map', on_delete=models.CASCADE)
+    rubrique = models.ForeignKey('Rubrique', on_delete=models.CASCADE)
+    ordre = models.PositiveIntegerField()
+    parent = models.ForeignKey(
+        'self', on_delete=models.CASCADE, blank=True, null=True, related_name='enfants'
+    )
+
+    class Meta:
+        ordering = ['ordre']  # Tri par défaut selon l'ordre défini
+
+    def __str__(self):
+        return f"Rubrique: {self.rubrique.nom} in {self.map.nom} (Order: {self.ordre})"
+
+class Map(models.Model):
+    nom = models.CharField(max_length=255)
+    projet = models.ForeignKey(Projet, on_delete=models.CASCADE, related_name='maps')
+    rubriques = models.ManyToManyField(
+        Rubrique,
+        through='MapRubrique',
+        related_name='maps'
+    )
+    is_master = models.BooleanField(default=False)  # Indique si c'est une carte "maître"
+
+    def __str__(self):
+        return f"Map: {self.nom} ({'Master' if self.is_master else 'Child'})"
+
+    class Meta:
+        ordering = ['nom']
+
+class ProfilPublication(models.Model):
+    nom = models.CharField(max_length=255)
+    type_sortie = models.CharField(
+        max_length=50,
+        choices=[
+            ('PDF', 'PDF'),
+            ('Web', 'Web Help'),
+            ('Moodle', 'Moodle'),
+            ('Fiche', 'Fiche Pratique')
+        ]
+    )
+    map = models.ForeignKey(Map, on_delete=models.CASCADE, related_name='profils')
+    paramètres = models.JSONField(default=dict)  # Stocke les règles spécifiques au format
+
+    def __str__(self):
+        return f"Profil: {self.nom} ({self.type_sortie})"
 
 class Media(models.Model):
     TYPE_MEDIA_CHOICES = [

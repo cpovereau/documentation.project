@@ -2,7 +2,14 @@
 import React, { useState } from 'react';
 import { FaUserCircle } from 'react-icons/fa'; // Importez une icône de profil
 
-const TopBar = ({ user, onLogout }) => {
+const defaultUser = {
+  firstName: "Invité",
+  name: "",
+  email: "non défini",
+  profile: "utilisateur",
+};
+
+const TopBar = ({ user = defaultUser, onLogout }) => {
   const [isUserModalOpen, setUserModalOpen] = useState(false);
 
   return (
@@ -16,16 +23,16 @@ const TopBar = ({ user, onLogout }) => {
           onClick={() => setUserModalOpen(!isUserModalOpen)} 
           style={{ marginRight: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#333', fontSize: '1rem' }}
         >
-          {user.firstName} {user.name}
+          {user.firstName || "Invité"} {user.name|| ""}
         </button>
 
         {/* Modal d'informations utilisateur */}
         {isUserModalOpen && (
           <div className="user-modal">
-            <p>Nom : {user.name}</p>
-            <p>Prénom : {user.firstName}</p>
-            <p>Email : {user.email}</p>
-            <p>Profil : {user.profile}</p>
+            <p>Nom : {user.name || "Non défini"}</p>
+            <p>Prénom : {user.firstName || "Non défini"}</p>
+            <p>Email : {user.email|| "Non défini"}</p>
+            <p>Profil : {user.profile|| "Non défini"}</p>
             <button onClick={() => setUserModalOpen(false)}>Enregistrer</button>
             {user.profile === 'admin' && <button>Gérer les comptes</button>}
           </div>

@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { FaPlus, FaFolderOpen, FaTrash } from 'react-icons/fa';
 import CreateProjectModal from './CreateProjectModal';
 import { notify } from '../utils/notifications';
-import { toast } from 'react-toastify';
 import { createProject } from '../services/projectService';
+// import { toast } from 'react-toastify';
+// import { createProject } from '../services/projectService';
 import { fetchGammes } from '../services/projectService';
+import { fetchProjectById } from '../services/projectService';
 import { fetchProjects } from '../services/projectService';
 import OpenProjectModal from './OpenProjectModal';
 import ProjetList from './ProjetList'; 
+import { deleteProject } from '../services/projectService';
 import './ProjectContainer.css';
 
 const ProjectContainer = () => {
@@ -37,11 +40,9 @@ const ProjectContainer = () => {
   const fetchProjectsWithGammeNames = async () => {
     try {
       const projects = await fetchProjects(); // Récupération des projets existants
-      console.log('Projets chargés :', projects); // Log des projets
       const enrichedProjects = projects.map((project) => {
         const gammeId = project.gamme?.id; // Vérifie que gamme existe avant d'accéder à id
         const gamme = gammes.find((g) => g.id === gammeId); // Cherche la gamme correspondante
-        console.log(`Projet : ${project.nom}, Gamme associée :`, gamme); // Log de la correspondance
         return {
           ...project,
           gammeNom: gamme ? gamme.nom : 'Gamme inconnue', // Ajoute le nom de la gamme
@@ -58,50 +59,76 @@ const ProjectContainer = () => {
     loadGammes(); // Charge les gammes au montage
   }, []);
 
-  useEffect(() => {
-    if (gammes.length > 0) {
-      fetchProjectsWithGammeNames(); // Charge les projets une fois les gammes récupérées
-    }
-  }, [gammes]); // Recharge les projets lorsque les gammes sont disponibles
-
   // Fonction pour créer un projet en utilisant le service
   const handleCreateProject = async (projectData) => {
     try {
-      console.log('Tentative d\'enregistrement du projet :', projectData);
-
+      console.log('Tentative de création du projet :', projectData);
+  
       // Appel au service pour créer le projet
-      const response = await createProject(projectData);
-      console.log('Projet créé avec succès :', response);
-
-      // Associe le nom de la gamme au nouveau projet
-      const gamme = gammes.find((g) => g.id === parseInt(response.gamme, 10));
-      const projectWithGammeName = {
-        ...response,
-        gammeNom: gamme ? gamme.nom : 'Gamme inconnue',
-      };
-
-      // Mise à jour explicite de la liste des projets
-      setProjects((projects) => projects.concat(projectWithGammeName));
+      const createdProject = await createProject(projectData);
+      console.log('Projet créé avec succès, Données du projet créé :', createdProject);
+  
+      // Récupérer l'ID correct depuis la structure de la réponse
+      const projectId = createdProject.projet?.id; // Accès à l'ID via createdProject.projet.id
+      if (!projectId) {
+        console.error('Erreur : l\'ID du projet est indéfini.');
+        return;
+      }
+  
+      // Récupérer le projet complet avec toutes ses relations (y compris la gamme)
+      const enrichedProject = await fetchProjectById(projectId);
+      console.log('Projet enrichi récupéré :', enrichedProject);
+  
+      // Mise à jour explicite de la liste des projets avec le projet enrichi
+      setProjects((projects) => [...projects, enrichedProject]);
       console.log('Projets mis à jour :', projects);
-
+  
       // Notification de succès
       notify("Projet créé avec succès !", "success");
-
+  
       // Ferme la fenêtre modale
       closeCreateModal();
     } catch (error) {
       console.error('Erreur lors de la création du projet :', error);
-
+  
       // Notification d'erreur
       notify("Erreur lors de la création du projet", "error");
     }
   };
-
+  
   // Fonction pour ouvrir un projet
   const handleOpenProject = (project) => {
     console.log('Projet ouvert :', project);
-    setActiveProject(project); // Définit le projet comme actif
-    setShowOpenModal(false); // Ferme la modale
+      // Ajoute le projet si il n'est pas présent dans la liste
+  setProjects((prevProjects) => {
+    if (!prevProjects.some((p) => p.id === project.id)) {
+      return [
+        ...prevProjects,
+        {
+          ...project,
+          gammeNom: project.gamme?.nom || 'Gamme inconnue', // Ajoute le nom de la gamme
+        },
+      ];
+    }
+    return prevProjects;
+  });
+
+  // Définit le projet comme actif
+  setActiveProject({
+    ...project,
+    gammeNom: project.gamme?.nom || 'Gamme inconnue', // Ajoute également gammeNom pour activeProject
+  });
+
+  // Ferme la fenêtre modale
+  setShowOpenModal(false);
+  };
+
+  // Fonction pour mettre à jour la liste des projets
+  const addProjectToList = (project) => {
+    // Évite d'ajouter plusieurs fois le même projet
+    if (!projects.some((p) => p.id === project.id)) {
+      setProjects((prevProjects) => [...prevProjects, project]);
+    }
   };
 
   // Fonction pour sélectionner un projet
@@ -109,6 +136,28 @@ const ProjectContainer = () => {
     console.log('Projet sélectionné :', project);
     setActiveProject(project);
   };
+
+  // Fonction pour supprimer un projet
+  const handleDeleteProject = async (projectId) => {
+  try {
+    // Appel au service pour supprimer le projet
+    await deleteProject(projectId);
+    console.log(`Projet ${projectId} supprimé.`);
+
+    // Mise à jour de la liste des projets
+    setProjects((prevProjects) => prevProjects.filter((p) => p.id !== projectId));
+
+    // Si le projet actif est supprimé, le désactiver
+    if (activeProject?.id === projectId) {
+      setActiveProject(null);
+    }
+
+    notify('Projet supprimé avec succès !', 'success');
+  } catch (error) {
+    console.error('Erreur lors de la suppression du projet :', error);
+    notify('Erreur lors de la suppression du projet.', 'error');
+  }
+};
 
   return (
     <div className="project-container">
@@ -120,9 +169,9 @@ const ProjectContainer = () => {
           <FaFolderOpen />
         </button>
         <button
-          onClick={() => console.log('Supprimer le projet actif')}
+          onClick={() => handleDeleteProject(activeProject?.id)}
           title="Supprimer le projet"
-          disabled={!isProjectOpen}
+          disabled={!activeProject}
         >
           <FaTrash />
         </button>

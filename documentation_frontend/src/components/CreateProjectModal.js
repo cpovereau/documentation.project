@@ -9,6 +9,7 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
   const [gamme, setGamme] = useState('Hébergement');
   const [gammes, setGammes] = useState([]);
   const [error, setError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Empêcher double soumission
 
   useEffect(() => {
     const loadGammes = async () => {
@@ -25,19 +26,25 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
     loadGammes();
   }, []);
 
-const handleCreate = async () => {
-  if (!nom.trim() || !description.trim() || !gamme) {
-    setError("Tous les champs sont requis !");
-    return;
-  }
-  try {
-    await onCreate({ nom, description, gamme_id: gamme });
-    setError(null);
-    onClose();
-  } catch (err) {
-    setError("Erreur lors de la création du projet. Veuillez réessayer.");
-  }
-};
+  const handleCreate = async () => {
+    if (!nom.trim() || !description.trim() || !gamme) {
+      setError("Tous les champs sont requis !");
+      return;
+    }
+    if (isSubmitting) {
+      return; // Empêche une deuxième soumission tant que la première n'est pas terminée
+    }
+    setIsSubmitting(true); // Marque la soumission comme en cours
+    try {
+      await onCreate({ nom, description, gamme_id: gamme });
+      setError(null);
+      onClose();
+    } catch (err) {
+      setError("Erreur lors de la création du projet. Veuillez réessayer.");
+    } finally {
+      setIsSubmitting(false); // Réinitialise après la soumission (réussie ou échouée)
+    }
+  };
 
   return (
     <div className="modal-overlay">
@@ -59,7 +66,7 @@ const handleCreate = async () => {
         {error && <p className="error-message">{error}</p>}
 
         <div className="modal-buttons">
-          <button onClick={handleCreate}>Créer</button>
+          <button onClick={handleCreate} disabled={isSubmitting}>Créer</button>
           <button onClick={onClose}>Annuler</button>
         </div>
       </div>

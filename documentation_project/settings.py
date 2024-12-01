@@ -1,9 +1,12 @@
 # Chemin de base du projet et clé secrète
 import os
 from pathlib import Path
+from decouple import config
 
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'default-insecure-secret-key')
+SECRET_KEY = config('SECRET_KEY', default='unsafe-default-key')
+# SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'default-insecure-secret-key')
 
 # Applications installées
 INSTALLED_APPS = [
@@ -60,8 +63,12 @@ DATABASES = {
         'NAME': os.getenv('POSTGRES_DB', 'documentationocealia'),
         'USER': os.getenv('POSTGRES_USER', 'gitadmin'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'Ocealia31520'),
-        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+        #'HOST': 'db' if is_docker else 'localhost',
+        'HOST': 'localhost' if ENVIRONMENT == 'local' else os.getenv('DATABASE_HOST', 'db'),
         'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        'OPTIONS': {
+            'options': '-c client_encoding=UTF8'
+        },
     }
 }
 
@@ -80,7 +87,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATIC_URL = '/static/'
 
 # Hôtes autorisés
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'ngrok-free.app', 'b9e3-2a01-cb19-8a9c-8600-1059-1453-619f-48ad.ngrok-free.app']
 
 # Configuration CORS
 CORS_ALLOWED_ORIGINS = [

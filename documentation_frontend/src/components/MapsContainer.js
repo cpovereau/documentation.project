@@ -1,11 +1,27 @@
-// src/components/MapsContainer.js
 import React, { useState } from 'react';
 import { FaPlus, FaFolder, FaArrowRight, FaArrowLeft, FaTrash, FaBook } from 'react-icons/fa';
+import { createMap } from '../services/mapService';
 import './MapsContainer.css';
 
-const MapsContainer = ({ isProjectLoaded }) => {
+const MapsContainer = ({ isProjectLoaded, currentProject, maps, setMaps }) => {
   const [treeData, setTreeData] = useState([{ id: 1, name: 'Root', children: [] }]);
   const [selectedItem, setSelectedItem] = useState(null);
+
+  const handleCreateMap = async () => {
+    if (!isProjectLoaded || !currentProject) {
+      return alert("Veuillez charger un projet avant de créer une Map.");
+    }
+
+    const mapName = prompt("Nom de la nouvelle Map :");
+    if (!mapName) return;
+
+    try {
+      const newMap = await createMap({ nom: mapName, projet: currentProject.id });
+      setMaps([...maps, newMap]); // Mise à jour de l'état avec la nouvelle Map
+    } catch (error) {
+      console.error("Erreur lors de la création de la Map :", error);
+    }
+  };
 
   // Gestion des actions de la barre d'outils
   const addNewRubric = () => {
@@ -55,7 +71,7 @@ const MapsContainer = ({ isProjectLoaded }) => {
   return (
     <div className="maps-container">
       <div className="toolbar">
-        <FaPlus onClick={addNewRubric} style={{ cursor: 'pointer' }} />
+        <FaPlus onClick={handleCreateMap} style={{ cursor: 'pointer' }} />
         <FaFolder onClick={addExistingRubric} style={{ cursor: 'pointer' }} />
         <FaArrowRight onClick={moveRight} style={{ cursor: 'pointer' }} />
         <FaArrowLeft
