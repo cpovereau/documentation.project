@@ -1,4 +1,3 @@
-// src/components/SidebarLeft.js
 import React, { useState } from 'react';
 import ProjectContainer from './ProjectContainer';
 import MapsContainer from './MapsContainer';
@@ -6,8 +5,9 @@ import { FaFolder, FaSitemap, FaBars } from 'react-icons/fa';
 import './SidebarLeft.css';
 
 const SidebarLeft = ({ isCollapsed, setCollapsed }) => {
-  const [isProjectOpen, setProjectOpen] = useState(true);
-  const [isMapsOpen, setMapsOpen] = useState(true);
+  // État pour le projet actif et les maps
+  const [activeProject, setActiveProject] = useState(null);
+  const [maps, setMaps] = useState([]);
 
   return (
     <div className={`sidebar-left ${isCollapsed ? 'collapsed' : ''}`}>
@@ -20,30 +20,35 @@ const SidebarLeft = ({ isCollapsed, setCollapsed }) => {
       <div className="sidebar-item">
         <div
           className="sidebar-item-header"
-          onClick={() => {
-            setProjectOpen(!isProjectOpen);
-            if (isCollapsed) setCollapsed(false); // Déploie la barre si compacte
-          }}
+          onClick={() => setCollapsed(false)}
         >
           <FaFolder className="icon" />
           {!isCollapsed && <span>Projet</span>}
         </div>
-        {isProjectOpen && !isCollapsed && <ProjectContainer />}
+        {!isCollapsed && (
+          <ProjectContainer
+            activeProject={activeProject}
+            setActiveProject={setActiveProject}
+            setMaps={setMaps} // Passe la gestion des maps
+          />
+        )}
       </div>
 
       {/* Container "Maps" */}
       <div className="sidebar-item">
         <div
           className="sidebar-item-header"
-          onClick={() => {
-            setMapsOpen(!isMapsOpen);
-            if (isCollapsed) setCollapsed(false); // Déploie la barre si compacte
-          }}
+          onClick={() => setCollapsed(false)}
         >
           <FaSitemap className="icon" />
           {!isCollapsed && <span>Maps</span>}
         </div>
-        {isMapsOpen && !isCollapsed && <MapsContainer />}
+        {!isCollapsed && (
+          <MapsContainer
+            currentProject={activeProject} // Passe le projet actif
+            maps={maps} // Passe les maps associées
+          />
+        )}
       </div>
     </div>
   );

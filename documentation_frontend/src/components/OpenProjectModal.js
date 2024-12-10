@@ -76,7 +76,11 @@ const OpenProjectModal = ({ onClose, onOpen }) => {
                 <li
                   key={project.id}
                   className="project-item"
-                  onClick={() => onOpen(project)} // Ouvre le projet sélectionné
+                  onClick={() => {
+                    console.log(`Projet cliqué : ${project.nom}`); // Diagnostic: Enregistre le clic dans la console
+                    onOpen(project);
+                  }}
+                  style={{ cursor: 'pointer' }}
                 >
                   {project.nom} ({project.gamme.nom})
                 </li>

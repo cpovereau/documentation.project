@@ -3,7 +3,7 @@ import pdb
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from .models import Projet, Rubrique, Gamme, Map
+from .models import Projet, Gamme, Map, Rubrique
 #import uuid  # Utilisé pour générer un token unique
 import logging
 from django.shortcuts import render, get_object_or_404
@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 #from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .serializers import GammeSerializer, ProjetSerializer, RubriqueSerializer, UserSerializer, MapSerializer
+from .serializers import ProjetSerializer, GammeSerializer, MapSerializer, RubriqueSerializer, UserSerializer
 from django.utils.timezone import now
 
 # Initialisation du logger

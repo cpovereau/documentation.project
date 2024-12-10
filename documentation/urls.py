@@ -1,6 +1,6 @@
 # documentation/urls.py
 from django.conf.urls import handler404, handler500
-from documentation import views
+# from documentation import views
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import GammeViewSet, ProjetViewSet, RubriqueViewSet, login_view, logout_view, CreateProjectAPIView, get_project_details, CreateMapView

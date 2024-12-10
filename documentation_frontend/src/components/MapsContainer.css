@@ -1,4 +1,6 @@
 .maps-container {
+  display: flex;
+  flex-direction: column;
   padding: 10px;
 }
 
@@ -24,6 +26,31 @@
   cursor: pointer;
 }
 
+.map-item {
+  padding: 8px;
+  border-bottom: 1px solid #ccc;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.map-item:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.map-item.active {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+}
+
 .maps-container li:hover {
   background-color: #f0f0f0;
+}
+
+.map-display-section {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border: 2px inset #ccc;
+  border-radius: 4px;
+  min-height: 150px;
 }

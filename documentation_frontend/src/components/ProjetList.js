@@ -1,4 +1,3 @@
-// frontend/src/components/ProjetList.js
 import React from 'react';
 import './ProjectList.css';
 
@@ -9,9 +8,12 @@ const ProjetList = ({ projects, onSelectProject, activeProject }) => {
         <div 
           key={project.id}
           className={`project-item ${activeProject?.id === project.id ? 'active' : ''}`} 
-          onClick={() => onSelectProject(project)}
+          onClick={() => {
+            console.log(`Projet cliqué dans ProjetList : ${project.nom}`); // Log pour vérifier l'événement de clic
+            onSelectProject(project);
+          }}
         >
-          {project.nom} <span className="project-gamme">({project.gamme ? project.gamme.nom : 'Gamme inconnue'})</span>
+          {project.nom} <span className="project-gamme">({project.gammeNom})</span>
         </div>
       ))}
     </div>
