@@ -23,7 +23,7 @@ jobs:
       - run:
           name: Wait for DB
           command: |
-            dockerize -wait tcp://localhost:5432 -timeout 60s
+            dockerize -wait tcp://postgres:5432 -timeout 60s
       - run:
           name: Install dependencies
           command: |
@@ -39,7 +39,7 @@ jobs:
       - run:
           name: Run Tests
           command: |
-            python manage.py test --keepdb --noinput
+            python manage.py test --noinput
 
 workflows:
   testcircle:
