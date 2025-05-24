@@ -1,0 +1,1 @@
+export { RightBarByAnima } from "./RightBarByAnima";

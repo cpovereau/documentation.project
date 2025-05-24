@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body::before {
+  content: "TAILWIND CSS CHARGÉ";
+  color: red;
+  font-size: 24px;
+  display: block;
+  padding: 2rem;
+}

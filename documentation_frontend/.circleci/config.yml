@@ -1,0 +1,47 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/python:3.11
+      - image: cimg/postgres:16.4
+        environment:
+          POSTGRES_DB: documentationocealia
+          POSTGRES_USER: gitadmin
+          POSTGRES_PASSWORD: Ocealia31520
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+    steps:
+      - checkout
+      - run:
+          name: Clean workspace
+          command: |
+            find . -name "*.pyc" -delete
+            find . -name "__pycache__" -delete
+            rm -rf .pytest_cache
+      - run:
+          name: Wait for DB
+          command: |
+            dockerize -wait tcp://postgres:5432 -timeout 60s
+      - run:
+          name: Install dependencies
+          command: |
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+      - run:
+          name: Set PYTHONPATH
+          command: export PYTHONPATH="$PYTHONPATH:$(pwd)"
+      - run:
+          name: Run Migrations
+          command: |
+            python manage.py migrate --noinput
+      - run:
+          name: Run Tests
+          command: |
+            python manage.py test --noinput
+
+workflows:
+  testcircle:
+    jobs:
+      - test
