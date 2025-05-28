@@ -1,1 +1,0 @@
-export { LeftBarByAnima } from "./LeftBarByAnima";
