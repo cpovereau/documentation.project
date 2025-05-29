@@ -1,10 +1,10 @@
 import React, { useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "components/ui/button";
-import { Input } from "components/ui/input";
 import { ScrollArea, ScrollBar } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
 import { MediaCard } from "./MediaCard";
+import { ImportModal } from "components/ui/import-modal";
 import {
   X as XIcon,
   Move,
@@ -37,6 +37,8 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   onExpand,
   className,
 }) => {
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importType, setImportType] = useState<"image" | "video">("image");
   const [isImageMode, setIsImageMode] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -326,7 +328,10 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         <div className="flex justify-center mt-4 mb-2">
           <Button
             className="w-full max-w-xs h-12 rounded-lg bg-[#2563eb] text-white font-semibold text-base hover:bg-[#1e40af] transition-colors"
-            onClick={handleImportClick}
+            onClick={() => {
+              setImportType(isImageMode ? "image" : "video");
+              setImportModalOpen(true);
+            }}
           >
             {isImageMode ? "Importer une image" : "Importer une vidéo"}
           </Button>
@@ -442,6 +447,30 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         </Button>
       )}
       {isFloating && createPortal(floatingWindow, document.body)}
+      <ImportModal
+        open={importModalOpen}
+        title={
+          importType === "image"
+            ? "Importer une image"
+            : importType === "video"
+            ? "Importer une vidéo"
+            : "Importer un fichier"
+        }
+        accept={
+          importType === "image"
+            ? "image/*"
+            : importType === "video"
+            ? "video/*"
+            : "*"
+        }
+        onClose={() => setImportModalOpen(false)}
+        onNext={(file) => {
+          // Ici tu ajoutes la logique d’import réel
+          console.log("Fichier importé :", file);
+          setImportModalOpen(false);
+        }}
+      />
+      ;
     </>
   );
 };
