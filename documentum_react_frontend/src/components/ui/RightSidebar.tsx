@@ -5,7 +5,22 @@ import { Input } from "components/ui/input";
 import { ScrollArea, ScrollBar } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
 import { MediaCard } from "./MediaCard";
-import { X as XIcon, Move, ArrowLeftFromLine } from "lucide-react";
+import {
+  X as XIcon,
+  Move,
+  ArrowLeftFromLine,
+  Search,
+  LayoutGrid,
+  List,
+  Text,
+} from "lucide-react";
+
+interface MediaItem {
+  id: number;
+  title: string;
+  updatedText: string;
+  imageUrl: string;
+}
 
 interface RightSidebarProps {
   isExpanded: boolean;
@@ -24,6 +39,10 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 }) => {
   const [isImageMode, setIsImageMode] = useState(true);
   const [searchText, setSearchText] = useState("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [displayMode, setDisplayMode] = useState<"grid" | "small" | "list">(
+    "grid"
+  );
   const [position, setPosition] = useState({
     x: window.innerWidth - 248,
     y: 103,
@@ -35,10 +54,64 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     edge: "left" | "right" | null;
   }>({ isResizing: false, edge: null });
 
-  // --- Floating/drag/resize logic (inchangé) ---
+  // --- Exemples de médias ---
+  const mediaItems: MediaItem[] = [
+    {
+      id: 1,
+      title: "Test image",
+      updatedText: "Updated today",
+      imageUrl: "https://c.animaapp.com/macke9kyh9ZtZh/img/image-2.png",
+    },
+    {
+      id: 2,
+      title: "Demo vidéo",
+      updatedText: "Updated yesterday",
+      imageUrl: "https://c.animaapp.com/macke9kyh9ZtZh/img/image-2.png",
+    },
+    {
+      id: 3,
+      title: "Un autre média",
+      updatedText: "Updated 2 days ago",
+      imageUrl: "https://c.animaapp.com/macke9kyh9ZtZh/img/image-2.png",
+    },
+    {
+      id: 4,
+      title: "Vidéo projet",
+      updatedText: "Updated 4 days ago",
+      imageUrl: "https://c.animaapp.com/macke9kyh9ZtZh/img/image-2.png",
+    },
+  ];
+
+  // --- Filtrage, tri, modes d'affichage ---
+  const filteredMedia = mediaItems
+    .filter((item) =>
+      item.title.toLowerCase().includes(searchText.toLowerCase())
+    )
+    .sort((a, b) =>
+      sortOrder === "asc"
+        ? a.title.localeCompare(b.title)
+        : b.title.localeCompare(a.title)
+    );
+
+  // --- Responsive / grid ---
+  const getGridClass = () => {
+    if (displayMode === "grid") return "grid gap-2 grid-cols-1 sm:grid-cols-1";
+    if (displayMode === "small") return "grid gap-2 grid-cols-2 sm:grid-cols-2";
+    if (displayMode === "list") return "flex flex-col gap-5";
+    return "grid-cols-1";
+  };
+
+  // --- Event handlers ---
   const toggleSwitch = useCallback(() => setIsImageMode((prev) => !prev), []);
   const handleClearSearch = useCallback(() => setSearchText(""), []);
-
+  const handleLabelClick = () =>
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+  const handleModeClick = () =>
+    setDisplayMode((prev) =>
+      prev === "grid" ? "small" : prev === "small" ? "list" : "grid"
+    );
+  const handleImportClick = () =>
+    alert(isImageMode ? "Importer une image" : "Importer une vidéo");
   const toggleFloating = useCallback(() => {
     onToggle(!isFloating);
     if (!isFloating) {
@@ -114,10 +187,11 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     [size.width]
   );
 
-  // --- Content (responsive, flex) ---
+  //  --- Rendu du contenu principal ---
   const renderContent = useCallback(
     () => (
       <>
+        {/* Titre & séparateur */}
         <div className="relative w-full h-12">
           <div className="absolute top-0.5 left-0 w-full">
             <Separator className="h-px w-full" />
@@ -126,7 +200,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             Médias
           </h2>
         </div>
-
+        {/* Switch images/vidéos */}
         <div
           className={`my-6 ${
             isFloating ? "flex justify-start" : "flex justify-center"
@@ -162,38 +236,41 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             />
           </div>
         </div>
-
-        <div className="relative mb-4">
-          <div className="flex items-center border-[3px] border-solid border-[#65558f] rounded-[10px] p-1">
-            <Button variant="ghost" className="p-2 h-12 w-12">
-              <img
-                className="w-6 h-6"
-                alt="SearchIcon icon"
-                src="https://c.animaapp.com/macke9kyh9ZtZh/img/icon-3.svg"
-              />
-            </Button>
-            <div className="flex-1 relative">
-              <Input
-                className="border-none focus-visible:ring-0 h-12 font-m3-body-large text-m3syslighton-surface"
-                placeholder="Recherche de médias…"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-              />
-            </div>
-            <Button
-              variant="ghost"
-              className="p-2 h-12 w-12"
-              onClick={handleClearSearch}
+        {/* Barre de recherche améliorée */}
+        <div className="relative w-full">
+          {/* Icône loupe */}
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+          {/* Champ texte */}
+          <input
+            type="text"
+            placeholder="Recherche"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 rounded-lg border border-[#65558f] bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#65558f]"
+          />
+          {/* Croix */}
+          {searchText && (
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              onClick={() => setSearchText("")}
+              tabIndex={-1}
+              aria-label="Effacer la recherche"
             >
-              <XIcon className="w-6 h-6" />
-            </Button>
-          </div>
+              <XIcon className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
+        <div className="h-3" />
+
+        {/* Boutons de tri et mode affichage */}
         <div className="flex justify-between">
           <Button
             variant="ghost"
             className="flex items-center gap-2 pl-3 pr-4 py-2.5 h-10 rounded-[100px]"
+            onClick={handleLabelClick}
+            title="Trier A-Z / Z-A"
           >
             <img
               className="w-[18px] h-[18px]"
@@ -201,71 +278,67 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
               src="https://c.animaapp.com/macke9kyh9ZtZh/img/icon-9.svg"
             />
             <span className="font-m3-label-large text-m-3syslightprimary">
-              Label
+              Label {sortOrder === "asc" ? "▲" : "▼"}
             </span>
           </Button>
 
-          <Button variant="ghost" className="p-2 h-10 rounded-[100px]">
-            <img
-              className="w-6 h-6"
-              alt="More options"
-              src="https://c.animaapp.com/macke9kyh9ZtZh/img/icon-5.svg"
-            />
+          <Button
+            variant="ghost"
+            className="p-2 h-10 rounded-[100px]"
+            onClick={handleModeClick}
+            title="Changer l'affichage"
+          >
+            {displayMode === "grid" && (
+              <LayoutGrid className="w-6 h-6 text-gray-700" />
+            )}
+            {displayMode === "small" && (
+              <List className="w-6 h-6 text-gray-700" /> // ou une autre icône si tu préfères
+            )}
+            {displayMode === "list" && (
+              <Text className="w-6 h-6 text-gray-700" />
+            )}
           </Button>
         </div>
 
-        {/* === Le ScrollArea devient "flex-1" (ou h-full selon contexte) === */}
-        <div className="flex-1 min-h-0">
-          <ScrollArea className="h-full bg-white rounded-[15px] shadow-[inset_0px_4px_4px_#00000040]">
-            <div
-              className={`grid gap-4 min-h-[400px] ${
-                size.width > 500 ? "grid-cols-2" : "grid-cols-1"
-              } ${size.width > 750 ? "grid-cols-3" : ""}`}
-            >
-              {[
-                {
-                  id: 1,
-                  title: "Title",
-                  updatedText: "Updated today",
-                  imageUrl:
-                    "https://c.animaapp.com/macke9kyh9ZtZh/img/image-2.png",
-                },
-                {
-                  id: 2,
-                  title: "Title",
-                  updatedText: "Updated yesterday",
-                  imageUrl:
-                    "https://c.animaapp.com/macke9kyh9ZtZh/img/image-2.png",
-                },
-                {
-                  id: 3,
-                  title: "Title",
-                  updatedText: "Updated 2 days ago",
-                  imageUrl:
-                    "https://c.animaapp.com/macke9kyh9ZtZh/img/image-2.png",
-                },
-              ].map((card) => (
+        {/* ScrollArea médias */}
+        <div className="flex flex-col" style={{ height: "560px" }}>
+          {" "}
+          <ScrollArea className="flex-1 min-h-0">
+            <div className={getGridClass()}>
+              {filteredMedia.map((card) => (
                 <MediaCard
                   key={card.id}
                   {...card}
-                  className="w-[150px] h-[200px]"
+                  className={
+                    displayMode === "grid"
+                      ? "w-full h-[180px]"
+                      : displayMode === "small"
+                      ? "w-full h-[100px]"
+                      : "w-full h-[60px]"
+                  }
+                  isListMode={displayMode === "list"}
                 />
               ))}
             </div>
-            <ScrollBar
-              orientation="vertical"
-              className="w-2.5 bg-[#d9d9d9] rounded-[15px] shadow-[inset_0px_4px_4px_#00000040] blur-[2px]"
-            >
-              <div className="w-2.5 h-[45px] mt-6 ml-0.5 bg-black rounded-[15px]" />
-            </ScrollBar>
+            <ScrollBar /* ... */ />
           </ScrollArea>
         </div>
-        <div className="h-6" />
+        <div className="flex justify-center mt-4 mb-2">
+          <Button
+            className="w-full max-w-xs h-12 rounded-lg bg-[#2563eb] text-white font-semibold text-base hover:bg-[#1e40af] transition-colors"
+            onClick={handleImportClick}
+          >
+            {isImageMode ? "Importer une image" : "Importer une vidéo"}
+          </Button>
+        </div>
+        <div className="h-2" />
       </>
     ),
     [
       isImageMode,
       searchText,
+      sortOrder,
+      displayMode,
       size.width,
       isFloating,
       handleClearSearch,
