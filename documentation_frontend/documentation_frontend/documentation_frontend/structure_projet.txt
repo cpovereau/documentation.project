@@ -1,0 +1,53 @@
+Documentation_projet : 
+docker-compose.yml
+manage.py
+dockerfile
+
+\Documentation : 
+admin.py
+management
+migrations
+models.py
+serializers.py
+tests
+urls.py
+views.py
+__init__.py
+__pycache__
+
+\Documentation_frontend :
+.env
+.dockerfile
+package.json
+tailwind.config.js
+ 
+\Documentation_frontend\public : 
+assets
+favicon.ico
+index.html
+logo192.png
+logo512.png
+manifest.json
+robots.txt
+ 
+\Documentation_frontend\src : 
+App.css
+App.js
+App.test.js
+assets
+components
+index.css
+index.js
+logo.svg
+pages
+reportWebVitals.js
+services
+setupTests.js
+utils
+ 
+\Env : 
+Include
+Lib
+pyvenv.cfg
+Scripts
+ 

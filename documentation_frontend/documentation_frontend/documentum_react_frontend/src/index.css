@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Variables Anima */
+:root {
+  --body-base-font-family: "Inter", Helvetica;
+  --body-base-font-size: 16px;
+  --body-base-font-style: normal;
+  --body-base-font-weight: 400;
+  --body-base-letter-spacing: 0px;
+  --body-base-line-height: 140%;
+  --m3-body-medium-font-family: "Roboto", Helvetica;
+  --m3-body-medium-font-size: 14px;
+  --m3-body-medium-line-height: 20px;
+  --shadow-md: 0px 2px 4px -1px rgba(26, 26, 26, 0.08), 0px 1px 0px 0px rgba(26, 26, 26, 0.08);
+  /* ... (conserve les autres variables utiles ici) ... */
+}
+
+/* Utilitaire Anima utile */
+@layer components {
+  .all-\[unset\] {
+    all: unset;
+  }
+}
+
+/* Thème clair/sombre basé sur Radix/shadcn */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    /* ... raccourci ici pour lisibilité ... */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    /* ... autres dark vars ... */
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Scrollbar pour la ScrollArea */
+.scrollarea-rounded::-webkit-scrollbar {
+  width: 14px;
+  background: transparent;
+}
+
+.scrollarea-rounded::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 14px;
+  min-height: 40px;
+  border: 4px solid transparent;
+  background-clip: padding-box;
+  /* Optionnel : effet shadow pour la bulle */
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.scrollarea-rounded::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 14px;
+}
+
+.scrollarea-rounded::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+.scrollarea-rounded {
+  scrollbar-width: thin;
+  scrollbar-color: #d9d9d9 transparent;
+  border-radius: 14px;
+}
