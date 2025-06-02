@@ -4,6 +4,7 @@ import { ProjectModule } from "components/ui/ProjectModule";
 import { MapModule } from "components/ui/MapModule";
 import { ProjectItem } from "components/ui/ProjectModule";
 import { MapItem } from "components/ui/MapModule";
+import { ImportModal } from "components/ui/import-modal";
 
 interface LeftSidebarProps {
   isExpanded: boolean;
@@ -17,15 +18,13 @@ const initialProjects: ProjectItem[] = [
 ];
 
 const initialMapItems: MapItem[] = [
-  { id: 1, title: "Racine", level: 0, expanded: true },
+  { id: 1, title: "Racine", level: 0, active: true },
   { id: 2, title: "Introduction", level: 1 },
   { id: 3, title: "Connexion à l'application", level: 1 },
   {
     id: 4,
     title: "Dossier de l'Usager",
     level: 1,
-    expanded: true,
-    active: true,
   },
   { id: 5, title: "Administratif", level: 2 },
   { id: 6, title: "Etablissement", level: 3 },
@@ -42,6 +41,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
   const toggleProjectExpand = () => setIsProjectExpanded(!isProjectExpanded);
   const toggleMapExpand = () => setIsMapExpanded(!isMapExpanded);
+
+  const [importWordOpen, setImportWordOpen] = useState(false);
 
   // Ajoute l’état des projets et sélection
   const [projects, setProjects] = useState<ProjectItem[]>(initialProjects);
@@ -114,8 +115,55 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   };
   const handleLoadMap = () => alert("Charger map");
 
+  const handleIndent = (itemId: number) => {
+    setMapItems((prev) =>
+      prev.map((item, i, arr) => {
+        if (item.id === itemId) {
+          if (i === 0) return item;
+          const prevLevel = arr[i - 1].level;
+          return { ...item, level: Math.min(item.level + 1, prevLevel + 1) };
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleOutdent = (itemId: number) => {
+    setMapItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId && item.level > 1
+          ? { ...item, level: item.level - 1 }
+          : item
+      )
+    );
+  };
+
+  // Expand/collapse handler
+  const handleToggleExpand = (itemId: number, expand: boolean) => {
+    setMapItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId ? { ...item, expanded: expand } : item
+      )
+    );
+  };
+
+  // Drag & drop reorder handler
+  const handleReorder = (newItems: MapItem[]) => setMapItems(newItems);
+
   return (
     <>
+      <ImportModal
+        open={importWordOpen}
+        title="Importer une map Word"
+        accept=".doc,.docx"
+        onClose={() => setImportWordOpen(false)}
+        onNext={(file) => {
+          // Appelle ici la logique de conversion/import Word → DITA
+          console.log("Fichier Word sélectionné :", file);
+          setImportWordOpen(false);
+        }}
+      />
+      ;
       <div
         className={`fixed top-[103px] bottom-0 left-0 transition-all duration-300 ease-in-out ${className}`}
         style={{ width: isExpanded ? "345px" : "0" }}
@@ -149,13 +197,18 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   <MapModule
                     isExpanded={isMapExpanded}
                     onToggle={toggleMapExpand}
-                    mapItems={mapItems} // <= obligatoire
+                    mapItems={mapItems}
                     selectedMapItemId={selectedMapItemId}
+                    onReorder={handleReorder}
                     onSelect={handleSelectMapItem}
                     onAdd={handleAddMapItem}
+                    onImportWord={() => setImportWordOpen(true)}
                     onClone={handleCloneMapItem}
                     onDelete={handleDeleteMapItem}
                     onLoad={handleLoadMap}
+                    onIndent={handleIndent}
+                    onOutdent={handleOutdent}
+                    onToggleExpand={handleToggleExpand}
                   />
                 </div>
               )}
