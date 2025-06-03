@@ -28,7 +28,9 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   isRightSidebarFloating,
 }) => {
   const [activeFormatting, setActiveFormatting] = useState<string[]>([]);
-  const [content, setContent] = useState("This is a sample text. Click on the formatting buttons above to see the effect.");
+  const [content, setContent] = useState(
+    "This is a sample text. Click on the formatting buttons above to see the effect."
+  );
   const [isBottomBarVisible, setIsBottomBarVisible] = useState(false);
   const [bottomBarHeight, setBottomBarHeight] = useState(200);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -170,44 +172,49 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     "Dark and light mode",
   ];
 
-  const renderMenuItems = () => {
-    return (
-      <NavigationMenuList className="flex items-center gap-1">
-        {menuItems.map((menuItem, index) => (
-          <NavigationMenuItem key={index}>
-            {menuItem.items ? (
-              <NavigationMenu>
-                <NavigationMenuTrigger className="bg-transparent hover:bg-gray-100 text-[#1a1a1ab2] font-text-base-font-semibold">
-                  {menuItem.label}
-                </NavigationMenuTrigger>
-                <NavigationMenuContent className="animate-in fade-in slide-in-from-top-1 duration-250">
-                  <ul className="p-2 min-w-[150px] w-auto bg-white shadow-md rounded-md">
-                    {menuItem.items.map((item, itemIndex) => (
-                      <li key={itemIndex}>
-                        <Button
-                          className="w-full text-left px-4 py-2 bg-white hover:bg-blue-100 text-gray-800 transition-colors duration-150 whitespace-nowrap justify-start"
-                          onClick={() => console.log(`Clicked: ${item}`)}
-                        >
-                          {item}
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenu>
-            ) : (
-              <Button
-                onClick={menuItem.action}
-                className="bg-transparent hover:bg-gray-100 text-[#1a1a1ab2] font-text-base-font-semibold"
-              >
+  // --- À INSÉRER dans CentralEditor, à la place ou en adaptation de ta fonction renderMenuItems ---
+  const renderMenuItems = () => (
+    <NavigationMenuList className="flex items-center gap-2">
+      {menuItems.map((menuItem, index) => (
+        <NavigationMenuItem key={index}>
+          {menuItem.items ? (
+            <NavigationMenu>
+              {/* ----- Menu principal (Edition, Insérer, Outils) ----- */}
+              <NavigationMenuTrigger className="bg-white text-gray-900 font-semibold px-4 py-2 rounded-xl shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition">
                 {menuItem.label}
-              </Button>
-            )}
-          </NavigationMenuItem>
-        ))}
-      </NavigationMenuList>
-    );
-  };
+              </NavigationMenuTrigger>
+              <NavigationMenuContent
+                // ----- Menu déroulant : fond blanc, border gris, shadow, arrondi, padding, Z-index élevé -----
+                className="min-w-[180px] bg-white shadow-lg border border-gray-200 rounded-xl z-50 p-2"
+              >
+                <ul>
+                  {menuItem.items.map((item, itemIndex) => (
+                    <li key={itemIndex}>
+                      {/* ---- Boutons des items : fond blanc, hover/active bleu doux, focus discret ---- */}
+                      <Button
+                        className="w-full text-left px-4 py-2 bg-white hover:bg-blue-100 focus:bg-blue-100 active:bg-blue-200 text-gray-800 rounded transition-colors duration-150 whitespace-nowrap justify-start"
+                        onClick={() => console.log(`Clicked: ${item}`)}
+                      >
+                        {item}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenu>
+          ) : (
+            // ----- Dernier bouton "Aide" avec style accentué -----
+            <Button
+              onClick={menuItem.action}
+              className="ml-2 bg-blue-50 text-blue-700 font-semibold px-4 py-2 rounded-xl shadow hover:bg-blue-100 transition"
+            >
+              {menuItem.label}
+            </Button>
+          )}
+        </NavigationMenuItem>
+      ))}
+    </NavigationMenuList>
+  );
 
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef<number | null>(null);
@@ -217,49 +224,52 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     setIsDragging(true);
     dragStartY.current = e.clientY;
     initialHeight.current = bottomBarHeight;
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
   };
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isDragging && dragStartY.current !== null) {
-      const deltaY = dragStartY.current - e.clientY;
-      const newHeight = initialHeight.current + deltaY;
-      setBottomBarHeight(Math.max(50, Math.min(newHeight, window.innerHeight - 200)));
-    }
-  }, [isDragging]);
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (isDragging && dragStartY.current !== null) {
+        const deltaY = dragStartY.current - e.clientY;
+        const newHeight = initialHeight.current + deltaY;
+        setBottomBarHeight(
+          Math.max(50, Math.min(newHeight, window.innerHeight - 200))
+        );
+      }
+    },
+    [isDragging]
+  );
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     dragStartY.current = null;
-    window.removeEventListener('mousemove', handleMouseMove);
-    window.removeEventListener('mouseup', handleMouseUp);
+    window.removeEventListener("mousemove", handleMouseMove);
+    window.removeEventListener("mouseup", handleMouseUp);
   }, [handleMouseMove]);
 
   useEffect(() => {
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [handleMouseMove, handleMouseUp]);
 
   return (
     <Card className="flex flex-col w-full h-full border border-[#e1e1e2] shadow-shadow-md rounded-xl overflow-hidden">
       <header className="flex items-center justify-between px-6 py-3 bg-[#fcfcfc] border-b border-[#e1e1e2]">
-        <NavigationMenu>
-          {renderMenuItems()}
-        </NavigationMenu>
+        <NavigationMenu>{renderMenuItems()}</NavigationMenu>
 
         <div className="flex items-center gap-2">
-          <Button 
+          <Button
             className={`h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 ${
-              isPreviewMode 
-                ? 'bg-[#eb4924] hover:bg-[#d13d1d]' 
-                : 'bg-[#2463eb] hover:bg-[#1d4ed8]'
+              isPreviewMode
+                ? "bg-[#eb4924] hover:bg-[#d13d1d]"
+                : "bg-[#2463eb] hover:bg-[#1d4ed8]"
             }`}
             onClick={onPreviewToggle}
           >
-            {isPreviewMode ? 'Cancel Preview' : 'Preview'}
+            {isPreviewMode ? "Cancel Preview" : "Preview"}
           </Button>
           <Button
             className="h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 bg-[#2463eb] hover:bg-[#1d4ed8]"
@@ -283,11 +293,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
                 size="icon"
                 className="p-1 hover:bg-gray-100 transition-colors duration-200"
               >
-                <img
-                  className="w-6 h-6"
-                  alt={icon.alt}
-                  src={icon.src}
-                />
+                <img className="w-6 h-6" alt={icon.alt} src={icon.src} />
               </Button>
             ))}
 
@@ -397,7 +403,10 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       </div>
 
       <div className="flex flex-col flex-grow overflow-hidden">
-        <CardContent className="gap-6 pt-8 pb-0 px-16 flex-grow overflow-auto" ref={cardContentRef}>
+        <CardContent
+          className="gap-6 pt-8 pb-0 px-16 flex-grow overflow-auto"
+          ref={cardContentRef}
+        >
           <h1 className="self-stretch mt-[-1.00px] font-text-5xl-font-semibold text-[#1a1a1a]">
             WYSIWYG
           </h1>

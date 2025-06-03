@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { TopBar } from "components/ui/TopBar";
 import { LeftSidebar } from "components/ui/LeftSidebar";
 import { RightSidebar } from "components/ui/RightSidebar";
-import { CentralEditor } from "./components/CentralEditor";
+import { CentralEditor } from "components/ui/CentralEditor";
 
 export const Desktop: React.FC = () => {
   const [isLeftSidebarExpanded, setIsLeftSidebarExpanded] = useState(true);
