@@ -183,20 +183,17 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
               <NavigationMenuTrigger className="bg-white text-gray-900 font-semibold px-4 py-2 rounded-xl shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition">
                 {menuItem.label}
               </NavigationMenuTrigger>
-              <NavigationMenuContent
-                // ----- Menu déroulant : fond blanc, border gris, shadow, arrondi, padding, Z-index élevé -----
-                className="min-w-[180px] bg-white shadow-lg border border-gray-200 rounded-xl z-50 p-2"
-              >
+              <NavigationMenuContent className="ring-1 ring-gray-200 focus:outline-none focus:ring-0 border border-gray-200">
                 <ul>
                   {menuItem.items.map((item, itemIndex) => (
                     <li key={itemIndex}>
                       {/* ---- Boutons des items : fond blanc, hover/active bleu doux, focus discret ---- */}
-                      <Button
-                        className="w-full text-left px-4 py-2 bg-white hover:bg-blue-100 focus:bg-blue-100 active:bg-blue-200 text-gray-800 rounded transition-colors duration-150 whitespace-nowrap justify-start"
+                      <button
+                        className="w-full text-left px-4 py-1 bg-white hover:bg-blue-100 focus:bg-blue-100 active:bg-blue-200 text-gray-800 rounded transition-colors duration-150 whitespace-nowrap justify-start"
                         onClick={() => console.log(`Clicked: ${item}`)}
                       >
                         {item}
-                      </Button>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -219,23 +216,33 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef<number | null>(null);
   const initialHeight = useRef<number>(200);
+  const dragOffset = useRef<number>(0);
+  const centralEditorRef = useRef<HTMLDivElement>(null);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     dragStartY.current = e.clientY;
     initialHeight.current = bottomBarHeight;
+    const handleRect = (e.target as HTMLElement).getBoundingClientRect();
+    dragOffset.current = e.clientY - handleRect.top;
+    // Ajoute la classe pour empêcher la sélection pendant le drag
+    document.body.classList.add("select-none");
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
   };
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (isDragging && dragStartY.current !== null) {
-        const deltaY = dragStartY.current - e.clientY;
-        const newHeight = initialHeight.current + deltaY;
-        setBottomBarHeight(
-          Math.max(50, Math.min(newHeight, window.innerHeight - 200))
+      if (isDragging && centralEditorRef.current) {
+        const editorRect = centralEditorRef.current.getBoundingClientRect();
+        // Y du curseur par rapport au top du CentralEditor
+        const relativeY = e.clientY - editorRect.top;
+        // Calcul de la hauteur de la BottomBar : tout ce qui est sous le curseur
+        const newHeight = Math.max(
+          50,
+          Math.min(editorRect.height - relativeY, editorRect.height - 200)
         );
+        setBottomBarHeight(newHeight);
       }
     },
     [isDragging]
@@ -244,6 +251,8 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     dragStartY.current = null;
+    // Retire la classe à la fin du drag
+    document.body.classList.remove("select-none");
     window.removeEventListener("mousemove", handleMouseMove);
     window.removeEventListener("mouseup", handleMouseUp);
   }, [handleMouseMove]);
@@ -256,7 +265,10 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   }, [handleMouseMove, handleMouseUp]);
 
   return (
-    <Card className="flex flex-col w-full h-full border border-[#e1e1e2] shadow-shadow-md rounded-xl overflow-hidden">
+    <Card
+      ref={centralEditorRef}
+      className="flex flex-col w-full h-full border border-[#e1e1e2] shadow-shadow-md rounded-xl overflow-hidden"
+    >
       <header className="flex items-center justify-between px-6 py-3 bg-[#fcfcfc] border-b border-[#e1e1e2]">
         <NavigationMenu>{renderMenuItems()}</NavigationMenu>
 
