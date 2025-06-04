@@ -307,9 +307,9 @@ export const MapModule: React.FC<MapModuleProps> = ({
             src="https://c.animaapp.com/macke9kyh9ZtZh/img/mapcollapsebutton.svg"
           />
         </Button>
-        <h2 className="absolute w-[134px] h-[26px] top-[11px] left-[47px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] tracking-[0] leading-normal whitespace-nowrap">
+        <div className="absolute w-[134px] h-[26px] top-[11px] left-[47px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] tracking-[0] leading-normal whitespace-nowrap">
           Map
-        </h2>
+        </div>
       </div>
       {/* --- BARRE OUTILS --- */}
       {isExpanded && (

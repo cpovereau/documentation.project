@@ -198,9 +198,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           <div className="absolute top-0.5 left-0 w-full">
             <Separator className="h-px w-full" />
           </div>
-          <h2 className="absolute w-[134px] h-[26px] top-[11px] left-[5px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] leading-normal whitespace-nowrap">
+          <div className="absolute w-[134px] h-[26px] top-[11px] left-[5px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] leading-normal whitespace-nowrap">
             Médias
-          </h2>
+          </div>
         </div>
         {/* Switch images/vidéos */}
         <div

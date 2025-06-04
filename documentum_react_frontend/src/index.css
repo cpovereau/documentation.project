@@ -83,3 +83,53 @@
   scrollbar-color: #d9d9d9 transparent;
   border-radius: 14px;
 }
+
+.icon-btn {
+  @apply px-2 py-1 rounded hover:bg-blue-50 transition font-semibold;
+  font-size: 1.1rem;
+  font-family: inherit;
+}
+
+important {
+  display: block;
+  background: #fff3cd;
+  border-left: 4px solid #ff9800;
+  padding: 8px 16px;
+  margin: 12px 0;
+  font-weight: bold;
+}
+note {
+  display: block;
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  padding: 8px 16px;
+  margin: 12px 0;
+}
+warning {
+  display: block;
+  background: #ffebee;
+  border-left: 4px solid #f44336;
+  padding: 8px 16px;
+  margin: 12px 0;
+}
+
+h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-top: 1.25em;
+  margin-bottom: 0.65em;
+}
+
+h3 {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}

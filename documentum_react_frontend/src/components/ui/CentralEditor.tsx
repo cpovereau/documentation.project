@@ -9,8 +9,60 @@ import {
   NavigationMenuContent,
   NavigationMenuTrigger,
 } from "components/ui/navigation-menu";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
+import TextAlign from "@tiptap/extension-text-align";
+import Link from "@tiptap/extension-link";
+import Color from "@tiptap/extension-color";
+import TextStyle from "@tiptap/extension-text-style";
+import Task from "extensions/Task";
+import Concept from "extensions/Concept";
+import Reference from "extensions/Reference";
+import Important from "extensions/Important";
+import Note from "extensions/Note";
+import Warning from "extensions/Warning";
 import { BottomBar } from "./BottomBar";
 // import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "../../../../components/ui/dialog";
+
+function handleCopy(editor: any) {
+  if (editor && window.getSelection) {
+    const html = editor.getHTML();
+    // On copie la sélection actuelle, pas tout le contenu
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) {
+      // Crée un div temporaire pour copier le HTML de la sélection
+      const temp = document.createElement("div");
+      temp.appendChild(selection.getRangeAt(0).cloneContents());
+      navigator.clipboard.writeText(temp.innerText); // Copie le texte brut
+      navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([temp.innerHTML], { type: "text/html" }),
+          "text/plain": new Blob([temp.innerText], { type: "text/plain" }),
+        }),
+      ]);
+    } else {
+      // Si rien n'est sélectionné, copie tout
+      navigator.clipboard.writeText(editor.getText());
+    }
+  }
+}
+
+function handleCut(editor: any) {
+  if (editor && window.getSelection) {
+    handleCopy(editor);
+    // Supprime la sélection après copie
+    editor.commands.deleteSelection();
+  }
+}
+
+function handlePaste(editor: any) {
+  if (editor) {
+    navigator.clipboard.readText().then((clipText) => {
+      editor.commands.insertContent(clipText);
+    });
+  }
+}
 
 interface CentralEditorProps {
   isPreviewMode: boolean;
@@ -27,19 +79,34 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   isRightSidebarExpanded,
   isRightSidebarFloating,
 }) => {
-  const [activeFormatting, setActiveFormatting] = useState<string[]>([]);
-  const [content, setContent] = useState(
-    "This is a sample text. Click on the formatting buttons above to see the effect."
-  );
   const [isBottomBarVisible, setIsBottomBarVisible] = useState(false);
   const [bottomBarHeight, setBottomBarHeight] = useState(200);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const cardContentRef = useRef<HTMLDivElement>(null);
 
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      TextStyle,
+      Color,
+      Link,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Task,
+      Concept,
+      Reference,
+      Important,
+      Note,
+      Warning,
+      // + d'autres extensions plus tard
+    ],
+    content: "<p>Commence à écrire…</p>",
+  });
+
   const menuItems = [
     {
       label: "Edition",
-      items: ["Cut", "Copy", "Paste"],
+      items: ["Couper", "Copier", "Coller"],
     },
     {
       label: "Insérer",
@@ -53,93 +120,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       label: "Aide",
       action: () => setIsHelpOpen(true),
     },
-  ];
-
-  const toolbarIcons = [
-    [
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/undo.svg",
-        alt: "Undo",
-      },
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/redo.svg",
-        alt: "Redo",
-      },
-    ],
-    [
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/print.svg",
-        alt: "Print",
-      },
-    ],
-    [
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/bold.svg",
-        alt: "Bold",
-      },
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/italic.svg",
-        alt: "Italic",
-      },
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/underline.svg",
-        alt: "Underline",
-      },
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/strikethrough.svg",
-        alt: "Strikethrough",
-      },
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/textcolor.svg",
-        alt: "Text color",
-      },
-    ],
-    [
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/link.svg",
-        alt: "Link",
-      },
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/image-3.svg",
-        alt: "Image",
-      },
-    ],
-    [
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/alignleft.svg",
-        alt: "Align left",
-      },
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/aligncenter.svg",
-        alt: "Align center",
-      },
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/alignright.svg",
-        alt: "Align right",
-      },
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/justifytext.svg",
-        alt: "Justify text",
-      },
-    ],
-    [
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/spacing.svg",
-        alt: "Spacing",
-      },
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/indent-left.svg",
-        alt: "Indent left",
-      },
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/indentright.svg",
-        alt: "Indent right",
-      },
-      {
-        src: "https://c.animaapp.com/macke9kyh9ZtZh/img/removestyle.svg",
-        alt: "Remove style",
-      },
-    ],
   ];
 
   const checklistItems = [
@@ -172,14 +152,12 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     "Dark and light mode",
   ];
 
-  // --- À INSÉRER dans CentralEditor, à la place ou en adaptation de ta fonction renderMenuItems ---
   const renderMenuItems = () => (
     <NavigationMenuList className="flex items-center gap-2">
       {menuItems.map((menuItem, index) => (
         <NavigationMenuItem key={index}>
           {menuItem.items ? (
             <NavigationMenu>
-              {/* ----- Menu principal (Edition, Insérer, Outils) ----- */}
               <NavigationMenuTrigger className="bg-white text-gray-900 font-semibold px-4 py-2 rounded-xl shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition">
                 {menuItem.label}
               </NavigationMenuTrigger>
@@ -187,10 +165,27 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
                 <ul>
                   {menuItem.items.map((item, itemIndex) => (
                     <li key={itemIndex}>
-                      {/* ---- Boutons des items : fond blanc, hover/active bleu doux, focus discret ---- */}
                       <button
                         className="w-full text-left px-4 py-1 bg-white hover:bg-blue-100 focus:bg-blue-100 active:bg-blue-200 text-gray-800 rounded transition-colors duration-150 whitespace-nowrap justify-start"
-                        onClick={() => console.log(`Clicked: ${item}`)}
+                        onClick={() => {
+                          // Actions menu Édition
+                          if (item === "Couper") {
+                            handleCut(editor);
+                          } else if (item === "Copier") {
+                            handleCopy(editor);
+                          } else if (item === "Coller") {
+                            handlePaste(editor);
+                          }
+                          // Actions menu Insérer
+                          else if (item === "Task") {
+                            editor?.chain().focus().insertTask().run();
+                          } else if (item === "Concept") {
+                            editor?.chain().focus().insertConcept().run();
+                          } else if (item === "Reference") {
+                            editor?.chain().focus().insertReference().run();
+                          }
+                          // ...à compléter pour d'autres menus si besoin
+                        }}
                       >
                         {item}
                       </button>
@@ -200,7 +195,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
               </NavigationMenuContent>
             </NavigationMenu>
           ) : (
-            // ----- Dernier bouton "Aide" avec style accentué -----
             <Button
               onClick={menuItem.action}
               className="ml-2 bg-blue-50 text-blue-700 font-semibold px-4 py-2 rounded-xl shadow hover:bg-blue-100 transition"
@@ -292,176 +286,233 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         </div>
       </header>
 
-      <div className="flex flex-wrap items-center justify-center gap-[16px_20px] p-4 bg-white border border-[#e1e1e2]">
-        {toolbarIcons.map((group, groupIndex) => (
-          <div
-            key={groupIndex}
-            className="inline-flex items-center justify-center gap-3 flex-[0_0_auto]"
+      <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b bg-[#fcfcfc]">
+        <button
+          onClick={() => editor?.chain().focus().undo().run()}
+          title="Annuler"
+          className="icon-btn"
+        >
+          ↺
+        </button>
+        <button
+          onClick={() => editor?.chain().focus().redo().run()}
+          title="Rétablir"
+          className="icon-btn"
+        >
+          ↻
+        </button>
+        <div className="h-5 border-l mx-2"></div>
+        <button
+          onClick={() => editor?.chain().focus().toggleBold().run()}
+          title="Gras"
+          className={`icon-btn ${
+            editor?.isActive("bold") ? "bg-blue-100" : ""
+          }`}
+        >
+          B
+        </button>
+        <button
+          onClick={() => editor?.chain().focus().toggleItalic().run()}
+          title="Italique"
+          className={`icon-btn ${
+            editor?.isActive("italic") ? "bg-blue-100" : ""
+          }`}
+        >
+          I
+        </button>
+        <button
+          onClick={() => editor?.chain().focus().toggleUnderline().run()}
+          title="Souligné"
+          className={`icon-btn ${
+            editor?.isActive("underline") ? "bg-blue-100" : ""
+          }`}
+        >
+          U
+        </button>
+        <div className="h-5 border-l mx-2"></div>
+        <button
+          onClick={() => editor?.chain().focus().setTextAlign("left").run()}
+          title="Aligner à gauche"
+          className={`icon-btn ${
+            editor?.isActive({ textAlign: "left" }) ? "bg-blue-100" : ""
+          }`}
+        >
+          ⯇
+        </button>
+        <button
+          onClick={() => editor?.chain().focus().setTextAlign("center").run()}
+          title="Centrer"
+          className={`icon-btn ${
+            editor?.isActive({ textAlign: "center" }) ? "bg-blue-100" : ""
+          }`}
+        >
+          ≡
+        </button>
+        <button
+          onClick={() => editor?.chain().focus().setTextAlign("right").run()}
+          title="Aligner à droite"
+          className={`icon-btn ${
+            editor?.isActive({ textAlign: "right" }) ? "bg-blue-100" : ""
+          }`}
+        >
+          ⯈
+        </button>
+        <button
+          onClick={() => editor?.chain().focus().setTextAlign("justify").run()}
+          title="Justifier"
+          className={`icon-btn ${
+            editor?.isActive({ textAlign: "justify" }) ? "bg-blue-100" : ""
+          }`}
+        >
+          ☰
+        </button>
+        <div className="h-5 border-l mx-2"></div>
+        <input
+          type="color"
+          onChange={(e) =>
+            editor?.chain().focus().setColor(e.target.value).run()
+          }
+          value={editor?.getAttributes("textStyle").color || "#000000"}
+          title="Changer la couleur"
+          className="ml-2"
+        />
+        <div className="h-5 border-l mx-2"></div>
+        <button
+          onClick={() => {
+            const url = prompt("Entrez l'URL :");
+            if (url) editor?.chain().focus().setLink({ href: url }).run();
+          }}
+          className={`icon-btn ${
+            editor?.isActive("link") ? "bg-blue-100" : ""
+          }`}
+        >
+          🔗
+        </button>
+        <button
+          onClick={() => editor?.chain().focus().unsetLink().run()}
+          className="icon-btn"
+          title="Supprimer le lien"
+        >
+          ❌
+        </button>
+
+        <div className="relative">
+          <select
+            className="border rounded px-2 py-1"
+            value={
+              editor?.isActive("heading", { level: 1 })
+                ? "heading1"
+                : editor?.isActive("heading", { level: 2 })
+                ? "heading2"
+                : editor?.isActive("heading", { level: 3 })
+                ? "heading3"
+                : editor?.isActive("important")
+                ? "important"
+                : editor?.isActive("note")
+                ? "note"
+                : editor?.isActive("warning")
+                ? "warning"
+                : "paragraph"
+            }
+            onChange={(e) => {
+              const value = e.target.value;
+              // Transformation en place pour titre et paragraphe
+              if (value === "paragraph")
+                editor?.chain().focus().setParagraph().run();
+              if (value === "heading1")
+                editor?.chain().focus().toggleHeading({ level: 1 }).run();
+              if (value === "heading2")
+                editor?.chain().focus().toggleHeading({ level: 2 }).run();
+              if (value === "heading3")
+                editor?.chain().focus().toggleHeading({ level: 3 }).run();
+              // Insertion de bloc Important, Note, Warning
+              if (value === "important") {
+                editor
+                  ?.chain()
+                  .focus()
+                  .insertContent({
+                    type: "important",
+                    content: [
+                      {
+                        type: "paragraph",
+                        content: [{ type: "text", text: "Texte important..." }],
+                      },
+                    ],
+                  })
+                  .run();
+              }
+              if (value === "note") {
+                editor
+                  ?.chain()
+                  .focus()
+                  .insertContent({
+                    type: "note",
+                    content: [
+                      {
+                        type: "paragraph",
+                        content: [{ type: "text", text: "Texte de note..." }],
+                      },
+                    ],
+                  })
+                  .run();
+              }
+              if (value === "warning") {
+                editor
+                  ?.chain()
+                  .focus()
+                  .insertContent({
+                    type: "warning",
+                    content: [
+                      {
+                        type: "paragraph",
+                        content: [
+                          { type: "text", text: "Texte de warning..." },
+                        ],
+                      },
+                    ],
+                  })
+                  .run();
+              }
+              if (value === "paragraph") {
+                if (
+                  editor?.isActive("important") ||
+                  editor?.isActive("note") ||
+                  editor?.isActive("warning")
+                ) {
+                  // Remplace le node courant par un paragraphe contenant son texte
+                  const text = editor?.state.doc.textBetween(
+                    editor?.state.selection.from,
+                    editor?.state.selection.to,
+                    " "
+                  );
+                  editor
+                    ?.chain()
+                    .focus()
+                    .deleteSelection()
+                    .setParagraph()
+                    .insertContent(text)
+                    .run();
+                } else {
+                  editor?.chain().focus().setParagraph().run();
+                }
+              }
+            }}
           >
-            {group.map((icon, iconIndex) => (
-              <Button
-                key={iconIndex}
-                variant="ghost"
-                size="icon"
-                className="p-1 hover:bg-gray-100 transition-colors duration-200"
-              >
-                <img className="w-6 h-6" alt={icon.alt} src={icon.src} />
-              </Button>
-            ))}
-
-            {groupIndex === 1 && (
-              <>
-                <div className="inline-flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    className="inline-flex h-8 items-center gap-1 px-2 py-1 bg-zinc-100 rounded overflow-hidden hover:bg-zinc-200 transition-colors duration-200"
-                  >
-                    <span className="font-text-sm-font-medium text-zinc-600 whitespace-nowrap">
-                      Arial
-                    </span>
-                    <img
-                      className="w-4 h-4"
-                      alt="Icon"
-                      src="https://c.animaapp.com/macke9kyh9ZtZh/img/icon-2.svg"
-                    />
-                  </Button>
-
-                  <div className="inline-flex h-8 items-center justify-center gap-1 bg-[#fcfcfc] rounded-xl border border-solid border-[#e1e1e2] shadow-shadow-xs">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="flex items-center justify-center w-8 h-8 rounded-l-xl hover:bg-gray-100 transition-colors duration-200"
-                    >
-                      <img
-                        className="w-4 h-4"
-                        alt="Decrease font size"
-                        src="https://c.animaapp.com/macke9kyh9ZtZh/img/icon.svg"
-                      />
-                    </Button>
-                    <div className="w-[30px] font-text-sm-font-medium text-[#1a1a1ab2] text-center">
-                      16
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="flex items-center justify-center w-8 h-8 rounded-r-xl hover:bg-gray-100 transition-colors duration-200"
-                    >
-                      <img
-                        className="w-4 h-4"
-                        alt="Increase font size"
-                        src="https://c.animaapp.com/macke9kyh9ZtZh/img/icon-1.svg"
-                      />
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {groupIndex === 2 && (
-              <div className="inline-flex h-8 items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="p-1 hover:bg-gray-100 transition-colors duration-200"
-                >
-                  <img
-                    className="w-6 h-6"
-                    alt="Icon"
-                    src="https://c.animaapp.com/macke9kyh9ZtZh/img/icon-6.svg"
-                  />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="p-1 hover:bg-gray-100 transition-colors duration-200"
-                >
-                  <img
-                    className="w-6 h-6"
-                    alt="Icon"
-                    src="https://c.animaapp.com/macke9kyh9ZtZh/img/icon-2.svg"
-                  />
-                </Button>
-              </div>
-            )}
-
-            {groupIndex === 4 && (
-              <div className="inline-flex h-8 items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="p-1 hover:bg-gray-100 transition-colors duration-200"
-                >
-                  <img
-                    className="w-6 h-6"
-                    alt="Icon"
-                    src="https://c.animaapp.com/macke9kyh9ZtZh/img/icon-8.svg"
-                  />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="p-1 hover:bg-gray-100 transition-colors duration-200"
-                >
-                  <img
-                    className="w-6 h-6"
-                    alt="Icon"
-                    src="https://c.animaapp.com/macke9kyh9ZtZh/img/icon-2.svg"
-                  />
-                </Button>
-              </div>
-            )}
-          </div>
-        ))}
+            <option value="paragraph">Paragraphe</option>
+            <option value="heading1">Titre 1</option>
+            <option value="heading2">Titre 2</option>
+            <option value="heading3">Titre 3</option>
+            <option value="important">Important</option>
+            <option value="note">Note</option>
+            <option value="warning">Warning</option>
+          </select>
+        </div>
       </div>
 
       <div className="flex flex-col flex-grow overflow-hidden">
-        <CardContent
-          className="gap-6 pt-8 pb-0 px-16 flex-grow overflow-auto"
-          ref={cardContentRef}
-        >
-          <h1 className="self-stretch mt-[-1.00px] font-text-5xl-font-semibold text-[#1a1a1a]">
-            WYSIWYG
-          </h1>
-
-          <h2 className="self-stretch font-text-2xl-font-regular text-[#1a1a1ab2]">
-            Rich Text Editor Component in Figma
-          </h2>
-
-          <div className="flex flex-col items-start gap-4 self-stretch w-full">
-            {checklistItems.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-4 self-stretch w-full"
-              >
-                {item.checked ? (
-                  <img
-                    className="w-8 h-8"
-                    alt="Checkbox"
-                    src="https://c.animaapp.com/macke9kyh9ZtZh/img/checkbox.svg"
-                  />
-                ) : (
-                  <Checkbox className="w-8 h-8 bg-zinc-100 rounded-xl border-2 border-[#e1e1e2] shadow-shadow-sm" />
-                )}
-                <div className="flex-1 mt-[-1.00px] font-text-xl-font-medium text-[#1a1a1a]">
-                  {item.text}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap items-start gap-[8px_0px] self-stretch w-full">
-            {featureItems.map((feature, index) => (
-              <div
-                key={index}
-                className="flex-1 font-text-2xl-font-regular text-[#1a1a1a]"
-              >
-                {feature}
-              </div>
-            ))}
-          </div>
-
-          <div className="self-stretch w-full h-[640px] border border-solid border-[#e1e1e2] bg-[url(https://c.animaapp.com/macke9kyh9ZtZh/img/image-4.svg)] bg-cover bg-[50%_50%]" />
-        </CardContent>
+        <div className="flex-grow overflow-auto p-4 bg-white">
+          <EditorContent editor={editor} className="min-h-[200px]" />
+        </div>
 
         {isBottomBarVisible && (
           <>
