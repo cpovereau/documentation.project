@@ -6,6 +6,10 @@ import { Separator } from "components/ui/separator";
 import { MediaCard } from "./MediaCard";
 import { ImportModal } from "components/ui/import-modal";
 import {
+  ArrowRightCircle,
+  ArrowUpDown,
+  Video,
+  Camera,
   X as XIcon,
   Move,
   ArrowLeftFromLine,
@@ -198,45 +202,39 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           <div className="absolute top-0.5 left-0 w-full">
             <Separator className="h-px w-full" />
           </div>
-          <div className="absolute w-[134px] h-[26px] top-[11px] left-[5px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] leading-normal whitespace-nowrap">
+          <div
+            className="absolute w-[134px] h-[26px] top-[11px]
+      font-['Roboto',Helvetica] font-extrabold text-black text-[32px] tracking-[0] leading-normal whitespace-nowrap"
+          >
             Médias
           </div>
         </div>
+
         {/* Switch images/vidéos */}
-        <div
-          className={`my-6 ${
-            isFloating ? "flex justify-start" : "flex justify-center"
-          }`}
-        >
-          <div className="relative flex items-center justify-center gap-3 w-[175px]">
-            <img
-              className={`w-8 h-8 cursor-pointer transition-opacity duration-300 ${
-                isImageMode ? "opacity-100" : "opacity-50"
-              }`}
-              alt="Images"
-              src="https://c.animaapp.com/macke9kyh9ZtZh/img/images.svg"
-              onClick={() => setIsImageMode(true)}
-            />
+        <div className="flex items-center justify-center gap-3 w-[175px] mx-auto mt-6 mb-4">
+          <Camera
+            aria-label="Images"
+            strokeWidth={2.5}
+            className="w-10 h-10 cursor-pointer"
+            onClick={() => setIsImageMode(true)}
+          />
+          <div
+            className="relative w-10 h-6 bg-gray-300 rounded-full cursor-pointer"
+            onClick={toggleSwitch}
+          >
             <div
-              className="relative w-10 h-6 bg-gray-300 rounded-full cursor-pointer"
-              onClick={toggleSwitch}
-            >
-              <div
-                className={`absolute w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${
-                  isImageMode ? "translate-x-0" : "translate-x-full"
-                }`}
-                style={{ top: "2px", left: "2px" }}
-              />
-            </div>
-            <img
-              className={`w-8 h-8 cursor-pointer transition-opacity duration-300 ${
-                !isImageMode ? "opacity-100" : "opacity-50"
+              className={`absolute w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${
+                isImageMode ? "translate-x-0" : "translate-x-full"
               }`}
-              alt="Video"
-              src="https://c.animaapp.com/macke9kyh9ZtZh/img/video.svg"
-              onClick={() => setIsImageMode(false)}
+              style={{ top: "2px", left: "2px" }}
             />
           </div>
+          <Video
+            aria-label="Video"
+            strokeWidth={2.5}
+            className="w-10 h-10 cursor-pointer"
+            onClick={() => setIsImageMode(false)}
+          />
         </div>
         {/* Barre de recherche améliorée */}
         <div className="relative w-full">
@@ -274,10 +272,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             onClick={handleLabelClick}
             title="Trier A-Z / Z-A"
           >
-            <img
+            <ArrowUpDown
               className="w-[18px] h-[18px]"
-              alt="Filter icon"
-              src="https://c.animaapp.com/macke9kyh9ZtZh/img/icon-9.svg"
+              aria-label="Filter icon"
             />
             <span className="font-m3-label-large text-m-3syslightprimary">
               Label {sortOrder === "asc" ? "▲" : "▼"}
@@ -437,12 +434,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           onClick={toggleExpanded}
           title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
         >
-          <img
-            className={`w-12 h-12 transition-transform duration-300 ${
-              isExpanded ? "" : "rotate-180"
-            }`}
-            alt="Rightbar toggle"
-            src="https://c.animaapp.com/macke9kyh9ZtZh/img/rightbar-collapse.svg"
+          <ArrowRightCircle
+            className={isExpanded ? "w-12 h-12" : "w-12 h-12 rotate-180"}
+            aria-label="Rightbar toggle"
           />
         </Button>
       )}

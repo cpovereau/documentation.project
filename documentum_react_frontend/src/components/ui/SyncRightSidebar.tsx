@@ -63,11 +63,7 @@ export const SyncRightSidebar: React.FC<SyncRightSidebarProps> = ({ isExpanded, 
         }}
         onClick={onToggle}
       >
-        <img
-          className={`w-full h-full transition-transform duration-300 ${isExpanded ? '' : 'rotate-180'}`}
-          alt="Rightbar toggle"
-          src="https://c.animaapp.com/macke9kyh9ZtZh/img/rightbar-collapse.svg"
-        />
+        <ChevronRight aria-label="Rightbar toggle" />
       </Button>
     </>
   );

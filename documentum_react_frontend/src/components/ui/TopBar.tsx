@@ -22,7 +22,8 @@ export const TopBar = ({ currentScreen = "desktop" }: TopBarProps) => {
       <img
         className="w-[131px] h-[70px] object-cover"
         alt="Logo"
-        src="https://c.animaapp.com/macke9kyh9ZtZh/img/logo.png"
+        src="/logo.png"
+        className="w-36 h-20 sm:w-34 brightness-125 object-contain"
       />
 
       {/* Texte bienvenue */}
@@ -46,7 +47,7 @@ export const TopBar = ({ currentScreen = "desktop" }: TopBarProps) => {
         <Button
           variant="ghost"
           size="icon"
-          className="p-0 h-12 w-12 flex items-center justify-center"
+          className="p-0 h-16 w-16 flex items-center justify-center"
           aria-label="Paramètres"
         >
           <SettingsIcon className="h-12 w-12 text-white" />

@@ -2,6 +2,15 @@ import React from "react";
 import { Button } from "components/ui/button";
 import { ScrollArea, ScrollBar } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
+import {
+  ChevronDown,
+  FilePlus,
+  Download,
+  Copy,
+  Trash,
+  Upload,
+  Star,
+} from "lucide-react";
 
 export type ProjectItem = {
   id: number;
@@ -58,13 +67,7 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
           className="absolute w-16 h-16 top-0 left-0 p-0"
           onClick={onToggle}
         >
-          <img
-            className={`w-full h-full transition-transform duration-300 ${
-              isExpanded ? "" : "rotate-90"
-            }`}
-            alt="Projet collapse"
-            src="https://c.animaapp.com/macke9kyh9ZtZh/img/mapcollapsebutton.svg"
-          />
+          <ChevronDown aria-label="Projet collapse" />
         </Button>
       </div>
 
@@ -72,17 +75,17 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
         <>
           <div className="flex items-center justify-between mt-2 mb-2 bg-[#d9d9d94c] rounded-[15px] p-2 mx-[5px]">
             <button className="w-8 h-8" onClick={onAdd}>
-              <img
+              <FilePlus
                 className="w-full h-full"
-                alt="Projet create"
-                src="https://c.animaapp.com/macke9kyh9ZtZh/img/projetcreate.png"
+                strokeWidth={2.5}
+                aria-label="Projet create"
               />
             </button>
             <button className="w-8 h-8" onClick={onLoad}>
-              <img
+              <Download
                 className="w-full h-full"
-                alt="Projet load"
-                src="https://c.animaapp.com/macke9kyh9ZtZh/img/rubriqueload.svg"
+                strokeWidth={2.5}
+                aria-label="Projet load"
               />
             </button>
             {/* Les actions suivantes nécessitent l’ID du projet sélectionné */}
@@ -92,10 +95,10 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
               disabled={!selectedProjectId}
               title="Cloner le projet sélectionné"
             >
-              <img
+              <Copy
                 className="w-full h-full"
-                alt="Projet clone"
-                src="https://c.animaapp.com/macke9kyh9ZtZh/img/rubriqueclone.svg"
+                strokeWidth={2.5}
+                aria-label="Projet clone"
               />
             </button>
             <button
@@ -104,10 +107,10 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
               disabled={!selectedProjectId}
               title="Supprimer le projet sélectionné"
             >
-              <img
+              <Trash
                 className="w-full h-full"
-                alt="Projet delete"
-                src="https://c.animaapp.com/macke9kyh9ZtZh/img/rubriquedelete.svg"
+                strokeWidth={2.5}
+                aria-label="Projet delete"
               />
             </button>
             <button
@@ -116,10 +119,10 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
               disabled={!selectedProjectId}
               title="Publier le projet sélectionné"
             >
-              <img
+              <Upload
                 className="w-full h-full"
-                alt="Projet publish"
-                src="https://c.animaapp.com/macke9kyh9ZtZh/img/projetpublish.svg"
+                strokeWidth={2.5}
+                aria-label="Projet publish"
               />
             </button>
           </div>
@@ -143,10 +146,9 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
                       <span className="italic">({project.gamme})</span>
                     </div>
                     {selectedProjectId === project.id && (
-                      <img
+                      <Star
                         className="absolute w-6 h-6 top-0 right-0"
-                        alt="Projet actif"
-                        src="https://c.animaapp.com/macke9kyh9ZtZh/img/rubriqueactive.svg"
+                        aria-label="Projet actif"
                       />
                     )}
                   </div>

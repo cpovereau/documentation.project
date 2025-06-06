@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "components/ui/button";
 import { Card, CardContent } from "components/ui/card";
 import { Checkbox } from "components/ui/checkbox";
+import { GripVertical } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -618,11 +619,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         <div className="font-text-base-font-medium text-[#1a1a1ab2] text-center whitespace-nowrap">
           0 words
         </div>
-        <img
-          className="w-6 h-6"
-          alt="Handler"
-          src="https://c.animaapp.com/macke9kyh9ZtZh/img/handler-.svg"
-        />
+        <GripVertical className="w-6 h-6" aria-label="Handler" />
       </footer>
 
       {/* <Dialog open={isHelpOpen} onOpenChange={setIsHelpOpen}>

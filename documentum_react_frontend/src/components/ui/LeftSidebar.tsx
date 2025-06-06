@@ -5,6 +5,7 @@ import { MapModule } from "components/ui/MapModule";
 import { ProjectItem } from "components/ui/ProjectModule";
 import { MapItem } from "components/ui/MapModule";
 import { ImportModal } from "components/ui/import-modal";
+import { ArrowLeftCircle } from "lucide-react";
 
 interface LeftSidebarProps {
   isExpanded: boolean;
@@ -225,12 +226,9 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         }}
         onClick={onToggle}
       >
-        <img
-          className={`w-full h-full transition-transform duration-300 ${
-            isExpanded ? "" : "rotate-180"
-          }`}
-          alt="Leftbar toggle"
-          src="https://c.animaapp.com/macke9kyh9ZtZh/img/leftbar-collapse.svg"
+        <ArrowLeftCircle
+          className={isExpanded ? "w-12 h-12" : "w-12 h-12 rotate-180"}
+          aria-label="Leftbar toggle"
         />
       </Button>
     </>

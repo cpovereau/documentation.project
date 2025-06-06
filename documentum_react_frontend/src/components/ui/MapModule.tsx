@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "components/ui/button";
 import { ScrollArea, ScrollBar } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
+import { ChevronDown, FilePlus, Download, Copy, Trash } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -299,13 +300,7 @@ export const MapModule: React.FC<MapModuleProps> = ({
           className="absolute w-16 h-16 top-0 left-0 p-0"
           onClick={onToggle}
         >
-          <img
-            className={`w-full h-full transition-transform duration-300 ${
-              isExpanded ? "" : "rotate-90"
-            }`}
-            alt="Map toggle"
-            src="https://c.animaapp.com/macke9kyh9ZtZh/img/mapcollapsebutton.svg"
-          />
+          <ChevronDown aria-label="Map toggle" />
         </Button>
         <div className="absolute w-[134px] h-[26px] top-[11px] left-[47px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] tracking-[0] leading-normal whitespace-nowrap">
           Map
@@ -316,10 +311,10 @@ export const MapModule: React.FC<MapModuleProps> = ({
         <>
           <div className="flex items-center justify-between mt-2 mb-2 bg-[#d9d9d94c] rounded-[15px] p-2">
             <button className="w-8 h-8" onClick={onAdd}>
-              <img
+              <FilePlus
                 className="w-full h-full"
-                alt="Rubrique create"
-                src="https://c.animaapp.com/macke9kyh9ZtZh/img/rubriquecreate.png"
+                strokeWidth={2.5}
+                aria-label="Rubrique create"
               />
             </button>
             <button className="w-8 h-8" onClick={onImportWord}>
@@ -330,10 +325,10 @@ export const MapModule: React.FC<MapModuleProps> = ({
               />
             </button>
             <button className="w-8 h-8" onClick={onLoad}>
-              <img
+              <Download
                 className="w-full h-full"
-                alt="Rubrique load"
-                src="https://c.animaapp.com/macke9kyh9ZtZh/img/rubriqueload.svg"
+                strokeWidth={2.5}
+                aria-label="Rubrique load"
               />
             </button>
             <button
@@ -341,10 +336,10 @@ export const MapModule: React.FC<MapModuleProps> = ({
               onClick={() => selectedMapItemId && onClone(selectedMapItemId)}
               disabled={!selectedMapItemId}
             >
-              <img
+              <Copy
                 className="w-full h-full"
-                alt="Rubrique clone"
-                src="https://c.animaapp.com/macke9kyh9ZtZh/img/rubriqueclone.svg"
+                strokeWidth={2.5}
+                aria-label="Rubrique clone"
               />
             </button>
             <button
@@ -352,10 +347,10 @@ export const MapModule: React.FC<MapModuleProps> = ({
               onClick={() => selectedMapItemId && onDelete(selectedMapItemId)}
               disabled={!selectedMapItemId}
             >
-              <img
+              <Trash
                 className="w-full h-full"
-                alt="Rubrique delete"
-                src="https://c.animaapp.com/macke9kyh9ZtZh/img/rubriquedelete.svg"
+                strokeWidth={2.5}
+                aria-label="Rubrique delete"
               />
             </button>
           </div>

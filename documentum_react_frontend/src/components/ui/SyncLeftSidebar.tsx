@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "c
 import { ScrollArea } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
 import { Card, CardContent } from "components/ui/card";
-import { ChevronDown, ChevronRight, Plus, ChevronLeft } from "lucide-react";
+import { Star, ChevronDown, ChevronRight, Plus, ChevronLeft } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "components/ui/tooltip";
 
 interface SyncLeftSidebarProps {
@@ -105,11 +105,7 @@ export const SyncLeftSidebar: React.FC<SyncLeftSidebarProps> = ({
                         <div className="w-2 h-2 bg-orange-500 rounded-full ml-2" />
                       )}
                       {selectedFeature === feature.id && (
-                        <img
-                          className="absolute w-6 h-6 right-0"
-                          alt="Feature active"
-                          src="https://c.animaapp.com/macke9kyh9ZtZh/img/rubriqueactive.svg"
-                        />
+                        <Star className="absolute w-6 h-6 right-0" aria-label="Feature active" />
                       )}
                     </div>
                   ))}
@@ -169,11 +165,7 @@ export const SyncLeftSidebar: React.FC<SyncLeftSidebarProps> = ({
   }}
   onClick={onToggle}
 >
-  <img
-    className={`w-full h-full transition-transform duration-300 ${isExpanded ? '' : 'rotate-180'}`}
-    alt="Leftbar toggle"
-    src="https://c.animaapp.com/macke9kyh9ZtZh/img/leftbar-collapse.svg"
-  />
+  <ChevronLeft aria-label="Leftbar toggle" />
 </Button>
     </>
   );
