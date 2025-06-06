@@ -64,6 +64,48 @@ function handlePaste(editor: any) {
   }
 }
 
+function handleFind(editor, findValue) {
+  if (!findValue || !editor) return;
+  // Recherche "simple" : place le curseur sur la première occurrence suivante
+  const docText = editor.getText();
+  const selectionStart = editor.state.selection.to;
+  const index = docText.indexOf(findValue, selectionStart);
+  if (index !== -1) {
+    // Sélectionne le texte trouvé
+    editor.commands.setTextSelection({
+      from: index + 1,
+      to: index + findValue.length,
+    });
+    editor.commands.focus();
+  } else {
+    alert("Fin du document atteinte ou aucun résultat.");
+  }
+}
+
+function handleReplace(editor, findValue, replaceValue) {
+  if (!findValue || !editor) return;
+  // Vérifie si le texte courant est sélectionné et correspond à findValue
+  const sel = editor.state.doc.textBetween(
+    editor.state.selection.from,
+    editor.state.selection.to,
+    " "
+  );
+  if (sel === findValue) {
+    editor.commands.insertContent(replaceValue);
+  } else {
+    // Sinon, va chercher la prochaine occurrence
+    handleFind(editor, findValue);
+  }
+}
+
+function handleReplaceAll(editor, findValue, replaceValue) {
+  if (!findValue || !editor) return;
+  // Remplace toutes les occurrences dans tout le doc
+  const html = editor.getHTML().split(findValue).join(replaceValue);
+  editor.commands.setContent(html, false);
+  alert("Tous les résultats ont été remplacés !");
+}
+
 interface CentralEditorProps {
   isPreviewMode: boolean;
   onPreviewToggle: () => void;
@@ -83,7 +125,24 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   const [bottomBarHeight, setBottomBarHeight] = useState(200);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const cardContentRef = useRef<HTMLDivElement>(null);
+  const [isFindOpen, setIsFindOpen] = useState(false);
+  const [findValue, setFindValue] = useState("");
+  const [replaceValue, setReplaceValue] = useState("");
+  const [historyLog, setHistoryLog] = useState<
+    { action: string; ts: number; content?: string }[]
+  >([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
+  function logAction(action: string, content?: string) {
+    setHistoryLog((logs) => [
+      ...logs,
+      {
+        action,
+        ts: Date.now(),
+        content,
+      },
+    ]);
+  }
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -106,7 +165,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   const menuItems = [
     {
       label: "Edition",
-      items: ["Couper", "Copier", "Coller"],
+      items: ["Couper", "Copier", "Coller", "Sélectionner tout"],
     },
     {
       label: "Insérer",
@@ -175,6 +234,8 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
                             handleCopy(editor);
                           } else if (item === "Coller") {
                             handlePaste(editor);
+                          } else if (item === "Sélectionner tout") {
+                            editor?.commands.selectAll();
                           }
                           // Actions menu Insérer
                           else if (item === "Task") {
@@ -303,7 +364,10 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         </button>
         <div className="h-5 border-l mx-2"></div>
         <button
-          onClick={() => editor?.chain().focus().toggleBold().run()}
+          onClick={() => {
+            editor?.chain().focus().toggleBold().run();
+            logAction("Texte mis en gras");
+          }}
           title="Gras"
           className={`icon-btn ${
             editor?.isActive("bold") ? "bg-blue-100" : ""
@@ -312,7 +376,10 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           B
         </button>
         <button
-          onClick={() => editor?.chain().focus().toggleItalic().run()}
+          onClick={() => {
+            editor?.chain().focus().toggleItalic().run();
+            logAction("Texte mis en italique");
+          }}
           title="Italique"
           className={`icon-btn ${
             editor?.isActive("italic") ? "bg-blue-100" : ""
@@ -321,7 +388,10 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           I
         </button>
         <button
-          onClick={() => editor?.chain().focus().toggleUnderline().run()}
+          onClick={() => {
+            editor?.chain().focus().toggleItalic().run();
+            logAction("Texte souligné");
+          }}
           title="Souligné"
           className={`icon-btn ${
             editor?.isActive("underline") ? "bg-blue-100" : ""
@@ -394,6 +464,18 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           title="Supprimer le lien"
         >
           ❌
+        </button>
+        <button
+          className="ml-2 px-3 py-1 rounded bg-gray-100 hover:bg-blue-100 text-gray-700"
+          onClick={() => setIsFindOpen(true)}
+        >
+          🔍 Rechercher / Remplacer
+        </button>
+        <button
+          className="ml-2 px-3 py-1 rounded bg-gray-100 hover:bg-blue-100 text-gray-700"
+          onClick={() => setIsHistoryOpen(true)}
+        >
+          🕑 Historique
         </button>
 
         <div className="relative">
@@ -556,6 +638,94 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           </DialogClose>
         </DialogContent>
       </Dialog> */}
+
+      {isFindOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-[600px] max-w-[96vw] animate-in fade-in slide-in-from-top-4">
+            <div className="flex flex-col gap-3">
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                🔍 Rechercher / Remplacer
+              </h3>
+              <input
+                className="border border-gray-200 focus:border-blue-500 outline-none rounded-lg px-3 py-2 text-base"
+                placeholder="Rechercher…"
+                value={findValue}
+                autoFocus
+                onChange={(e) => setFindValue(e.target.value)}
+              />
+              <input
+                className="border border-gray-200 focus:border-blue-500 outline-none rounded-lg px-3 py-2 text-base"
+                placeholder="Remplacer par…"
+                value={replaceValue}
+                onChange={(e) => setReplaceValue(e.target.value)}
+              />
+              <div className="flex flex-row gap-3 mt-2 flex-wrap justify-end">
+                <button
+                  className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition"
+                  onClick={() => handleFind(editor, findValue)}
+                >
+                  Suivant
+                </button>
+                <button
+                  className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition"
+                  onClick={() => handleReplace(editor, findValue, replaceValue)}
+                >
+                  Remplacer
+                </button>
+                <button
+                  className="px-4 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold transition"
+                  onClick={() =>
+                    handleReplaceAll(editor, findValue, replaceValue)
+                  }
+                >
+                  Remplacer tout
+                </button>
+                <button
+                  className="px-4 py-1.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold transition"
+                  onClick={() => setIsFindOpen(false)}
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isHistoryOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-[430px] max-w-[96vw] animate-in fade-in slide-in-from-top-4">
+            <h3 className="font-semibold mb-3">Historique des actions</h3>
+            <div className="max-h-[400px] overflow-y-auto flex flex-col gap-2">
+              {historyLog.length === 0 ? (
+                <div className="text-gray-500">Aucune action enregistrée.</div>
+              ) : (
+                historyLog
+                  .slice()
+                  .reverse()
+                  .map((item, i) => (
+                    <div key={i} className="flex flex-col text-sm">
+                      <span className="font-medium text-gray-800">
+                        {new Date(item.ts).toLocaleTimeString()} — {item.action}
+                      </span>
+                      {item.content && (
+                        <span className="text-gray-500 line-clamp-1">
+                          {item.content}
+                        </span>
+                      )}
+                    </div>
+                  ))
+              )}
+            </div>
+            <button
+              className="mt-4 px-4 py-1.5 rounded bg-gray-200 hover:bg-gray-300"
+              onClick={() => setIsHistoryOpen(false)}
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };

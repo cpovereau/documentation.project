@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { SyncLeftSidebar } from "./components/SyncLeftSidebar";
-import { SyncCentralEditor } from "./components/SyncCentralEditor";
-import { SyncRightSidebar } from "./components/SyncRightSidebar";
+import { SyncLeftSidebar } from "components/ui/SyncLeftSidebar";
+import { SyncCentralEditor } from "components/ui/SyncCentralEditor";
+import { SyncRightSidebar } from "components/ui/SyncRightSidebar";
 import { TopBar } from "components/ui/TopBar";
 
 const products = ["Planning", "Usager", "Finance"];
