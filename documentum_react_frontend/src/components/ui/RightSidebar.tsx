@@ -426,13 +426,12 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       {!isFloating && (
         <Button
           variant="ghost"
-          className={`fixed top-[120px] p-0 h-18 w-18 z-50 transition-all duration-300 ease-in-out hover:bg-gray-200`}
+          className={`fixed top-[120px] p-0 h-17 w-17 z-50 flex items-center justify-center rounded-full transition-all duration-300 ease-in-out hover:bg-gray-200`}
           style={{
             right: isExpanded ? "248px" : "0",
             transform: "translateX(50%)",
           }}
           onClick={toggleExpanded}
-          title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
         >
           <ArrowRightCircle
             className={isExpanded ? "w-12 h-12" : "w-12 h-12 rotate-180"}

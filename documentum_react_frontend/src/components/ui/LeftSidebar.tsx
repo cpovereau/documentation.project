@@ -219,7 +219,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       </div>
       <Button
         variant="ghost"
-        className={`fixed top-[120px] p-0 h-18 w-18 z-50 transition-all duration-300 ease-in-out hover:bg-gray-200`}
+        className={`fixed top-[120px] p-0 h-17 w-17 z-50 flex items-center justify-center rounded-full transition-all duration-300 ease-in-out hover:bg-gray-200`}
         style={{
           left: isExpanded ? "345px" : "0",
           transform: "translateX(-50%)",

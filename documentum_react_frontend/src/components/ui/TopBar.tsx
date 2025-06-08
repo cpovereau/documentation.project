@@ -38,7 +38,7 @@ export const TopBar = ({ currentScreen = "desktop" }: TopBarProps) => {
         <Button
           variant="primary"
           onClick={() => navigate(targetScreen)}
-          className="min-w-[160px] font-semibold text-base shadow"
+          className="min-w-[160px] h-11 font-semibold text-base shadow"
         >
           {switchLabel}
         </Button>
@@ -56,7 +56,7 @@ export const TopBar = ({ currentScreen = "desktop" }: TopBarProps) => {
         {/* Déconnexion */}
         <Button
           variant="danger"
-          className="min-w-[140px] font-semibold text-base shadow"
+          className="min-w-[140px] h-11 font-semibold text-base shadow"
         >
           Déconnexion
         </Button>

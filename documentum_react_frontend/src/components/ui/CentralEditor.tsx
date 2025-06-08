@@ -218,6 +218,20 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     "Dark and light mode",
   ];
 
+  useEffect(() => {
+    if (!editor) return;
+    const updateWordCount = () => {
+      const text = editor.getText();
+      const words = text.trim().split(/\s+/).filter(Boolean);
+      setWordCount(words.length === 1 && words[0] === "" ? 0 : words.length);
+    };
+    updateWordCount();
+    editor.on("update", updateWordCount);
+    return () => {
+      editor.off("update", updateWordCount);
+    };
+  }, [editor]);
+
   const renderMenuItems = () => (
     <NavigationMenuList className="flex items-center gap-2">
       {menuItems.map((menuItem, index) => (
@@ -280,6 +294,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   const initialHeight = useRef<number>(200);
   const dragOffset = useRef<number>(0);
   const centralEditorRef = useRef<HTMLDivElement>(null);
+  const [wordCount, setWordCount] = useState(0);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -647,7 +662,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
               {editor?.getHTML()}
             </pre>
           ) : (
-            <EditorContent editor={editor} className="min-h-[200px]" />
+            <EditorContent editor={editor} className="no-border-editor" />
           )}
         </div>
 
@@ -672,7 +687,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
 
       <footer className="flex h-10 items-center justify-between px-4 py-0 bg-[#fcfcfc] border-t border-[#e1e1e2]">
         <div className="font-text-base-font-medium text-[#1a1a1ab2] text-center whitespace-nowrap">
-          0 words
+          {wordCount} mot{wordCount > 1 ? "s" : ""}
         </div>
         <GripVertical className="w-6 h-6" aria-label="Handler" />
       </footer>

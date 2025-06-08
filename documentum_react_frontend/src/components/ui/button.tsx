@@ -34,7 +34,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        className={`px-4 py-2 rounded transition-all duration-200 ${variantClass} ${className}`}
+        className={`rounded transition-all duration-200 ${variantClass} ${className}`}
         {...props}
       >
         {children}

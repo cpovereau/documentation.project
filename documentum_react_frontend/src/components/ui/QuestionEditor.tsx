@@ -260,14 +260,14 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
           <Button
             variant="outline"
             onClick={handleAddQuestion}
-            className="bg-transparent hover:bg-gray-100"
+            className="h-11 min-w-[160px] bg-transparent hover:bg-gray-100"
           >
             Ajouter une question
           </Button>
           <Button
             variant="outline"
             onClick={handleAddAnswer}
-            className="bg-transparent hover:bg-gray-100"
+            className="h-11 min-w-[160px] bg-transparent hover:bg-gray-100"
             disabled={activeIndex === -1}
           >
             Ajouter une réponse
@@ -278,7 +278,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
           <Button
             variant="ghost"
             onClick={() => setShowXML((v) => !v)}
-            className="ml-3"
+            className="h-11 min-w-[140px] ml-3"
           >
             {showXML ? "Cacher XML" : "Voir XML généré"}
           </Button>

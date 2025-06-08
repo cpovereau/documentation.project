@@ -59,72 +59,91 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
         <div className="absolute top-0.5 left-3 w-[298px]">
           <Separator className="h-px w-full" />
         </div>
+        <Button
+          variant="ghost"
+          className="absolute w-14 h-14 top-0 left-0 p-0 flex items-center justify-center"
+          onClick={onToggle}
+          aria-label={isExpanded ? "Réduire" : "Déplier"}
+          title={isExpanded ? "Réduire la section" : "Déplier la section"}
+        >
+          <ChevronDown
+            className={`transition-transform duration-200 w-8 h-8 ${
+              isExpanded ? "rotate-0" : "-rotate-90"
+            }`}
+          />
+        </Button>
         <div className="absolute w-[134px] h-[26px] top-[11px] left-[47px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] tracking-[0] leading-normal whitespace-nowrap">
           Projet
         </div>
-        <Button
-          variant="ghost"
-          className="absolute w-16 h-16 top-0 left-0 p-0"
-          onClick={onToggle}
-        >
-          <ChevronDown aria-label="Projet collapse" />
-        </Button>
       </div>
 
       {isExpanded && (
         <>
-          <div className="flex items-center justify-between mt-2 mb-2 bg-[#d9d9d94c] rounded-[15px] p-2 mx-[5px]">
-            <button className="w-8 h-8" onClick={onAdd}>
+          <div className="flex items-center justify-between gap-2 bg-[#d9d9d94c] rounded-[15px] mt-2 mx-[5px] py-1 px-1">
+            <Button
+              variant="ghost"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
+      hover:bg-blue-100/70 hover:text-blue-700 group"
+              onClick={onAdd}
+              title="Créer un projet"
+            >
               <FilePlus
-                className="w-full h-full"
+                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
                 strokeWidth={2.5}
-                aria-label="Projet create"
               />
-            </button>
-            <button className="w-8 h-8" onClick={onLoad}>
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
+      hover:bg-blue-100/70 hover:text-blue-700 group"
+              onClick={onLoad}
+              title="Charger un projet existant"
+            >
               <Download
-                className="w-full h-full"
+                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
                 strokeWidth={2.5}
-                aria-label="Projet load"
               />
-            </button>
+            </Button>
             {/* Les actions suivantes nécessitent l’ID du projet sélectionné */}
-            <button
-              className="w-8 h-8"
+            <Button
+              variant="ghost"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
+      hover:bg-blue-100/70 hover:text-blue-700 group"
               onClick={() => selectedProjectId && onClone(selectedProjectId)}
               disabled={!selectedProjectId}
               title="Cloner le projet sélectionné"
             >
               <Copy
-                className="w-full h-full"
+                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
                 strokeWidth={2.5}
-                aria-label="Projet clone"
               />
-            </button>
-            <button
-              className="w-8 h-8"
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
+      hover:bg-blue-100/70 hover:text-blue-700 group"
               onClick={() => selectedProjectId && onDelete(selectedProjectId)}
               disabled={!selectedProjectId}
               title="Supprimer le projet sélectionné"
             >
               <Trash
-                className="w-full h-full"
+                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
                 strokeWidth={2.5}
-                aria-label="Projet delete"
               />
-            </button>
-            <button
-              className="w-8 h-8"
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
+      hover:bg-blue-100/70 hover:text-blue-700 group"
               onClick={() => selectedProjectId && onPublish(selectedProjectId)}
               disabled={!selectedProjectId}
               title="Publier le projet sélectionné"
             >
               <Upload
-                className="w-full h-full"
+                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
                 strokeWidth={2.5}
-                aria-label="Projet publish"
               />
-            </button>
+            </Button>
           </div>
           <div style={{ maxHeight: "180px", overflowY: "auto" }}>
             <ScrollArea className="h-full w-full">

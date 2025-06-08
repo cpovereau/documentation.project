@@ -297,10 +297,16 @@ export const MapModule: React.FC<MapModuleProps> = ({
         </div>
         <Button
           variant="ghost"
-          className="absolute w-16 h-16 top-0 left-0 p-0"
+          className="absolute w-14 h-14 top-0 left-0 p-0 flex items-center justify-center"
           onClick={onToggle}
+          aria-label={isExpanded ? "Réduire" : "Déplier"}
+          title={isExpanded ? "Réduire la section" : "Déplier la section"}
         >
-          <ChevronDown aria-label="Map toggle" />
+          <ChevronDown
+            className={`transition-transform duration-200 w-8 h-8 ${
+              isExpanded ? "rotate-0" : "-rotate-90"
+            }`}
+          />
         </Button>
         <div className="absolute w-[134px] h-[26px] top-[11px] left-[47px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] tracking-[0] leading-normal whitespace-nowrap">
           Map
@@ -309,50 +315,70 @@ export const MapModule: React.FC<MapModuleProps> = ({
       {/* --- BARRE OUTILS --- */}
       {isExpanded && (
         <>
-          <div className="flex items-center justify-between mt-2 mb-2 bg-[#d9d9d94c] rounded-[15px] p-2">
-            <button className="w-8 h-8" onClick={onAdd}>
+          <div className="flex items-center justify-between gap-2 bg-[#d9d9d94c] rounded-[15px] mt-2 mx-[5px] py-1 px-1">
+            <Button
+              variant="ghost"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
+      hover:bg-blue-100/70 hover:text-blue-700 group"
+              onClick={onAdd}
+              title="Créer une rubrique"
+            >
               <FilePlus
-                className="w-full h-full"
+                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
                 strokeWidth={2.5}
-                aria-label="Rubrique create"
               />
-            </button>
-            <button className="w-8 h-8" onClick={onImportWord}>
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
+      hover:bg-blue-100/70 hover:text-blue-700 group"
+              onClick={onImportWord}
+              title="Importer un document Word"
+            >
               <img
-                className="w-full h-full"
+                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
                 alt="Importer Word"
                 src="/word-import2.svg"
               />
-            </button>
-            <button className="w-8 h-8" onClick={onLoad}>
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
+      hover:bg-blue-100/70 hover:text-blue-700 group"
+              onClick={onLoad}
+              title="Charger une rubrique existante"
+            >
               <Download
-                className="w-full h-full"
+                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
                 strokeWidth={2.5}
-                aria-label="Rubrique load"
               />
-            </button>
-            <button
-              className="w-8 h-8"
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
+      hover:bg-blue-100/70 hover:text-blue-700 group"
               onClick={() => selectedMapItemId && onClone(selectedMapItemId)}
               disabled={!selectedMapItemId}
+              title="Dupliquer la rubrique sélectionnée"
             >
               <Copy
-                className="w-full h-full"
+                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
                 strokeWidth={2.5}
-                aria-label="Rubrique clone"
               />
-            </button>
-            <button
-              className="w-8 h-8"
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
+      hover:bg-blue-100/70 hover:text-blue-700 group"
               onClick={() => selectedMapItemId && onDelete(selectedMapItemId)}
               disabled={!selectedMapItemId}
+              title="Supprimer la rubrique sélectionnée"
             >
               <Trash
-                className="w-full h-full"
+                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
                 strokeWidth={2.5}
-                aria-label="Rubrique delete"
               />
-            </button>
+            </Button>
           </div>
           {/* --- LISTE AVEC SCROLL --- */}
           <div style={{ maxHeight: "450px", overflowY: "auto" }}>

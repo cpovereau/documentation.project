@@ -133,3 +133,10 @@ h3 {
   margin-top: 1em;
   margin-bottom: 0.5em;
 }
+
+.no-border-editor .ProseMirror:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
