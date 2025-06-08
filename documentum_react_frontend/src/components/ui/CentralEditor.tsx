@@ -23,7 +23,7 @@ import Reference from "extensions/Reference";
 import Important from "extensions/Important";
 import Note from "extensions/Note";
 import Warning from "extensions/Warning";
-import { BottomBar } from "./BottomBar";
+import { QuestionEditor } from "./QuestionEditor";
 // import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "../../../../components/ui/dialog";
 
 function handleCopy(editor: any) {
@@ -122,8 +122,8 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   isRightSidebarExpanded,
   isRightSidebarFloating,
 }) => {
-  const [isBottomBarVisible, setIsBottomBarVisible] = useState(false);
-  const [bottomBarHeight, setBottomBarHeight] = useState(200);
+  const [isQuestionEditorVisible, setIsQuestionEditorVisible] = useState(false);
+  const [questionEditorHeight, setQuestionEditorHeight] = useState(200);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const cardContentRef = useRef<HTMLDivElement>(null);
   const [isFindOpen, setIsFindOpen] = useState(false);
@@ -278,7 +278,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     dragStartY.current = e.clientY;
-    initialHeight.current = bottomBarHeight;
+    initialHeight.current = questionEditorHeight;
     const handleRect = (e.target as HTMLElement).getBoundingClientRect();
     dragOffset.current = e.clientY - handleRect.top;
     // Ajoute la classe pour empêcher la sélection pendant le drag
@@ -293,12 +293,12 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         const editorRect = centralEditorRef.current.getBoundingClientRect();
         // Y du curseur par rapport au top du CentralEditor
         const relativeY = e.clientY - editorRect.top;
-        // Calcul de la hauteur de la BottomBar : tout ce qui est sous le curseur
+        // Calcul de la hauteur du QUestionEditor : tout ce qui est sous le curseur
         const newHeight = Math.max(
           50,
           Math.min(editorRect.height - relativeY, editorRect.height - 200)
         );
-        setBottomBarHeight(newHeight);
+        setQuestionEditorHeight(newHeight);
       }
     },
     [isDragging]
@@ -341,7 +341,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           </Button>
           <Button
             className="h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 bg-[#2463eb] hover:bg-[#1d4ed8]"
-            onClick={() => setIsBottomBarVisible(!isBottomBarVisible)}
+            onClick={() => setIsQuestionEditorVisible(!isQuestionEditorVisible)}
           >
             Q\R
           </Button>
@@ -597,7 +597,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           <EditorContent editor={editor} className="min-h-[200px]" />
         </div>
 
-        {isBottomBarVisible && (
+        {isQuestionEditorVisible && (
           <>
             <div
               className="h-[12px] bg-gray-200 cursor-ns-resize flex items-center justify-center"
@@ -605,11 +605,12 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
             >
               <div className="w-16 h-1 bg-gray-400 rounded-full"></div>
             </div>
-            <BottomBar
-              height={bottomBarHeight}
+            <QuestionEditor
+              height={questionEditorHeight}
               isLeftSidebarExpanded={isLeftSidebarExpanded}
               isRightSidebarExpanded={isRightSidebarExpanded}
               isRightSidebarFloating={isRightSidebarFloating}
+              isPreviewMode={isPreviewMode}
             />
           </>
         )}
