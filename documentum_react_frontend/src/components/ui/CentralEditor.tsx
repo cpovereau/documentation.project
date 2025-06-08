@@ -133,6 +133,11 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     { action: string; ts: number; content?: string }[]
   >([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isXmlView, setIsXmlView] = useState(false);
+  const [lastXmlValidation, setLastXmlValidation] = useState<null | {
+    ok: boolean;
+    msg: string;
+  }>(null);
 
   function logAction(action: string, content?: string) {
     setHistoryLog((logs) => [
@@ -144,6 +149,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       },
     ]);
   }
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -313,6 +319,34 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     window.removeEventListener("mouseup", handleMouseUp);
   }, [handleMouseMove]);
 
+  function validateXML() {
+    const xmlString = `<racine>${editor?.getHTML()}</racine>`;
+    let valid = false;
+    let msg = "";
+    try {
+      const parser = new window.DOMParser();
+      const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+      const parserError = xmlDoc.getElementsByTagName("parsererror");
+      if (parserError.length > 0) {
+        valid = false;
+        msg = "❌ XML non valide : " + parserError[0].textContent;
+      } else {
+        valid = true;
+        msg = "✅ XML bien formé !";
+      }
+    } catch (e) {
+      valid = false;
+      msg = "❌ Erreur lors de la validation XML : " + (e as Error).message;
+    }
+    setIsXmlView(true);
+    setLastXmlValidation({ ok: valid, msg });
+    setTimeout(() => alert(msg), 100);
+  }
+
+  function returnToEdit() {
+    setIsXmlView(false);
+  }
+
   useEffect(() => {
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
@@ -327,8 +361,22 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     >
       <header className="flex items-center justify-between px-6 py-3 bg-[#fcfcfc] border-b border-[#e1e1e2]">
         <NavigationMenu>{renderMenuItems()}</NavigationMenu>
-
         <div className="flex items-center gap-2">
+          {isXmlView ? (
+            <button
+              className="h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 bg-[#f59e42] hover:bg-[#f97316] text-white font-semibold"
+              onClick={returnToEdit}
+            >
+              Retour à la saisie
+            </button>
+          ) : (
+            <button
+              className="h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 bg-[#22c55e] hover:bg-[#16a34a] text-white font-semibold"
+              onClick={validateXML}
+            >
+              Valider XML
+            </button>
+          )}
           <Button
             className={`h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 ${
               isPreviewMode
@@ -594,7 +642,13 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
 
       <div className="flex flex-col flex-grow overflow-hidden">
         <div className="flex-grow overflow-auto p-4 bg-white">
-          <EditorContent editor={editor} className="min-h-[200px]" />
+          {isXmlView ? (
+            <pre className="bg-gray-100 rounded p-4 font-mono text-xs whitespace-pre-wrap">
+              {editor?.getHTML()}
+            </pre>
+          ) : (
+            <EditorContent editor={editor} className="min-h-[200px]" />
+          )}
         </div>
 
         {isQuestionEditorVisible && (
