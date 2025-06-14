@@ -7,9 +7,7 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 export const Select = SelectPrimitive.Root;
-
 export const SelectGroup = SelectPrimitive.Group;
-
 export const SelectValue = SelectPrimitive.Value;
 
 export const SelectTrigger = React.forwardRef<
@@ -39,8 +37,12 @@ export const SelectContent = React.forwardRef<
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
+      position="popper"
+      sideOffset={1}
+      collisionPadding={1}
+      align="start"
       className={cn(
-        "relative z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-80",
+        "z-50 min-w-[8rem] max-h-96 overflow-auto rounded-md border bg-white text-popover-foreground shadow-md", // ← pas d’animation ici
         className
       )}
       {...props}
@@ -66,8 +68,9 @@ export const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground",
-      className
+      "relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
+      "focus:bg-accent focus:text-accent-foreground",
+      "data-[state=checked]:font-semibold"
     )}
     {...props}
   >

@@ -4,22 +4,37 @@ import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
 import { ScrollArea } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
-import { ChevronRight, ChevronLeft, Search } from "lucide-react";
+import {
+  ArrowRightCircle,
+  ChevronRight,
+  ChevronLeft,
+  Search,
+} from "lucide-react";
 
 interface SyncRightSidebarProps {
   isExpanded: boolean;
   onToggle: () => void;
 }
 
-export const SyncRightSidebar: React.FC<SyncRightSidebarProps> = ({ isExpanded, onToggle }) => {
+export const SyncRightSidebar: React.FC<SyncRightSidebarProps> = ({
+  isExpanded,
+  onToggle,
+}) => {
   return (
     <>
-      <div className={`bg-[#f7a900] h-full transition-all duration-300 ease-in-out ${isExpanded ? 'w-[248px]' : 'w-0'} overflow-hidden`}>
+      <div
+        className={`bg-[#f7a900] fixed top-[103px] bottom-0 right-0 transition-all duration-300 ease-in-out ${
+          isExpanded ? "w-[248px]" : "w-0"
+        } overflow-hidden`}
+      >
         <div className="pt-20 px-4 flex flex-col h-full">
           <div className="space-y-4 mb-6">
+            <Separator className="my-6" />
             <h2 className="text-2xl font-bold">Détail du sujet</h2>
             <div>
-              <label className="block text-sm font-medium mb-1">Dernière mise à jour</label>
+              <label className="block text-sm font-medium mb-1">
+                Dernière mise à jour
+              </label>
               <Input value="15/04/2023" readOnly />
             </div>
             <div>
@@ -56,14 +71,17 @@ export const SyncRightSidebar: React.FC<SyncRightSidebarProps> = ({ isExpanded, 
       </div>
       <Button
         variant="ghost"
-        className={`fixed top-[123px] p-0 h-12 w-12 z-50 transition-all duration-300 ease-in-out`}
-        style={{ 
-          right: isExpanded ? '248px' : '0',
-          transform: 'translateX(50%)'
+        className={`fixed top-[120px] p-0 h-17 w-17 z-50 flex items-center justify-center rounded-full transition-all duration-300 ease-in-out hover:bg-gray-200`}
+        style={{
+          right: isExpanded ? "200px" : "0",
+          transform: "translateX(-50%)",
         }}
         onClick={onToggle}
       >
-        <ChevronRight aria-label="Rightbar toggle" />
+        <ArrowRightCircle
+          className={isExpanded ? "w-12 h-12" : "w-12 h-12 rotate-180"}
+          aria-label="Rightbar toggle"
+        />
       </Button>
     </>
   );

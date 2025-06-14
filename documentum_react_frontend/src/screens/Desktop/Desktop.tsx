@@ -37,7 +37,7 @@ export const Desktop: React.FC = () => {
   return (
     <div className="bg-white flex flex-col h-screen w-full">
       <TopBar currentScreen="desktop" className="z-50" />
-      <div className="flex flex-row flex-1 overflow-hidden relative">
+      <div className="flex flex-row flex-1 relative">
         <LeftSidebar
           isExpanded={isLeftSidebarExpanded}
           onToggle={() =>

@@ -140,3 +140,15 @@ h3 {
   box-shadow: none !important;
   background: transparent !important;
 }
+
+body[data-scroll-locked="1"] {
+  pointer-events: auto !important;
+}
+
+[aria-hidden="true"] {
+  aria-hidden: false !important;
+}
+
+[data-radix-select-content] {
+  max-height: var(--radix-select-content-available-height);
+}
