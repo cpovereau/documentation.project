@@ -18,9 +18,9 @@ interface SyncLeftSidebarProps {
   versionOptions: { value: string; label: string }[];
   onAddVersion: () => void;
   onPublish: () => void;
-  onShowImpact: () => void;
+  onShowImpactMap: () => void;
   features: FeatureItem[];
-  selectedFeatureId: number | null;
+  selectedFeature: number | null;
   onSelectFeature: (id: number) => void;
   onAddFeature: () => void;
   onDeleteFeature: (id: number) => void;
@@ -41,9 +41,9 @@ export const SyncLeftSidebar: React.FC<SyncLeftSidebarProps> = ({
   versionOptions,
   onAddVersion,
   onPublish,
-  onShowImpact,
+  onShowImpactMap,
   features,
-  selectedFeatureId,
+  selectedFeature,
   onSelectFeature,
   onAddFeature,
   onDeleteFeature,
@@ -98,7 +98,7 @@ export const SyncLeftSidebar: React.FC<SyncLeftSidebarProps> = ({
           <Button
             variant="outline"
             className="h-11 px-4 py-0 w-full"
-            onClick={onShowImpact}
+            onClick={onShowImpactMap}
           >
             Afficher l'arbre d'impact
           </Button>
@@ -110,7 +110,7 @@ export const SyncLeftSidebar: React.FC<SyncLeftSidebarProps> = ({
               isExpanded={true}
               onToggle={() => {}}
               features={features}
-              selectedFeatureId={selectedFeatureId}
+              selectedFeatureId={selectedFeature}
               onSelect={onSelectFeature}
               onAdd={onAddFeature}
               onDelete={onDeleteFeature}

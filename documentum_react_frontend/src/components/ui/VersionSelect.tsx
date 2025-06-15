@@ -36,7 +36,7 @@ export const VersionSelect: React.FC<VersionSelectProps> = ({
       position="popper"
     >
       <SelectTrigger className={className}>
-        <SelectValue placeholder="Sélectionner une version" />
+        <SelectValue placeholder="Version ?" />
         {value ? options.find((opt) => opt.value === value)?.label : null}
       </SelectTrigger>
       <SelectContent>

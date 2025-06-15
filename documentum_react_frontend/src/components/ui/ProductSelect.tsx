@@ -31,7 +31,7 @@ export const ProductSelect: React.FC<ProductSelectProps> = ({
     position="popper"
   >
     <SelectTrigger className={className}>
-      <SelectValue placeholder="Sélectionner un produit">
+      <SelectValue placeholder="Produit ?">
         {value ? options.find((opt) => opt.value === value)?.label : null}
       </SelectValue>
     </SelectTrigger>
