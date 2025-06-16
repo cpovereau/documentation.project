@@ -3,6 +3,7 @@ import { Button } from "components/ui/button";
 import { ScrollArea, ScrollBar } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
 import { ChevronDown, FilePlus, Download, Copy, Trash } from "lucide-react";
+import { MapItem as MapItemComponent } from "@/components/ui/MapItem";
 import {
   DndContext,
   closestCenter,
@@ -14,20 +15,10 @@ import {
 import {
   arrayMove,
   SortableContext,
-  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 
-// --- TYPES ---
-
-export type MapItem = {
-  id: number;
-  title: string;
-  level: number;
-  expanded?: boolean;
-  active?: boolean;
-};
+import type { MapItem } from "@/types/MapItem";
 
 export interface MapModuleProps {
   isExpanded: boolean;
@@ -46,15 +37,6 @@ export interface MapModuleProps {
   onToggleExpand: (itemId: number, expand: boolean) => void;
 }
 
-// -------- UTILS --------
-
-function hasVisibleChildren(items: MapItem[], idx: number): boolean {
-  const parent = items[idx];
-  const nextIdx = idx + 1;
-  if (nextIdx >= items.length) return false;
-  return items[nextIdx].level > parent.level;
-}
-
 function getVisibleItems(items: MapItem[]): MapItem[] {
   const result: MapItem[] = [];
   let hideLevel: number | null = null;
@@ -68,178 +50,6 @@ function getVisibleItems(items: MapItem[]): MapItem[] {
   }
   return result;
 }
-
-// ------- LIGNE D'ITEM --------
-
-function SortableItem({
-  item,
-  idx,
-  selectedMapItemId,
-  onSelect,
-  canOutdent,
-  canIndent,
-  onOutdent,
-  onIndent,
-  mapItems,
-  onToggleExpand,
-  hasChildren,
-}: any) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-    isOver,
-  } = useSortable({ id: item.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 20 : "auto",
-    background: isDragging ? "rgba(96,165,250,0.20)" : undefined,
-    borderBottom: isOver ? "2px solid #2563eb" : undefined,
-    paddingLeft: `${item.level * 30}px`,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={`relative flex items-center h-[28px] px-1 rounded group transition
-        ${idx !== mapItems.length - 1 ? "mb-2" : ""}
-        cursor-pointer
-        ${
-          selectedMapItemId === item.id
-            ? "bg-blue-100 font-bold"
-            : "hover:bg-gray-100"
-        }
-      `}
-      onClick={() => onSelect(item.id)}
-    >
-      {/* --- Bouton pliage/dépliage --- */}
-      {hasChildren && item.expanded !== false && (
-        <button
-          className="w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200 mr-1 group-hover:opacity-100"
-          style={{ opacity: 0.7, transition: "opacity .15s" }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleExpand(item.id, false);
-          }}
-          aria-label="Replier la rubrique"
-          title="Replier la rubrique"
-          tabIndex={0}
-          type="button"
-        >
-          {/* Icône moins */}
-          <svg width="14" height="14" viewBox="0 0 20 20">
-            <path d="M4 10h12" stroke="#888" strokeWidth="2" fill="none" />
-          </svg>
-        </button>
-      )}
-      {hasChildren && item.expanded === false && (
-        <button
-          className="w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200 mr-1"
-          style={{ opacity: 1, transition: "opacity .15s" }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleExpand(item.id, true);
-          }}
-          aria-label="Déplier la rubrique"
-          title="Déplier la rubrique"
-          tabIndex={0}
-          type="button"
-        >
-          {/* Icône plus */}
-          <svg width="14" height="14" viewBox="0 0 20 20">
-            <path
-              d="M10 4v12M4 10h12"
-              stroke="#888"
-              strokeWidth="2"
-              fill="none"
-            />
-          </svg>
-        </button>
-      )}
-
-      {/* --- Label --- */}
-      <div className="flex-1 font-['Roboto',Helvetica] text-[#515a6e] text-xs tracking-[0] leading-normal whitespace-nowrap">
-        {item.title}
-      </div>
-      {/* --- Boutons indent/outdent --- */}
-      <div
-        className={`
-          flex gap-1 ml-1 indent-buttons 
-          opacity-0 group-hover:opacity-100 transition-opacity
-          ${selectedMapItemId === item.id ? "opacity-100" : ""}
-        `}
-      >
-        <button
-          className={`w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200 focus:bg-blue-200 focus:outline-none
-            ${
-              canOutdent(item, idx, mapItems)
-                ? ""
-                : "opacity-30 cursor-not-allowed"
-            }
-          `}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (canOutdent(item, idx, mapItems)) onOutdent(item.id);
-          }}
-          disabled={!canOutdent(item, idx, mapItems)}
-          aria-label="Monter d'un niveau"
-          title={
-            !canOutdent(item, idx, mapItems)
-              ? "Impossible de monter d'un niveau"
-              : "Monter d'un niveau"
-          }
-          tabIndex={0}
-          type="button"
-        >
-          <svg width="16" height="16" viewBox="0 0 20 20">
-            <path
-              d="M13 16l-6-6 6-6"
-              stroke="#888"
-              strokeWidth="2"
-              fill="none"
-            />
-          </svg>
-        </button>
-        <button
-          className={`w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200 focus:bg-blue-200 focus:outline-none
-            ${
-              canIndent(item, idx, mapItems)
-                ? ""
-                : "opacity-30 cursor-not-allowed"
-            }
-          `}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (canIndent(item, idx, mapItems)) onIndent(item.id);
-          }}
-          disabled={!canIndent(item, idx, mapItems)}
-          aria-label="Descendre d'un niveau"
-          title={
-            !canIndent(item, idx, mapItems)
-              ? "Impossible de descendre d'un niveau"
-              : "Descendre d'un niveau"
-          }
-          tabIndex={0}
-          type="button"
-        >
-          <svg width="16" height="16" viewBox="0 0 20 20">
-            <path d="M7 4l6 6-6 6" stroke="#888" strokeWidth="2" fill="none" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ------- MAIN MAPMODULE --------
 
 export const MapModule: React.FC<MapModuleProps> = ({
   isExpanded,
@@ -257,15 +67,6 @@ export const MapModule: React.FC<MapModuleProps> = ({
   onReorder,
   onToggleExpand,
 }) => {
-  const canOutdent = (item: MapItem, idx: number, items: MapItem[]) =>
-    item.level > 1;
-  const canIndent = (item: MapItem, idx: number, items: MapItem[]) => {
-    if (idx === 0) return false;
-    const prev = items[idx - 1];
-    if (!prev) return false;
-    return prev.level >= item.level;
-  };
-
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
@@ -278,7 +79,6 @@ export const MapModule: React.FC<MapModuleProps> = ({
       const oldIndex = visibleItems.findIndex((item) => item.id === active.id);
       const newIndex = visibleItems.findIndex((item) => item.id === over.id);
       const reorderedVisible = arrayMove(visibleItems, oldIndex, newIndex);
-      // On suppose que toute la flatlist = visible, sinon il faut adapter pour garder la cohérence
       onReorder(reorderedVisible);
     }
   }
@@ -318,8 +118,7 @@ export const MapModule: React.FC<MapModuleProps> = ({
           <div className="flex items-center justify-between gap-2 bg-[#d9d9d94c] rounded-[15px] mt-2 mx-[5px] py-1 px-1">
             <Button
               variant="ghost"
-              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
-      hover:bg-blue-100/70 hover:text-blue-700 group"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
               onClick={onAdd}
               title="Créer une rubrique"
             >
@@ -330,8 +129,7 @@ export const MapModule: React.FC<MapModuleProps> = ({
             </Button>
             <Button
               variant="ghost"
-              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
-      hover:bg-blue-100/70 hover:text-blue-700 group"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
               onClick={onImportWord}
               title="Importer un document Word"
             >
@@ -343,8 +141,7 @@ export const MapModule: React.FC<MapModuleProps> = ({
             </Button>
             <Button
               variant="ghost"
-              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
-      hover:bg-blue-100/70 hover:text-blue-700 group"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
               onClick={onLoad}
               title="Charger une rubrique existante"
             >
@@ -355,8 +152,7 @@ export const MapModule: React.FC<MapModuleProps> = ({
             </Button>
             <Button
               variant="ghost"
-              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
-      hover:bg-blue-100/70 hover:text-blue-700 group"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
               onClick={() => selectedMapItemId && onClone(selectedMapItemId)}
               disabled={!selectedMapItemId}
               title="Dupliquer la rubrique sélectionnée"
@@ -368,8 +164,7 @@ export const MapModule: React.FC<MapModuleProps> = ({
             </Button>
             <Button
               variant="ghost"
-              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition
-      hover:bg-blue-100/70 hover:text-blue-700 group"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
               onClick={() => selectedMapItemId && onDelete(selectedMapItemId)}
               disabled={!selectedMapItemId}
               title="Supprimer la rubrique sélectionnée"
@@ -394,24 +189,20 @@ export const MapModule: React.FC<MapModuleProps> = ({
                 >
                   <div>
                     {visibleItems.map((item) => {
-                      // Trouver l'index du même item dans la flatlist d'origine
                       const origIdx = mapItems.findIndex(
                         (x) => x.id === item.id
                       );
                       return (
-                        <SortableItem
+                        <MapItemComponent
                           key={item.id}
                           item={item}
                           idx={origIdx}
                           selectedMapItemId={selectedMapItemId}
                           onSelect={onSelect}
-                          canOutdent={canOutdent}
-                          canIndent={canIndent}
-                          onOutdent={onOutdent}
-                          onIndent={onIndent}
                           mapItems={visibleItems}
                           onToggleExpand={onToggleExpand}
-                          hasChildren={hasVisibleChildren(mapItems, origIdx)}
+                          onIndent={onIndent}
+                          onOutdent={onOutdent}
                         />
                       );
                     })}

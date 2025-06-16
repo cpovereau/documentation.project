@@ -1,8 +1,7 @@
-export interface FeatureItem {
+export interface MapItem {
   id: number;
-  name: string;
+  title: string;
   level: number;
   expanded?: boolean;
   active?: boolean;
-  hasUpdate?: boolean;
 }

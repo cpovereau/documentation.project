@@ -209,7 +209,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             Médias
           </div>
         </div>
-
         {/* Switch images/vidéos */}
         <div className="flex items-center justify-center gap-3 w-[175px] mx-auto mt-6 mb-4">
           <Camera
@@ -261,9 +260,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             </button>
           )}
         </div>
-
         <div className="h-3" />
-
         {/* Boutons de tri et mode affichage */}
         <div className="flex justify-between">
           <Button
@@ -298,30 +295,26 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             )}
           </Button>
         </div>
-
-        {/* ScrollArea médias */}
-        <div className="flex flex-col" style={{ height: "560px" }}>
-          {" "}
-          <ScrollArea className="flex-1 min-h-0">
-            <div className={getGridClass()}>
-              {filteredMedia.map((card) => (
-                <MediaCard
-                  key={card.id}
-                  {...card}
-                  className={
-                    displayMode === "grid"
-                      ? "w-full h-[180px]"
-                      : displayMode === "small"
-                      ? "w-full h-[100px]"
-                      : "w-full h-[60px]"
-                  }
-                  isListMode={displayMode === "list"}
-                />
-              ))}
-            </div>
-            <ScrollBar /* ... */ />
-          </ScrollArea>
-        </div>
+        {/* ScrollArea médias */}{" "}
+        <ScrollArea className="flex-1 min-h-0" maxHeight="500px">
+          <div className={getGridClass()}>
+            {filteredMedia.map((card) => (
+              <MediaCard
+                key={card.id}
+                {...card}
+                className={
+                  displayMode === "grid"
+                    ? "w-full h-[180px]"
+                    : displayMode === "small"
+                    ? "w-full h-[100px]"
+                    : "w-full h-[60px]"
+                }
+                isListMode={displayMode === "list"}
+              />
+            ))}
+          </div>
+          <ScrollBar /* ... */ />
+        </ScrollArea>
         <div className="flex justify-center mt-4 mb-2">
           <Button
             className="w-full max-w-xs h-12 rounded-lg bg-[#2563eb] text-white font-semibold text-base hover:bg-[#1e40af] transition-colors"
