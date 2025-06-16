@@ -3,7 +3,8 @@ import { Button } from "components/ui/button";
 import { Separator } from "components/ui/separator";
 import { ProductSelect } from "components/ui/ProductSelect";
 import { VersionSelect } from "components/ui/VersionSelect";
-import { FeatureModule, FeatureItem } from "components/ui/FeatureModule";
+import { FeatureModule } from "components/ui/FeatureModule";
+import type { FeatureItem } from "@/types/FeatureItem";
 import { ArrowLeftCircle } from "lucide-react";
 import { cn } from "lib/utils";
 
@@ -22,12 +23,16 @@ interface SyncLeftSidebarProps {
   features: FeatureItem[];
   selectedFeature: number | null;
   onSelectFeature: (id: number) => void;
+  setSelectedFeature: (id: number) => void;
   onAddFeature: () => void;
+  onIndent: (id: number) => void;
+  onOutdent: (id: number) => void;
   onDeleteFeature: (id: number) => void;
   onCopyFeature: (id: number) => void;
   onPasteFeature: () => void;
   onReorderFeatures: (items: FeatureItem[]) => void;
   onToggleExpandFeature: (id: number, expand: boolean) => void;
+  className?: string;
 }
 
 export const SyncLeftSidebar: React.FC<SyncLeftSidebarProps> = ({
@@ -51,74 +56,82 @@ export const SyncLeftSidebar: React.FC<SyncLeftSidebarProps> = ({
   onPasteFeature,
   onReorderFeatures,
   onToggleExpandFeature,
+  onIndent,
+  onOutdent,
+  className = "",
 }) => (
   <>
-    {/* Sidebar dockée à droite */}
     <div
-      className={cn(
-        "fixed top-[103px] bottom-0 left-0 z-40 transition-all duration-300 ease-in-out bg-[#f7a900] rounded-tl-2xl rounded-bl-2xl flex flex-col shadow-lg",
-        isExpanded ? "w-[345px]" : "w-0 overflow-hidden"
-      )}
-      style={{ minWidth: isExpanded ? 345 : 0, maxWidth: 345 }}
+      className="w-[345px] h-full bg-[#f7a900] rounded-r-[15px] shadow-lg flex flex-col"
+      style={{ width: isExpanded ? "345px" : "0px" }}
     >
-      <div className="pt-20 px-4 flex flex-col h-full p-4">
-        <Separator />
-        <div className="h-[26px] top-[11px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] tracking-[0] leading-normal whitespace-nowrap">
-          Produit / Version
-        </div>
-        {/* Header : Produit / Version côte à côte */}
-        <div className="flex pt-5 gap-2 mb-2">
-          <ProductSelect
-            value={selectedProduct}
-            onChange={(val) => {
-              console.log("produit choisi :", val);
-              setSelectedProduct(val);
-            }}
-            options={productOptions}
-          />
-          <VersionSelect
-            value={selectedVersion}
-            onChange={(val) => {
-              console.log("version choisie :", val);
-              setSelectedVersion(val);
-            }}
-            options={versionOptions ?? []}
-            onAdd={onAddVersion}
-          />
-        </div>
-        {/* Boutons action contextuelle */}
-        <div className="flex flex-col gap-2 mb-2">
-          <Button
-            variant="primary"
-            className="h-11 px-4 py-0 w-full"
-            onClick={onPublish}
-          >
-            Publier le suivi de version
-          </Button>
-          <Button
-            variant="outline"
-            className="h-11 px-4 py-0 w-full"
-            onClick={onShowImpactMap}
-          >
-            Afficher l'arbre d'impact
-          </Button>
-        </div>
-        {/* Bloc Fonctionnalités */}
-        <div className="flex-1">
-          <div className="rounded-xl shadow p-2 h-full flex flex-col">
-            <FeatureModule
-              isExpanded={true}
-              onToggle={() => {}}
-              features={features}
-              selectedFeatureId={selectedFeature}
-              onSelect={onSelectFeature}
-              onAdd={onAddFeature}
-              onDelete={onDeleteFeature}
-              onCopy={onCopyFeature}
-              onPaste={onPasteFeature}
-              onReorder={onReorderFeatures}
-              onToggleExpand={onToggleExpandFeature}
-            />
+      <div className="relative h-full">
+        <div
+          className="h-full bg-[#f7a900] rounded-r-[15px] shadow-lg transition-all duration-300 ease-in-out flex flex-col"
+          style={{
+            width: "345px",
+            transform: isExpanded ? "translateX(0)" : "translateX(-345px)",
+          }}
+        >
+          <div className="pt-20 px-4 flex flex-col h-full p-4">
+            <Separator />
+            <div className="h-[26px] top-[11px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] leading-normal whitespace-nowrap">
+              Produit / Version
+            </div>
+
+            {/* Produit / Version */}
+            <div className="flex pt-5 gap-2 mb-2">
+              <ProductSelect
+                value={selectedProduct}
+                onChange={(val) => setSelectedProduct(val)}
+                options={productOptions}
+              />
+              <VersionSelect
+                value={selectedVersion}
+                onChange={(val) => setSelectedVersion(val)}
+                options={versionOptions}
+                onAdd={onAddVersion}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-2 mb-2">
+              <Button
+                variant="primary"
+                className="h-11 px-4 py-0 w-full"
+                onClick={onPublish}
+              >
+                Publier le suivi de version
+              </Button>
+              <Button
+                variant="outline"
+                className="h-11 px-4 py-0 w-full"
+                onClick={onShowImpactMap}
+              >
+                Afficher l'arbre d'impact
+              </Button>
+            </div>
+
+            {/* Bloc Fonctionnalités */}
+            <div className="flex-1">
+              <div className="rounded-xl shadow p-2 h-full flex flex-col">
+                <FeatureModule
+                  isExpanded={true}
+                  onToggle={() => {}}
+                  features={features}
+                  selectedFeatureId={selectedFeature}
+                  onSelectFeature={onSelectFeature}
+                  onAdd={onAddFeature}
+                  onDelete={onDeleteFeature}
+                  onCopy={onCopyFeature}
+                  onPaste={onPasteFeature}
+                  onReorderFeatures={onReorderFeatures}
+                  onToggleExpand={onToggleExpandFeature}
+                  onIndent={onIndent}
+                  onOutdent={onOutdent}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
