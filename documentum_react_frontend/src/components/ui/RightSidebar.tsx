@@ -1,30 +1,9 @@
 import React, { useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "components/ui/button";
-import { ScrollArea, ScrollBar } from "components/ui/scroll-area";
-import { Separator } from "components/ui/separator";
-import { MediaCard } from "./MediaCard";
 import { ImportModal } from "components/ui/import-modal";
-import {
-  ArrowRightCircle,
-  ArrowUpDown,
-  Video,
-  Camera,
-  X as XIcon,
-  Move,
-  ArrowLeftFromLine,
-  Search,
-  LayoutGrid,
-  List,
-  Text,
-} from "lucide-react";
-
-interface MediaItem {
-  id: number;
-  title: string;
-  updatedText: string;
-  imageUrl: string;
-}
+import { MediaPanel, MediaItem } from "components/ui/MediaPanel";
+import { ArrowRightCircle, Move, ArrowLeftFromLine } from "lucide-react";
 
 interface RightSidebarProps {
   isExpanded: boolean;
@@ -55,69 +34,81 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   });
   const [size, setSize] = useState({ width: 248, height: "auto" });
   const floatingRef = useRef<HTMLDivElement>(null);
-  const resizingRef = useRef<{
-    isResizing: boolean;
-    edge: "left" | "right" | null;
-  }>({ isResizing: false, edge: null });
+  const resizingRef = useRef({
+    isResizing: false,
+    edge: null as "left" | "right" | null,
+  });
 
-  // --- Exemples de médias ---
   const mediaItems: MediaItem[] = [
     {
       id: 1,
-      title: "Test image",
-      updatedText: "Updated today",
-      imageUrl: "https://c.animaapp.com/macke9kyh9ZtZh/img/image-2.png",
+      title: "Demo vidéo",
+      updatedText: "Updated yesterday",
+      imageUrl: "https://placehold.co/150x90",
     },
     {
       id: 2,
-      title: "Demo vidéo",
-      updatedText: "Updated yesterday",
-      imageUrl: "https://c.animaapp.com/macke9kyh9ZtZh/img/image-2.png",
+      title: "Test image",
+      updatedText: "Updated today",
+      imageUrl: "https://placehold.co/150x90",
     },
     {
       id: 3,
       title: "Un autre média",
       updatedText: "Updated 2 days ago",
-      imageUrl: "https://c.animaapp.com/macke9kyh9ZtZh/img/image-2.png",
+      imageUrl: "https://placehold.co/150x90",
     },
     {
       id: 4,
       title: "Vidéo projet",
       updatedText: "Updated 4 days ago",
-      imageUrl: "https://c.animaapp.com/macke9kyh9ZtZh/img/image-2.png",
+      imageUrl: "https://placehold.co/150x90",
+    },
+    {
+      id: 5,
+      title: "Capture ADM menu",
+      updatedText: "Updated 1 week ago",
+      imageUrl: "https://placehold.co/150x90",
+    },
+    {
+      id: 6,
+      title: "BOU Export",
+      updatedText: "Updated 3 days ago",
+      imageUrl: "https://placehold.co/150x90",
+    },
+    {
+      id: 7,
+      title: "USA Paramètres",
+      updatedText: "Updated yesterday",
+      imageUrl: "https://placehold.co/150x90",
+    },
+    {
+      id: 8,
+      title: "PLA Planning",
+      updatedText: "Updated today",
+      imageUrl: "https://placehold.co/150x90",
     },
   ];
 
-  // --- Filtrage, tri, modes d'affichage ---
-  const filteredMedia = mediaItems
-    .filter((item) =>
-      item.title.toLowerCase().includes(searchText.toLowerCase())
-    )
-    .sort((a, b) =>
-      sortOrder === "asc"
-        ? a.title.localeCompare(b.title)
-        : b.title.localeCompare(a.title)
-    );
+  const [page, setPage] = useState(1);
 
-  // --- Responsive / grid ---
-  const getGridClass = () => {
-    if (displayMode === "grid") return "grid gap-2 grid-cols-1 sm:grid-cols-1";
-    if (displayMode === "small") return "grid gap-2 grid-cols-2 sm:grid-cols-2";
-    if (displayMode === "list") return "flex flex-col gap-5";
-    return "grid-cols-1";
-  };
-
-  // --- Event handlers ---
   const toggleSwitch = useCallback(() => setIsImageMode((prev) => !prev), []);
+
   const handleClearSearch = useCallback(() => setSearchText(""), []);
+
   const handleLabelClick = () =>
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+
   const handleModeClick = () =>
     setDisplayMode((prev) =>
       prev === "grid" ? "small" : prev === "small" ? "list" : "grid"
     );
-  const handleImportClick = () =>
-    alert(isImageMode ? "Importer une image" : "Importer une vidéo");
+
+  const handleImportClick = () => {
+    setImportType(isImageMode ? "image" : "video");
+    setImportModalOpen(true);
+  };
+
   const toggleFloating = useCallback(() => {
     onToggle(!isFloating);
     if (!isFloating) {
@@ -193,152 +184,31 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     [size.width]
   );
 
-  //  --- Rendu du contenu principal ---
-  const renderContent = useCallback(
-    () => (
-      <>
-        {/* Titre & séparateur */}
-        <div className="relative w-full h-12">
-          <div className="absolute top-0.5 left-0 w-full">
-            <Separator className="h-px w-full" />
-          </div>
-          <div
-            className="absolute w-[134px] h-[26px] top-[11px]
-      font-['Roboto',Helvetica] font-extrabold text-black text-[32px] tracking-[0] leading-normal whitespace-nowrap"
-          >
-            Médias
-          </div>
-        </div>
-        {/* Switch images/vidéos */}
-        <div className="flex items-center justify-center gap-3 w-[175px] mx-auto mt-6 mb-4">
-          <Camera
-            aria-label="Images"
-            strokeWidth={2.5}
-            className="w-10 h-10 cursor-pointer"
-            onClick={() => setIsImageMode(true)}
-          />
-          <div
-            className="relative w-10 h-6 bg-gray-300 rounded-full cursor-pointer"
-            onClick={toggleSwitch}
-          >
-            <div
-              className={`absolute w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${
-                isImageMode ? "translate-x-0" : "translate-x-full"
-              }`}
-              style={{ top: "2px", left: "2px" }}
-            />
-          </div>
-          <Video
-            aria-label="Video"
-            strokeWidth={2.5}
-            className="w-10 h-10 cursor-pointer"
-            onClick={() => setIsImageMode(false)}
-          />
-        </div>
-        {/* Barre de recherche améliorée */}
-        <div className="relative w-full">
-          {/* Icône loupe */}
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-          {/* Champ texte */}
-          <input
-            type="text"
-            placeholder="Recherche"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 rounded-lg border border-[#65558f] bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#65558f]"
-          />
-          {/* Croix */}
-          {searchText && (
-            <button
-              type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              onClick={() => setSearchText("")}
-              tabIndex={-1}
-              aria-label="Effacer la recherche"
-            >
-              <XIcon className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-        <div className="h-3" />
-        {/* Boutons de tri et mode affichage */}
-        <div className="flex justify-between">
-          <Button
-            variant="ghost"
-            className="flex items-center gap-2 pl-3 pr-4 py-2.5 h-10 rounded-[100px]"
-            onClick={handleLabelClick}
-            title="Trier A-Z / Z-A"
-          >
-            <ArrowUpDown
-              className="w-[18px] h-[18px]"
-              aria-label="Filter icon"
-            />
-            <span className="font-m3-label-large text-m-3syslightprimary">
-              Label {sortOrder === "asc" ? "▲" : "▼"}
-            </span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            className="p-2 h-10 rounded-[100px]"
-            onClick={handleModeClick}
-            title="Changer l'affichage"
-          >
-            {displayMode === "grid" && (
-              <LayoutGrid className="w-6 h-6 text-gray-700" />
-            )}
-            {displayMode === "small" && (
-              <List className="w-6 h-6 text-gray-700" /> // ou une autre icône si tu préfères
-            )}
-            {displayMode === "list" && (
-              <Text className="w-6 h-6 text-gray-700" />
-            )}
-          </Button>
-        </div>
-        {/* ScrollArea médias */}{" "}
-        <ScrollArea className="flex-1 min-h-0" maxHeight="500px">
-          <div className={getGridClass()}>
-            {filteredMedia.map((card) => (
-              <MediaCard
-                key={card.id}
-                {...card}
-                className={
-                  displayMode === "grid"
-                    ? "w-full h-[180px]"
-                    : displayMode === "small"
-                    ? "w-full h-[100px]"
-                    : "w-full h-[60px]"
-                }
-                isListMode={displayMode === "list"}
-              />
-            ))}
-          </div>
-          <ScrollBar /* ... */ />
-        </ScrollArea>
-        <div className="flex justify-center mt-4 mb-2">
-          <Button
-            className="w-full max-w-xs h-12 rounded-lg bg-[#2563eb] text-white font-semibold text-base hover:bg-[#1e40af] transition-colors"
-            onClick={() => {
-              setImportType(isImageMode ? "image" : "video");
-              setImportModalOpen(true);
-            }}
-          >
-            {isImageMode ? "Importer une image" : "Importer une vidéo"}
-          </Button>
-        </div>
-        <div className="h-2" />
-      </>
-    ),
-    [
-      isImageMode,
-      searchText,
-      sortOrder,
-      displayMode,
-      size.width,
-      isFloating,
-      handleClearSearch,
-      toggleSwitch,
-    ]
+  const mediaPanel = (
+    <MediaPanel
+      page={page}
+      setPage={setPage}
+      mediaItems={mediaItems}
+      isImageMode={isImageMode}
+      searchText={searchText}
+      sortOrder={sortOrder}
+      displayMode={displayMode}
+      onSearchChange={(text) => {
+        setPage(1);
+        setSearchText(text);
+      }}
+      onClearSearch={handleClearSearch}
+      onToggleMode={toggleSwitch}
+      onToggleType={(type) => setIsImageMode(type === "image")}
+      onToggleSort={handleLabelClick}
+      onToggleDisplayMode={() => {
+        setPage(1);
+        setDisplayMode((prev) =>
+          prev === "grid" ? "small" : prev === "small" ? "list" : "grid"
+        );
+      }}
+      onImportClick={handleImportClick}
+    />
   );
 
   const floatingWindow = (
@@ -356,21 +226,20 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       <div className="p-4 h-full flex flex-col">
         <div className="flex justify-between items-center mb-4">
           <div
-            className="cursor-move p-2 rounded-md hover:bg-gray-200 transition-colors duration-200"
+            className="cursor-move p-2 rounded-md hover:bg-gray-200"
             onMouseDown={handleDragStart}
           >
             <Move className="w-8 h-8 text-gray-600" />
           </div>
           <Button
             variant="ghost"
-            className="flex items-center justify-center p-0 h-16 w-16 hover:bg-gray-200 transition-colors duration-200"
+            className="p-0 h-16 w-16"
             onClick={() => onToggle(false)}
-            title="Dock sidebar"
           >
             <ArrowLeftFromLine className="w-6 h-6 text-gray-600" />
           </Button>
         </div>
-        <div className="flex-grow overflow-hidden">{renderContent()}</div>
+        <div className="flex-grow overflow-hidden">{mediaPanel}</div>
       </div>
       <div
         className="absolute top-0 left-0 w-1 h-full cursor-ew-resize"
@@ -383,17 +252,16 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     </div>
   );
 
-  // --- Layout principal, responsive, plein écran ---
   return (
     <>
       {!isFloating && (
         <div
-          className={`fixed top-[103px] bottom-0 right-0 transition-all duration-300 ease-in-out flex flex-col ${className}`}
+          className={`fixed top-[103px] bottom-0 right-0 flex flex-col ${className}`}
           style={{ width: isExpanded ? "248px" : "0" }}
         >
           <div className="relative h-full flex flex-col">
             <div
-              className={`h-full bg-[#f7a900] rounded-l-[15px] transition-all duration-300 ease-in-out flex flex-col`}
+              className="h-full bg-[#f7a900] rounded-l-[15px] flex flex-col"
               style={{
                 width: "248px",
                 transform: isExpanded ? "translateX(0)" : "translateX(248px)",
@@ -403,14 +271,13 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                 <div className="absolute top-4 right-4">
                   <Button
                     variant="ghost"
-                    className="flex items-center justify-center p-0 h-18 w-18 hover:bg-gray-200 transition-colors duration-200"
+                    className="p-0 h-18 w-18"
                     onClick={() => onToggle(true)}
-                    title="Detach sidebar"
                   >
                     <Move className="w-6 h-6 text-gray-600" />
                   </Button>
                 </div>
-                {renderContent()}
+                {mediaPanel}
               </div>
             </div>
           </div>
@@ -419,7 +286,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       {!isFloating && (
         <Button
           variant="ghost"
-          className={`fixed top-[120px] p-0 h-17 w-17 z-50 flex items-center justify-center rounded-full transition-all duration-300 ease-in-out hover:bg-gray-200`}
+          className="fixed top-[120px] p-0 h-17 w-17 z-50 flex items-center justify-center rounded-full hover:bg-gray-200"
           style={{
             right: isExpanded ? "248px" : "0",
             transform: "translateX(50%)",
@@ -436,27 +303,15 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       <ImportModal
         open={importModalOpen}
         title={
-          importType === "image"
-            ? "Importer une image"
-            : importType === "video"
-            ? "Importer une vidéo"
-            : "Importer un fichier"
+          importType === "image" ? "Importer une image" : "Importer une vidéo"
         }
-        accept={
-          importType === "image"
-            ? "image/*"
-            : importType === "video"
-            ? "video/*"
-            : "*"
-        }
+        accept={importType === "image" ? "image/*" : "video/*"}
         onClose={() => setImportModalOpen(false)}
         onNext={(file) => {
-          // Ici tu ajoutes la logique d’import réel
           console.log("Fichier importé :", file);
           setImportModalOpen(false);
         }}
       />
-      ;
     </>
   );
 };

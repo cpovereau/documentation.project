@@ -1,15 +1,10 @@
-import React from "react";
-// Update the import path below if your Button component is located elsewhere
+import React, { useState } from "react";
 import { Button } from "components/ui/button";
-import { Input } from "components/ui/input";
-import { ScrollArea } from "components/ui/scroll-area";
-import { Separator } from "components/ui/separator";
-import {
-  ArrowRightCircle,
-  ChevronRight,
-  ChevronLeft,
-  Search,
-} from "lucide-react";
+import { ArrowRightCircle } from "lucide-react";
+import { AuthorInfo } from "./AuthorInfo";
+import { MediaPanel, MediaItem } from "./MediaPanel";
+import { ScrollArea } from "@radix-ui/react-scroll-area";
+import { ImportModal } from "components/ui/import-modal";
 
 interface SyncRightSidebarProps {
   isExpanded: boolean;
@@ -20,61 +15,122 @@ export const SyncRightSidebar: React.FC<SyncRightSidebarProps> = ({
   isExpanded,
   onToggle,
 }) => {
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importType, setImportType] = useState<"image" | "video">("image");
+  const [isImageMode, setIsImageMode] = useState(true);
+  const [searchText, setSearchText] = useState("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [displayMode, setDisplayMode] = useState<"grid" | "small" | "list">(
+    "grid"
+  );
+
+  const mediaItems: MediaItem[] = [
+    {
+      id: 1,
+      title: "Demo vidéo",
+      updatedText: "Updated yesterday",
+      imageUrl: "https://placehold.co/150x90",
+    },
+    {
+      id: 2,
+      title: "Test image",
+      updatedText: "Updated today",
+      imageUrl: "https://placehold.co/150x90",
+    },
+    {
+      id: 3,
+      title: "Un autre média",
+      updatedText: "Updated 2 days ago",
+      imageUrl: "https://placehold.co/150x90",
+    },
+    {
+      id: 4,
+      title: "Vidéo projet",
+      updatedText: "Updated 4 days ago",
+      imageUrl: "https://placehold.co/150x90",
+    },
+    {
+      id: 5,
+      title: "Capture ADM menu",
+      updatedText: "Updated 1 week ago",
+      imageUrl: "https://placehold.co/150x90",
+    },
+    {
+      id: 6,
+      title: "BOU Export",
+      updatedText: "Updated 3 days ago",
+      imageUrl: "https://placehold.co/150x90",
+    },
+    {
+      id: 7,
+      title: "USA Paramètres",
+      updatedText: "Updated yesterday",
+      imageUrl: "https://placehold.co/150x90",
+    },
+    {
+      id: 8,
+      title: "PLA Planning",
+      updatedText: "Updated today",
+      imageUrl: "https://placehold.co/150x90",
+    },
+  ];
+
+  const [page, setPage] = useState(1);
+
+  const handleImportClick = () => {
+    setImportType(isImageMode ? "image" : "video");
+    setImportModalOpen(true);
+  };
+
   return (
     <>
       <div
-        className={`bg-[#f7a900] fixed top-[103px] bottom-0 right-0 transition-all duration-300 ease-in-out ${
+        className={`bg-[#f7a900] fixed top-[103px] bottom-0 right-0 overflow-hidden transition-all duration-300 ease-in-out ${
           isExpanded ? "w-[248px]" : "w-0"
         } overflow-hidden`}
       >
-        <div className="pt-20 px-4 flex flex-col h-full">
-          <div className="space-y-4 mb-6">
-            <Separator className="my-6" />
-            <h2 className="text-2xl font-bold">Détail du sujet</h2>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Dernière mise à jour
-              </label>
-              <Input value="15/04/2023" readOnly />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Auteur</label>
-              <Input value="Jean Dupont" readOnly />
-            </div>
-            <Button className="w-full">Ouvrir pour modification</Button>
+        <div className="pt-20 px-4 flex flex-col max-h-full min-h-0 h-full">
+          <div className="space-y-4 mb-2">
+            <AuthorInfo auteur="Jean Dupont" date="15/04/2023" />
           </div>
 
-          <Separator className="my-6" />
-
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold">Médias</h2>
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <Input placeholder="Recherche" className="pl-8" />
-            </div>
-            <div className="bg-white rounded-lg p-4 shadow-md">
-              <ScrollArea className="h-[300px]">
-                <div className="grid grid-cols-2 gap-2">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="bg-gray-100 p-2 rounded">
-                      <div className="bg-gray-300 w-full h-20 mb-2"></div>
-                      <p className="text-xs">Image {i}</p>
-                      <p className="text-xs text-gray-500">15/04/2023</p>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-            <Button className="w-full">Importer une image</Button>
-          </div>
+          <ScrollArea className="flex-1 min-h-0 scrollarea-rounded">
+            <MediaPanel
+              page={page}
+              setPage={setPage}
+              mediaItems={mediaItems}
+              isImageMode={isImageMode}
+              searchText={searchText}
+              sortOrder={sortOrder}
+              displayMode={displayMode}
+              onSearchChange={(text) => {
+                setPage(1);
+                setSearchText(text);
+              }}
+              onClearSearch={() => setSearchText("")}
+              onToggleMode={() => setIsImageMode((prev) => !prev)}
+              onToggleType={(type) => setIsImageMode(type === "image")}
+              onToggleSort={() =>
+                setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+              }
+              onToggleDisplayMode={() => {
+                setPage(1);
+                setDisplayMode((prev) =>
+                  prev === "grid" ? "small" : prev === "small" ? "list" : "grid"
+                );
+              }}
+              onImportClick={handleImportClick}
+            />
+          </ScrollArea>
         </div>
       </div>
+
       <Button
         variant="ghost"
-        className={`fixed top-[120px] p-0 h-17 w-17 z-50 flex items-center justify-center rounded-full transition-all duration-300 ease-in-out hover:bg-gray-200`}
+        className={`fixed top-[120px] z-50 flex items-center justify-center rounded-full hover:bg-gray-200 transition-all duration-300 ease-in-out`}
         style={{
-          right: isExpanded ? "200px" : "0",
-          transform: "translateX(-50%)",
+          right: isExpanded ? "248px" : "0px",
+          transform: "translateX(50%)",
         }}
         onClick={onToggle}
       >
@@ -83,6 +139,18 @@ export const SyncRightSidebar: React.FC<SyncRightSidebarProps> = ({
           aria-label="Rightbar toggle"
         />
       </Button>
+      <ImportModal
+        open={importModalOpen}
+        title={
+          importType === "image" ? "Importer une image" : "Importer une vidéo"
+        }
+        accept={importType === "image" ? "image/*" : "video/*"}
+        onClose={() => setImportModalOpen(false)}
+        onNext={(file) => {
+          console.log("Fichier importé :", file);
+          setImportModalOpen(false);
+        }}
+      />
     </>
   );
 };

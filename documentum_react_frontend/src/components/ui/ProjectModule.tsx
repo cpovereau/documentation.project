@@ -72,7 +72,7 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
             }`}
           />
         </Button>
-        <div className="absolute w-[134px] h-[26px] top-[11px] left-[47px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] tracking-[0] leading-normal whitespace-nowrap">
+        <div className="absolute w-[134px] h-[26px] top-[11px] left-[47px] font-bold text-black text-[32px] leading-normal">
           Projet
         </div>
       </div>

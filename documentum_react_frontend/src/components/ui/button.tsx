@@ -7,12 +7,14 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
     | "danger"
     | "outline"
     | "ghost"
-    | "success";
+    | "success"
+    | "disabled";
 };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ children, className = "", variant = "primary", ...props }, ref) => {
     let variantClass = "";
+
     if (variant === "primary") {
       variantClass =
         "bg-blue-600 text-white border border-blue-800 hover:bg-blue-700";
@@ -31,10 +33,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       variantClass =
         "bg-green-600 text-white border border-green-800 hover:bg-green-700";
     }
+
     return (
       <button
         ref={ref}
-        className={`rounded transition-all duration-200 ${variantClass} ${className}`}
+        className={`rounded transition-all duration-200 ${variantClass} ${className} disabled:opacity-50 disabled:cursor-not-allowed`}
         {...props}
       >
         {children}
@@ -42,5 +45,4 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     );
   }
 );
-
 Button.displayName = "Button";

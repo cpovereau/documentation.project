@@ -16,25 +16,25 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { FeatureItemComponent } from "@/components/ui/FeatureItem";
-import type { FeatureItem } from "@/types/FeatureItem";
+import { FeatureItem as FeatureItemComponent } from "@/components/ui/FeatureItem";
+import type { FeatureItem as FeatureItemType } from "@/types/FeatureItem";
 
 export interface FeatureModuleProps {
-  features: FeatureItem[];
+  features: FeatureItemType[];
   selectedFeatureId: number | null;
   onSelectFeature: (id: number) => void;
   onAdd: () => void;
   onDelete: (id: number) => void;
   onCopy: (id: number) => void;
   onPaste: () => void;
-  onReorderFeatures: (items: FeatureItem[]) => void;
+  onReorderFeatures: (items: FeatureItemType[]) => void;
   onToggleExpand: (id: number, expand: boolean) => void;
   onIndent: (id: number) => void;
   onOutdent: (id: number) => void;
 }
 
-function getVisibleItems(items: FeatureItem[]): FeatureItem[] {
-  const result: FeatureItem[] = [];
+function getVisibleItems(items: FeatureItemType[]): FeatureItemType[] {
+  const result: FeatureItemType[] = [];
   let hideLevel: number | null = null;
   for (const item of items) {
     if (hideLevel !== null && item.level > hideLevel) continue;
@@ -75,7 +75,7 @@ export const FeatureModule: React.FC<FeatureModuleProps> = ({
   return (
     <div className="relative w-full">
       <Separator />
-      <h2 className="h-[26px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] leading-normal m-0">
+      <h2 className="h-[26px] font-bold text-black text-[32px] leading-normal m-0">
         Fonctionnalités
       </h2>
       <div className="flex items-center justify-between gap-2 bg-[#d9d9d94c] rounded-[15px] mt-6 mx-[5px] py-1 px-1">
@@ -134,7 +134,7 @@ export const FeatureModule: React.FC<FeatureModuleProps> = ({
                   item={item}
                   idx={idx}
                   selectedFeatureId={selectedFeatureId}
-                  onSelectFeature={onSelectFeature}
+                  onSelect={onSelectFeature}
                   features={features}
                   onToggleExpand={onToggleExpand}
                   onIndent={onIndent}

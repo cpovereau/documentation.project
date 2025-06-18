@@ -1,0 +1,227 @@
+import React, { useState } from "react";
+import { Button } from "components/ui/button";
+import { Separator } from "components/ui/separator";
+import { MediaCard } from "components/ui/MediaCard";
+import {
+  Camera,
+  Video,
+  Upload,
+  X as XIcon,
+  Search,
+  ArrowUpDown,
+  LayoutGrid,
+  List,
+  Text,
+} from "lucide-react";
+
+export interface MediaItem {
+  id: number;
+  title: string;
+  updatedText: string;
+  imageUrl: string;
+}
+
+interface MediaPanelProps {
+  mediaItems: MediaItem[];
+  isImageMode: boolean;
+  searchText: string;
+  sortOrder: "asc" | "desc";
+  displayMode: "grid" | "small" | "list";
+  onSearchChange: (text: string) => void;
+  onClearSearch: () => void;
+  onToggleMode: () => void;
+  onToggleType: (type: "image" | "video") => void;
+  onToggleSort: () => void;
+  onToggleDisplayMode: () => void;
+  onImportClick: () => void;
+  page: number;
+  setPage: (page: number) => void;
+}
+
+export const MediaPanel: React.FC<MediaPanelProps> = ({
+  mediaItems,
+  isImageMode,
+  searchText,
+  sortOrder,
+  displayMode,
+  onSearchChange,
+  onClearSearch,
+  onToggleMode,
+  onToggleType,
+  onToggleSort,
+  onToggleDisplayMode,
+  onImportClick,
+  page,
+  setPage,
+}) => {
+  const itemsPerPage = displayMode === "grid" ? 3 : 6;
+
+  const filteredMedia = mediaItems
+    .filter((item) =>
+      item.title.toLowerCase().includes(searchText.toLowerCase())
+    )
+    .sort((a, b) =>
+      sortOrder === "asc"
+        ? a.title.localeCompare(b.title)
+        : b.title.localeCompare(a.title)
+    );
+
+  const paginatedMedia = filteredMedia.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
+
+  const getGridClass = () => {
+    if (displayMode === "grid") return "grid gap-2 grid-cols-1";
+    if (displayMode === "small") return "grid gap-2 grid-cols-2";
+    if (displayMode === "list")
+      return "flex flex-col gap-3 text-sm leading-tight";
+    return "grid-cols-1";
+  };
+
+  const totalPages = Math.ceil(filteredMedia.length / itemsPerPage);
+  const hasPrevious = page > 1;
+  const hasNext = page < totalPages;
+
+  return (
+    <>
+      <div className="relative w-full h-12">
+        <div className="absolute top-0.5 left-0 w-full">
+          <Separator className="h-px w-full" />
+        </div>
+        <div className="absolute font-bold text-black text-[32px] top-[11px] left-0">
+          Médias
+        </div>
+      </div>
+
+      {/* Ligne actions */}
+      <div className="flex items-center justify-between mt-4 mb-2">
+        <Button
+          variant="ghost"
+          className="p-2"
+          onClick={onImportClick}
+          title={isImageMode ? "Importer photo" : "Importer vidéo"}
+        >
+          <Upload className="w-6 h-6" />
+        </Button>
+        <div className="flex items-center gap-3">
+          <Camera
+            className="w-7 h-7 cursor-pointer"
+            onClick={() => onToggleType("image")}
+          />
+          <div
+            className="relative w-10 h-6 bg-gray-300 rounded-full cursor-pointer"
+            onClick={onToggleMode}
+          >
+            <div
+              className={`absolute w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${
+                isImageMode ? "translate-x-0" : "translate-x-full"
+              }`}
+              style={{ top: "2px", left: "2px" }}
+            />
+          </div>
+          <Video
+            className="w-7 h-7 cursor-pointer"
+            onClick={() => onToggleType("video")}
+          />
+        </div>
+      </div>
+
+      {/* Recherche */}
+      <div className="relative w-full">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Recherche"
+          value={searchText}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="w-full pl-10 pr-10 py-2 rounded-lg border border-[#65558f] bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#65558f]"
+        />
+        {searchText && (
+          <button
+            type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            onClick={onClearSearch}
+            aria-label="Effacer la recherche"
+          >
+            <XIcon className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+
+      <div className="h-3" />
+
+      {/* Tri + mode */}
+      <div className="flex justify-between mb-2">
+        <Button
+          variant="ghost"
+          className="flex items-center gap-2"
+          onClick={onToggleSort}
+        >
+          <ArrowUpDown className="w-4 h-4" />
+          <span className="text-sm">
+            Label {sortOrder === "asc" ? "▲" : "▼"}
+          </span>
+        </Button>
+        <Button variant="ghost" onClick={onToggleDisplayMode}>
+          {displayMode === "grid" && <LayoutGrid className="w-6 h-6" />}
+          {displayMode === "small" && <List className="w-6 h-6" />}
+          {displayMode === "list" && <Text className="w-6 h-6" />}
+        </Button>
+      </div>
+
+      {/* Conteneur visuel avec fond blanc */}
+      <div
+        className="bg-white rounded-xl p-3 shadow-sm"
+        style={{
+          height:
+            displayMode === "grid"
+              ? "400px"
+              : displayMode === "small"
+              ? "400px"
+              : "auto",
+          overflow: "hidden",
+        }}
+      >
+        <div className={getGridClass()}>
+          {paginatedMedia.map((card) => (
+            <div
+              key={card.id}
+              className={
+                displayMode === "grid"
+                  ? "h-[110px]"
+                  : displayMode === "small"
+                  ? "h-[90px]"
+                  : ""
+              }
+            >
+              <MediaCard
+                {...card}
+                className="w-full h-full"
+                isListMode={displayMode === "list"}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-between items-center mt-4">
+        <Button
+          variant="ghost"
+          disabled={!hasPrevious}
+          onClick={() => setPage((p) => p - 1)}
+        >
+          ◀️ Précédent
+        </Button>
+        <Button
+          variant="ghost"
+          disabled={!hasNext}
+          onClick={() => setPage((p) => p + 1)}
+        >
+          Suivant ▶️
+        </Button>
+      </div>
+    </>
+  );
+};

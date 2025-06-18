@@ -75,7 +75,7 @@ export const SyncLeftSidebar: React.FC<SyncLeftSidebarProps> = ({
         >
           <div className="pt-20 px-4 flex flex-col h-full p-4">
             <Separator />
-            <div className="h-[26px] top-[11px] font-['Roboto',Helvetica] font-extrabold text-black text-[32px] leading-normal whitespace-nowrap">
+            <div className="h-[26px] top-[11px] font-bold text-black text-[32px] leading-normal mb-4">
               Produit / Version
             </div>
 
