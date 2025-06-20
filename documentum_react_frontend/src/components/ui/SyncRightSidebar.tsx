@@ -93,35 +93,30 @@ export const SyncRightSidebar: React.FC<SyncRightSidebarProps> = ({
           <div className="space-y-4 mb-2">
             <AuthorInfo auteur="Jean Dupont" date="15/04/2023" />
           </div>
-
-          <ScrollArea className="flex-1 min-h-0 scrollarea-rounded">
-            <MediaPanel
-              page={page}
-              setPage={setPage}
-              mediaItems={mediaItems}
-              isImageMode={isImageMode}
-              searchText={searchText}
-              sortOrder={sortOrder}
-              displayMode={displayMode}
-              onSearchChange={(text) => {
-                setPage(1);
-                setSearchText(text);
-              }}
-              onClearSearch={() => setSearchText("")}
-              onToggleMode={() => setIsImageMode((prev) => !prev)}
-              onToggleType={(type) => setIsImageMode(type === "image")}
-              onToggleSort={() =>
-                setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
-              }
-              onToggleDisplayMode={() => {
-                setPage(1);
-                setDisplayMode((prev) =>
-                  prev === "grid" ? "small" : prev === "small" ? "list" : "grid"
-                );
-              }}
-              onImportClick={handleImportClick}
-            />
-          </ScrollArea>
+          <MediaPanel
+            mediaItems={mediaItems}
+            isImageMode={isImageMode}
+            searchText={searchText}
+            sortOrder={sortOrder}
+            displayMode={displayMode}
+            onSearchChange={(text) => {
+              setPage(1);
+              setSearchText(text);
+            }}
+            onClearSearch={() => setSearchText("")}
+            onToggleMode={() => setIsImageMode((prev) => !prev)}
+            onToggleType={(type) => setIsImageMode(type === "image")}
+            onToggleSort={() =>
+              setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+            }
+            onToggleDisplayMode={() => {
+              setPage(1);
+              setDisplayMode((prev) =>
+                prev === "grid" ? "small" : prev === "small" ? "list" : "grid"
+              );
+            }}
+            onImportClick={handleImportClick}
+          />
         </div>
       </div>
 

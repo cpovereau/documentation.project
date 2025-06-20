@@ -219,7 +219,8 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         top: `${position.y}px`,
         left: `${position.x}px`,
         width: `${size.width}px`,
-        height: size.height,
+        height: `calc(100vh - ${position.y}px)`,
+        maxHeight: "90vh",
         zIndex: 9999,
       }}
     >
@@ -233,7 +234,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           </div>
           <Button
             variant="ghost"
-            className="p-0 h-16 w-16"
+            className="p-0 h-16 w-16 flex items-center justify-center"
             onClick={() => onToggle(false)}
           >
             <ArrowLeftFromLine className="w-6 h-6 text-gray-600" />
@@ -268,13 +269,13 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
               }}
             >
               <div className="pt-20 px-4 h-full flex flex-col overflow-hidden">
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-3 right-3">
                   <Button
                     variant="ghost"
-                    className="p-0 h-18 w-18"
+                    className="p-0 h-18 w-18 flex items-center justify-center"
                     onClick={() => onToggle(true)}
                   >
-                    <Move className="w-6 h-6 text-gray-600" />
+                    <Move className="w-9 h-9 text-gray-600" />
                   </Button>
                 </div>
                 {mediaPanel}
@@ -286,7 +287,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       {!isFloating && (
         <Button
           variant="ghost"
-          className="fixed top-[120px] p-0 h-17 w-17 z-50 flex items-center justify-center rounded-full hover:bg-gray-200"
+          className="fixed top-[120px] p-0 h-12 w-12 z-50 flex items-center justify-center rounded-full hover:bg-gray-200"
           style={{
             right: isExpanded ? "248px" : "0",
             transform: "translateX(50%)",

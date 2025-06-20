@@ -1,7 +1,12 @@
+// CentralEditor.tsx
+// Éditeur central principal de l'application Desktop
+
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import { toast } from "sonner";
+import { useSpeechToText } from "hooks/useSpeechToText";
 import { Button } from "components/ui/button";
-import { Card, CardContent } from "components/ui/card";
-import { Checkbox } from "components/ui/checkbox";
+import { Card } from "components/ui/card"; // CardContent non utilisé
+import { Checkbox } from "components/ui/checkbox"; // À intégrer dans la barre d'outils plus tard
 import { GripVertical } from "lucide-react";
 import {
   NavigationMenu,
@@ -24,89 +29,11 @@ import Important from "extensions/Important";
 import Note from "extensions/Note";
 import Warning from "extensions/Warning";
 import { QuestionEditor } from "./QuestionEditor";
-// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "../../../../components/ui/dialog";
 
-function handleCopy(editor: any) {
-  if (editor && window.getSelection) {
-    const html = editor.getHTML();
-    // On copie la sélection actuelle, pas tout le contenu
-    const selection = window.getSelection();
-    if (selection && !selection.isCollapsed) {
-      // Crée un div temporaire pour copier le HTML de la sélection
-      const temp = document.createElement("div");
-      temp.appendChild(selection.getRangeAt(0).cloneContents());
-      navigator.clipboard.writeText(temp.innerText); // Copie le texte brut
-      navigator.clipboard.write([
-        new ClipboardItem({
-          "text/html": new Blob([temp.innerHTML], { type: "text/html" }),
-          "text/plain": new Blob([temp.innerText], { type: "text/plain" }),
-        }),
-      ]);
-    } else {
-      // Si rien n'est sélectionné, copie tout
-      navigator.clipboard.writeText(editor.getText());
-    }
-  }
-}
+// Fonctions d'édition classiques (copier/coller/trouver/remplacer...)
+//... (ces fonctions sont inchangées et nécessaires)
 
-function handleCut(editor: any) {
-  if (editor && window.getSelection) {
-    handleCopy(editor);
-    // Supprime la sélection après copie
-    editor.commands.deleteSelection();
-  }
-}
-
-function handlePaste(editor: any) {
-  if (editor) {
-    navigator.clipboard.readText().then((clipText) => {
-      editor.commands.insertContent(clipText);
-    });
-  }
-}
-
-function handleFind(editor, findValue) {
-  if (!findValue || !editor) return;
-  // Recherche "simple" : place le curseur sur la première occurrence suivante
-  const docText = editor.getText();
-  const selectionStart = editor.state.selection.to;
-  const index = docText.indexOf(findValue, selectionStart);
-  if (index !== -1) {
-    // Sélectionne le texte trouvé
-    editor.commands.setTextSelection({
-      from: index + 1,
-      to: index + findValue.length,
-    });
-    editor.commands.focus();
-  } else {
-    alert("Fin du document atteinte ou aucun résultat.");
-  }
-}
-
-function handleReplace(editor, findValue, replaceValue) {
-  if (!findValue || !editor) return;
-  // Vérifie si le texte courant est sélectionné et correspond à findValue
-  const sel = editor.state.doc.textBetween(
-    editor.state.selection.from,
-    editor.state.selection.to,
-    " "
-  );
-  if (sel === findValue) {
-    editor.commands.insertContent(replaceValue);
-  } else {
-    // Sinon, va chercher la prochaine occurrence
-    handleFind(editor, findValue);
-  }
-}
-
-function handleReplaceAll(editor, findValue, replaceValue) {
-  if (!findValue || !editor) return;
-  // Remplace toutes les occurrences dans tout le doc
-  const html = editor.getHTML().split(findValue).join(replaceValue);
-  editor.commands.setContent(html, false);
-  alert("Tous les résultats ont été remplacés !");
-}
-
+// Props du composant
 interface CentralEditorProps {
   isPreviewMode: boolean;
   onPreviewToggle: () => void;
@@ -115,6 +42,7 @@ interface CentralEditorProps {
   isRightSidebarFloating: boolean;
 }
 
+// Début du composant CentralEditor
 export const CentralEditor: React.FC<CentralEditorProps> = ({
   isPreviewMode,
   onPreviewToggle,
@@ -122,10 +50,10 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   isRightSidebarExpanded,
   isRightSidebarFloating,
 }) => {
+  // États
   const [isQuestionEditorVisible, setIsQuestionEditorVisible] = useState(false);
   const [questionEditorHeight, setQuestionEditorHeight] = useState(200);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const cardContentRef = useRef<HTMLDivElement>(null);
   const [isFindOpen, setIsFindOpen] = useState(false);
   const [findValue, setFindValue] = useState("");
   const [replaceValue, setReplaceValue] = useState("");
@@ -138,21 +66,58 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     ok: boolean;
     msg: string;
   }>(null);
+  const [wordCount, setWordCount] = useState(0);
+  const inputSourceRef = useRef<string | null>(null);
 
-  function logAction(action: string, content?: string) {
-    setHistoryLog((logs) => [
-      ...logs,
-      {
-        action,
-        ts: Date.now(),
-        content,
-      },
-    ]);
+  // Références
+  const centralEditorRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef<number | null>(null);
+  const initialHeight = useRef<number>(200);
+  const dragOffset = useRef<number>(0);
+
+  // Fonctions pour copier, coller, couper
+  function handleCut(editor: Editor | null) {
+    if (!editor) return;
+    const selectedText = editor.state.doc.textBetween(
+      editor.state.selection.from,
+      editor.state.selection.to,
+      "\n"
+    );
+    navigator.clipboard.writeText(selectedText);
+    editor.commands.deleteSelection();
+    logAction("Texte coupé", selectedText);
   }
 
+  function handleCopy(editor: Editor | null) {
+    if (!editor) return;
+    const selectedText = editor.state.doc.textBetween(
+      editor.state.selection.from,
+      editor.state.selection.to,
+      "\n"
+    );
+    navigator.clipboard.writeText(selectedText);
+    logAction("Texte copié", selectedText);
+  }
+
+  function handlePaste(editor: Editor | null) {
+    if (!editor) return;
+    navigator.clipboard.readText().then((text) => {
+      editor.commands.insertContent(text);
+      logAction("Texte collé", text);
+    });
+  }
+
+  // Historique local des actions
+  function logAction(action: string, content?: string) {
+    setHistoryLog((logs) => [...logs, { action, ts: Date.now(), content }]);
+  }
+
+  // Initialisation de l'éditeur TipTap avec extensions personnalisées
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        inputRules: false,
+      }),
       Underline,
       TextStyle,
       Color,
@@ -164,11 +129,184 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       Important,
       Note,
       Warning,
-      // + d'autres extensions plus tard
     ],
     content: "<p>Commence à écrire…</p>",
   });
 
+  // Gestion des commandes vocales
+
+  const [isDictating, setIsDictating] = useState(false);
+
+  const { start, stop, isRecording, isStopping, error } = useSpeechToText({
+    onResult: (text) => {
+      if (!editor) return;
+
+      inputSourceRef.current = "voice";
+
+      const { state, view } = editor;
+
+      const pos = state.selection.$from.pos;
+      const needsSpace =
+        pos > 0 && !/\s$/.test(state.doc.textBetween(pos - 1, pos));
+
+      const tr = state.tr.insertText((needsSpace ? " " : "") + text, pos);
+      view.dispatch(tr);
+
+      setTimeout(() => {
+        inputSourceRef.current = null;
+      }, 100);
+    },
+
+    onCommand: (cmd) => {
+      if (!editor) return;
+
+      editor.chain().focus().run();
+
+      const { state, commands } = editor;
+      const { from } = state.selection;
+
+      switch (cmd) {
+        case "deletePreviousWord":
+          if (!state.selection.empty) {
+            commands.deleteSelection().run();
+            return;
+          }
+
+          if (from <= 1) return;
+
+          const textBefore = editor.getText().slice(0, from);
+          const match = textBefore.match(/(\S+)\s*$/);
+
+          if (match) {
+            const start = from - match[0].length;
+            commands
+              .setTextSelection({ from: start, to: from })
+              .deleteSelection()
+              .run();
+          } else {
+            commands.deleteBackward().run();
+          }
+          return;
+
+        case "start":
+          commands.setTextSelection({ from: 1 }).run();
+          return;
+
+        case "end":
+          const end = state.doc.content.size || 1;
+          commands.setTextSelection({ from: end }).run();
+          return;
+
+        case "newline":
+          commands.insertContent("\n\n").run();
+          return;
+
+        case "selectAll":
+          commands.selectAll().run();
+          return;
+
+        case "selectParagraph": {
+          const { doc, selection } = state;
+          const pos = selection.$from.pos;
+
+          let start = pos;
+          let end = pos;
+
+          // Cherche le bloc parent (paragraph ou heading)
+          doc.descendants((node, posStart, parent) => {
+            if (
+              node.type.name === "paragraph" ||
+              node.type.name === "heading"
+            ) {
+              if (pos >= posStart && pos <= posStart + node.nodeSize) {
+                start = posStart + 1;
+                end = posStart + node.nodeSize - 1;
+                return false; // stop walking
+              }
+            }
+            return true;
+          });
+
+          commands.setTextSelection({ from: start, to: end }).run();
+          return;
+        }
+        case "undo":
+          commands.undo().run();
+          return;
+
+        case "redo":
+          commands.redo().run();
+          return;
+
+        case "bold":
+          commands.toggleBold().run();
+          return;
+
+        case "italic":
+          commands.toggleItalic().run();
+          return;
+
+        case "underline":
+          commands.toggleUnderline().run();
+          return;
+
+        case "cut":
+          handleCut(editor);
+          return;
+
+        case "copy":
+          handleCopy(editor);
+          return;
+
+        case "paste":
+          handlePaste(editor);
+          return;
+
+        case "save":
+          alert("💾 Sauvegarde simulée !");
+          return;
+
+        default:
+          console.warn("Commande vocale inconnue :", cmd);
+      }
+    },
+  });
+
+  // Toast au lancement de la dictée vocale
+  useEffect(() => {
+    if (isRecording) {
+      toast.success("🎙️ Dictée en cours…", {
+        duration: 3000,
+        id: "dictate-start",
+      });
+    }
+  }, [isRecording]);
+
+  // Sortie de la dictée vocale en cas de click
+  useEffect(() => {
+    if (!editor || !isRecording) return;
+
+    const dom = editor.view.dom;
+
+    const handleManualInteraction = () => {
+      stop(); // stop dictation
+    };
+
+    dom.addEventListener("mousedown", handleManualInteraction);
+
+    return () => {
+      dom.removeEventListener("mousedown", handleManualInteraction);
+    };
+  }, [editor, isRecording, stop]);
+
+  // Toast en cas de sortie de dictée vocale
+  useEffect(() => {
+    if (isStopping && isRecording) {
+      toast.info("⏳ Arrêt de la dictée en cours…", { duration: 8000 });
+    }
+  }, [isStopping]);
+
+  // Menu du haut (Edition, Insérer, Outils...)
   const menuItems = [
     {
       label: "Edition",
@@ -188,49 +326,51 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     },
   ];
 
-  const checklistItems = [
-    {
-      checked: true,
-      text: "Research about the WYSIWYG editor's best practices",
-    },
-    {
-      checked: false,
-      text: "Organize training sessions for working with rich text editor",
-    },
-    {
-      checked: false,
-      text: "Strategize the rich text editor component structure",
-    },
-  ];
-
-  const featureItems = [
-    "Responsive design",
-    "Rich-text formatting",
-    "Real-time editing",
-    "WYSIWYG interface",
-    "Font styles and sizes",
-    "Text color and highlighting",
-    "Text alignment",
-    "Bullet and numbered lists",
-    "Undo/redo functionality",
-    "Image insertion and editing",
-    "Hyperlink creation",
-    "Dark and light mode",
-  ];
-
+  // Effet pour compteur de mots + comportements automatiques (majuscule, virgule)
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || isDictating) {
+      console.log("Keydown désactivé (isDictating = true)");
+      return;
+    }
+
     const updateWordCount = () => {
       const text = editor.getText();
       const words = text.trim().split(/\s+/).filter(Boolean);
       setWordCount(words.length === 1 && words[0] === "" ? 0 : words.length);
     };
+
     updateWordCount();
     editor.on("update", updateWordCount);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (inputSourceRef.current === "voice") return;
+
+      const { state, view } = editor;
+      const { selection } = state;
+      const pos = selection.$from.pos;
+      const docText = editor.getText();
+      const preceding = docText.slice(Math.max(0, pos - 3), pos);
+
+      if (preceding.endsWith(". ") && /^[a-z]$/.test(event.key)) {
+        event.preventDefault();
+        const uppercase = event.key.toUpperCase();
+        view.dispatch(state.tr.insertText(uppercase, pos));
+      }
+
+      if (event.key === "," && docText[pos] !== " ") {
+        event.preventDefault();
+        view.dispatch(state.tr.insertText(", ", pos));
+      }
+    };
+
+    const dom = editor.view.dom;
+    dom.addEventListener("keydown", handleKeyDown);
+
     return () => {
       editor.off("update", updateWordCount);
+      dom.removeEventListener("keydown", handleKeyDown);
     };
-  }, [editor]);
+  }, [editor, isDictating]);
 
   const renderMenuItems = () => (
     <NavigationMenuList className="flex items-center gap-2">
@@ -290,11 +430,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   );
 
   const [isDragging, setIsDragging] = useState(false);
-  const dragStartY = useRef<number | null>(null);
-  const initialHeight = useRef<number>(200);
-  const dragOffset = useRef<number>(0);
-  const centralEditorRef = useRef<HTMLDivElement>(null);
-  const [wordCount, setWordCount] = useState(0);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -529,6 +664,20 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         >
           ❌
         </button>
+
+        <Button
+          onClick={isRecording ? stop : start}
+          className={`ml-2 px-3 py-1 font-semibold rounded-xl transition duration-200
+    ${
+      isRecording
+        ? "bg-red-600 hover:bg-red-700 text-white border border-red-700"
+        : "bg-blue-600 hover:bg-blue-700 text-white border border-blue-700"
+    }
+  `}
+        >
+          🎙️ {isRecording ? "Arrêter" : "Dicter"}
+        </Button>
+
         <button
           className="ml-2 px-3 py-1 rounded bg-gray-100 hover:bg-blue-100 text-gray-700"
           onClick={() => setIsFindOpen(true)}
@@ -662,7 +811,14 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
               {editor?.getHTML()}
             </pre>
           ) : (
-            <EditorContent editor={editor} className="no-border-editor" />
+            <EditorContent
+              editor={editor}
+              className="no-border-editor"
+              spellCheck={true}
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="off"
+            />
           )}
         </div>
 

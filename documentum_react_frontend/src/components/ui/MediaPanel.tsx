@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "components/ui/button";
 import { Separator } from "components/ui/separator";
 import { MediaCard } from "components/ui/MediaCard";
@@ -34,8 +34,7 @@ interface MediaPanelProps {
   onToggleSort: () => void;
   onToggleDisplayMode: () => void;
   onImportClick: () => void;
-  page: number;
-  setPage: (page: number) => void;
+  isFloating?: boolean;
 }
 
 export const MediaPanel: React.FC<MediaPanelProps> = ({
@@ -51,11 +50,8 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
   onToggleSort,
   onToggleDisplayMode,
   onImportClick,
-  page,
-  setPage,
+  isFloating = false,
 }) => {
-  const itemsPerPage = displayMode === "grid" ? 3 : 6;
-
   const filteredMedia = mediaItems
     .filter((item) =>
       item.title.toLowerCase().includes(searchText.toLowerCase())
@@ -66,11 +62,6 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
         : b.title.localeCompare(a.title)
     );
 
-  const paginatedMedia = filteredMedia.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage
-  );
-
   const getGridClass = () => {
     if (displayMode === "grid") return "grid gap-2 grid-cols-1";
     if (displayMode === "small") return "grid gap-2 grid-cols-2";
@@ -78,10 +69,6 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
       return "flex flex-col gap-3 text-sm leading-tight";
     return "grid-cols-1";
   };
-
-  const totalPages = Math.ceil(filteredMedia.length / itemsPerPage);
-  const hasPrevious = page > 1;
-  const hasNext = page < totalPages;
 
   return (
     <>
@@ -170,57 +157,23 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
         </Button>
       </div>
 
-      {/* Conteneur visuel avec fond blanc */}
+      {/* Conteneur avec scrollbar adaptative */}
       <div
-        className="bg-white rounded-xl p-3 shadow-sm"
+        className="media-container-style"
         style={{
-          height:
-            displayMode === "grid"
-              ? "400px"
-              : displayMode === "small"
-              ? "400px"
-              : "auto",
-          overflow: "hidden",
+          marginBottom: isFloating ? 0 : "1rem", // ou "0.75rem" selon le style visuel voulu
         }}
       >
         <div className={getGridClass()}>
-          {paginatedMedia.map((card) => (
-            <div
+          {filteredMedia.map((card) => (
+            <MediaCard
               key={card.id}
-              className={
-                displayMode === "grid"
-                  ? "h-[110px]"
-                  : displayMode === "small"
-                  ? "h-[90px]"
-                  : ""
-              }
-            >
-              <MediaCard
-                {...card}
-                className="w-full h-full"
-                isListMode={displayMode === "list"}
-              />
-            </div>
+              {...card}
+              className="w-full"
+              isListMode={displayMode === "list"}
+            />
           ))}
         </div>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex justify-between items-center mt-4">
-        <Button
-          variant="ghost"
-          disabled={!hasPrevious}
-          onClick={() => setPage((p) => p - 1)}
-        >
-          ◀️ Précédent
-        </Button>
-        <Button
-          variant="ghost"
-          disabled={!hasNext}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          Suivant ▶️
-        </Button>
       </div>
     </>
   );
