@@ -1,50 +1,7 @@
 services:
-  backend:
-    build:
-      context: ./documentation
-      dockerfile: Dockerfile
-    container_name: django_backend
+  languagetool:
+    image: erikvl87/languagetool
+    container_name: languagetool
     ports:
-      - "8000:8000"
-    volumes:
-      - .:/app
-    env_file:
-      - ./documentation_project/.env
-    depends_on:
-      - db
-
-  frontend:
-    build:
-      context: ./documentation_frontend
-      dockerfile: Dockerfile
-    container_name: react_frontend
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./documentation_frontend:/app
-
-  db:
-    image: postgres:15
-    container_name: postgres_db
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: gitadmin
-      POSTGRES_PASSWORD: Ocealia31520
-      POSTGRES_DB: documentationocealia
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-  
-  file_server:
-    image: python:3.11-slim
-    container_name: file_server
-    volumes:
-      - .:/data
-    command: >
-      python -m http.server 8080 --directory /data
-    ports:
-      - "8080:8080"
-
-volumes:
-  postgres_data:
-
+      - "8010:8010"
+    restart: unless-stopped

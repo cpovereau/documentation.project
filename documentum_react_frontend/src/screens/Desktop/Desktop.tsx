@@ -3,6 +3,17 @@ import { TopBar } from "components/ui/TopBar";
 import { LeftSidebar } from "components/ui/LeftSidebar";
 import { RightSidebar } from "components/ui/RightSidebar";
 import { CentralEditor } from "components/ui/CentralEditor";
+import type { MapItem } from "@/types/MapItem";
+
+const initialMapItems: MapItem[] = [
+  { id: 1, title: "Racine", level: 0, expanded: true },
+  { id: 2, title: "Introduction", level: 1, expanded: true },
+  { id: 3, title: "Connexion à l'application", level: 1, expanded: true },
+  { id: 4, title: "Dossier de l'Usager", level: 1, expanded: true },
+  { id: 5, title: "Administratif", level: 2, expanded: true },
+  { id: 6, title: "Etablissement", level: 3, expanded: true },
+  { id: 7, title: "Etat Civil", level: 3, expanded: true },
+];
 
 export const Desktop: React.FC = () => {
   const [isLeftSidebarExpanded, setIsLeftSidebarExpanded] = useState(true);
@@ -13,6 +24,7 @@ export const Desktop: React.FC = () => {
     useState(true);
   const [previousRightSidebarState, setPreviousRightSidebarState] =
     useState(true);
+  const [mapItems, setMapItems] = useState<MapItem[]>(initialMapItems);
 
   const togglePreviewMode = () => {
     if (!isPreviewMode) {
@@ -34,6 +46,14 @@ export const Desktop: React.FC = () => {
     }
   };
 
+  const handleToggleExpandMapNode = (itemId: number, expand: boolean) => {
+    setMapItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId ? { ...item, expanded: expand } : item
+      )
+    );
+  };
+
   return (
     <div className="bg-white flex flex-col h-screen w-full">
       <TopBar currentScreen="desktop" className="z-50" />
@@ -44,6 +64,8 @@ export const Desktop: React.FC = () => {
             !isPreviewMode && setIsLeftSidebarExpanded(!isLeftSidebarExpanded)
           }
           className="z-40"
+          mapItems={mapItems}
+          onToggleExpand={handleToggleExpandMapNode}
         />
         <div
           className="flex-1 z-0 transition-all duration-300 ease-in-out"

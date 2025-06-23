@@ -126,6 +126,16 @@
   font-family: inherit;
 }
 
+/* Styles pour la gestion des erreurs grammaticales */
+.grammar-error {
+  background-color: rgba(255, 0, 0, 0.15);
+  border-bottom: 1px dotted red;
+  cursor: help;
+}
+
+
+/* Styles pour les éléments de texte */
+
 important {
   display: block;
   background: #fff3cd;

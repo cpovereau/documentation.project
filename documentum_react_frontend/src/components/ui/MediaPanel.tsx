@@ -1,8 +1,16 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "components/ui/button";
 import { Separator } from "components/ui/separator";
 import { MediaCard } from "components/ui/MediaCard";
 import {
+  Check,
   Camera,
   Video,
   Upload,
@@ -12,7 +20,20 @@ import {
   LayoutGrid,
   List,
   Text,
+  Filter,
 } from "lucide-react";
+import { parseMediaFilename, matchesMediaFilter } from "@/lib/mediaUtils";
+
+const produitOptions = [
+  { value: "PLA", label: "PLA - Planning" },
+  { value: "USA", label: "USA - Usager" },
+];
+
+const fonctionnaliteOptions = [
+  { value: "BUT", label: "BUT - Bouton" },
+  { value: "MEN", label: "MEN - Menu" },
+  { value: "TRA", label: "TRA - Transverse" },
+];
 
 export interface MediaItem {
   id: number;
@@ -52,10 +73,25 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
   onImportClick,
   isFloating = false,
 }) => {
+  const [activeFilter, setActiveFilter] = useState<MediaFilterType | null>(
+    null
+  );
+  const [filterKeyword, setFilterKeyword] = useState<string>("");
+  const [showFilterMenu, setShowFilterMenu] = useState<boolean>(false);
   const filteredMedia = mediaItems
-    .filter((item) =>
-      item.title.toLowerCase().includes(searchText.toLowerCase())
-    )
+    .filter((item) => {
+      const matchSearchText = item.title
+        .toLowerCase()
+        .includes(searchText.toLowerCase());
+
+      const matchStructuredFilter = matchesMediaFilter(
+        item.title,
+        activeFilter,
+        filterKeyword
+      );
+
+      return matchSearchText && matchStructuredFilter;
+    })
     .sort((a, b) =>
       sortOrder === "asc"
         ? a.title.localeCompare(b.title)
@@ -115,16 +151,105 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
       </div>
 
       {/* Recherche */}
-      <div className="relative w-full">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-        <input
-          type="text"
-          placeholder="Recherche"
-          value={searchText}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-10 pr-10 py-2 rounded-lg border border-[#65558f] bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#65558f]"
-        />
-        {searchText && (
+      <div className="relative w-full group">
+        {/* Icônes à gauche */}
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center space-x-1">
+          <Search className="text-gray-400 w-5 h-5 pointer-events-none" />
+
+          {/* Menu filtre */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "w-5 h-5 transition-opacity duration-150",
+                  activeFilter
+                    ? "text-primary opacity-100"
+                    : "text-gray-400 opacity-0 group-hover:opacity-100",
+                  "focus:outline-none"
+                )}
+                title="Filtrer"
+              >
+                <Filter className="w-4 h-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="z-50 w-40 bg-white shadow-md"
+            >
+              <DropdownMenuItem onClick={() => setActiveFilter("produit")}>
+                {activeFilter === "produit" && (
+                  <Check className="mr-2 h-4 w-4 text-primary" />
+                )}
+                Produit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setActiveFilter("fonctionnalite")}
+              >
+                {activeFilter === "fonctionnalite" && (
+                  <Check className="mr-2 h-4 w-4 text-primary" />
+                )}
+                Fonctionnalité
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setActiveFilter("item")}>
+                {activeFilter === "item" && (
+                  <Check className="mr-2 h-4 w-4 text-primary" />
+                )}
+                Item
+              </DropdownMenuItem>
+              {activeFilter && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    setActiveFilter(null);
+                    setFilterKeyword("");
+                  }}
+                  className="text-red-500"
+                >
+                  Réinitialiser le filtre
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Champ dynamique selon filtre */}
+        {activeFilter === "produit" && (
+          <select
+            className="w-full pl-14 pr-10 py-2 rounded-lg border border-[#65558f] bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#65558f]"
+            value={filterKeyword}
+            onChange={(e) => setFilterKeyword(e.target.value)}
+          >
+            <option value="">-- Choisir un produit --</option>
+            <option value="PLA">PLA - Planning</option>
+            <option value="USA">USA - Usager</option>
+          </select>
+        )}
+
+        {activeFilter === "fonctionnalite" && (
+          <select
+            className="w-full pl-14 pr-10 py-2 rounded-lg border border-[#65558f] bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#65558f]"
+            value={filterKeyword}
+            onChange={(e) => setFilterKeyword(e.target.value)}
+          >
+            <option value="">-- Choisir une fonctionnalité --</option>
+            <option value="BUT">BUT - Bouton</option>
+            <option value="MEN">MEN - Menu</option>
+            <option value="TRA">TRA - Transverse</option>
+          </select>
+        )}
+
+        {(!activeFilter || activeFilter === "item") && (
+          <input
+            type="text"
+            placeholder="Recherche"
+            value={searchText}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-full pl-14 pr-10 py-2 rounded-lg border border-[#65558f] bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#65558f]"
+          />
+        )}
+
+        {/* Bouton X visible uniquement si texte libre saisi */}
+        {(!activeFilter || activeFilter === "item") && searchText && (
           <button
             type="button"
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"

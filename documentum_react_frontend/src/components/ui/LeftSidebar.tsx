@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "components/ui/button";
-import { ProjectModule } from "components/ui/ProjectModule";
+import { ProjectModule, ProjectItem } from "components/ui/ProjectModule";
 import { MapModule } from "components/ui/MapModule";
-import { ProjectItem } from "components/ui/ProjectModule";
-import { MapItem } from "components/ui/MapModule";
+import type { MapItem } from "@/types/MapItem";
 import { ImportModal } from "components/ui/import-modal";
 import { ArrowLeftCircle } from "lucide-react";
 
@@ -11,31 +10,49 @@ interface LeftSidebarProps {
   isExpanded: boolean;
   onToggle: () => void;
   className?: string;
+  mapItems: MapItem[];
+  onToggleExpand: (itemId: number, expand: boolean) => void;
 }
 
 const initialProjects: ProjectItem[] = [
-  { id: 1, title: "Documentation Utilisateur Planning", gamme: "Planning" },
-  { id: 2, title: "Documentation Utilisateur", gamme: "Usager" },
-];
-
-const initialMapItems: MapItem[] = [
-  { id: 1, title: "Racine", level: 0, active: true },
-  { id: 2, title: "Introduction", level: 1 },
-  { id: 3, title: "Connexion à l'application", level: 1 },
   {
-    id: 4,
-    title: "Dossier de l'Usager",
-    level: 1,
+    id: 1,
+    title: "Documentation Utilisateur Planning",
+    gamme: "Planning",
+    mapItems: [
+      {
+        id: 101,
+        title: "Vue générale",
+        isMaster: true,
+        level: 1,
+        expanded: true,
+      },
+      { id: 102, title: "Module RDV", isMaster: false, level: 2 },
+    ],
   },
-  { id: 5, title: "Administratif", level: 2 },
-  { id: 6, title: "Etablissement", level: 3 },
-  { id: 7, title: "Etat Civil", level: 3 },
+  {
+    id: 2,
+    title: "Documentation Utilisateur",
+    gamme: "Usager",
+    mapItems: [
+      {
+        id: 201,
+        title: "Vue globale",
+        isMaster: true,
+        level: 1,
+        expanded: true,
+      },
+      { id: 202, title: "Module AN", isMaster: false, level: 2 },
+    ],
+  },
 ];
 
 export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   isExpanded,
   onToggle,
   className,
+
+  onToggleExpand,
 }) => {
   const [isProjectExpanded, setIsProjectExpanded] = useState(true);
   const [isMapExpanded, setIsMapExpanded] = useState(true);
@@ -50,6 +67,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
     projects[0]?.id ?? null
   );
+  const [selectedMapItemId, setSelectedMapItemId] = useState<number | null>(
+    projects.find((p) => p.id === selectedProjectId)?.mapItems[0]?.id ?? null
+  );
+
+  const [mapItems, setMapItems] = useState<MapItem[]>(
+    projects.find((p) => p.id === selectedProjectId)?.mapItems ?? []
+  );
 
   // callbacks pour gestion
   const handleSelect = (id: number) => setSelectedProjectId(id);
@@ -59,7 +83,12 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       : 1;
     setProjects([
       ...projects,
-      { id: newId, title: `Nouveau Projet ${newId}`, gamme: "Nouvelle Gamme" },
+      {
+        id: newId,
+        title: `Nouveau Projet ${newId}`,
+        gamme: "Nouvelle Gamme",
+        mapItems: [],
+      },
     ]);
     setSelectedProjectId(newId);
   };
@@ -69,7 +98,12 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       const newId = Math.max(...projects.map((x) => x.id)) + 1;
       setProjects([
         ...projects,
-        { ...p, id: newId, title: p.title + " (Clone)" },
+        {
+          ...p,
+          id: newId,
+          title: p.title + " (Clone)",
+          mapItems: [...p.mapItems],
+        },
       ]);
       setSelectedProjectId(newId);
     }
@@ -80,12 +114,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   };
   const handlePublish = (id: number) => alert("Publier projet id: " + id);
   const handleLoad = () => alert("Charger projet (à implémenter)");
-
-  // Ajoute la gestion de l’état pour MapModule ici :
-  const [mapItems, setMapItems] = useState<MapItem[]>(initialMapItems);
-  const [selectedMapItemId, setSelectedMapItemId] = useState<number | null>(
-    mapItems[0]?.id ?? null
-  );
 
   // Les callbacks d'interaction MapModule
   const handleSelectMapItem = (id: number) => setSelectedMapItemId(id);
@@ -150,6 +178,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
   // Drag & drop reorder handler
   const handleReorder = (newItems: MapItem[]) => setMapItems(newItems);
+
+  //Synchronisation des mapItems avec le projet sélectionné
+  useEffect(() => {
+    const selected = projects.find((p) => p.id === selectedProjectId);
+    setMapItems(selected?.mapItems ?? []);
+    setSelectedMapItemId(selected?.mapItems[0]?.id ?? null);
+  }, [selectedProjectId, projects]);
 
   return (
     <>

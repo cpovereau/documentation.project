@@ -7,6 +7,7 @@ import { useSpeechToText } from "hooks/useSpeechToText";
 import { Button } from "components/ui/button";
 import { Card } from "components/ui/card"; // CardContent non utilisé
 import { Checkbox } from "components/ui/checkbox"; // À intégrer dans la barre d'outils plus tard
+import { PopupProps } from "components/ui/PopupSuggestion";
 import { GripVertical } from "lucide-react";
 import {
   NavigationMenu,
@@ -29,6 +30,9 @@ import Important from "extensions/Important";
 import Note from "extensions/Note";
 import Warning from "extensions/Warning";
 import { QuestionEditor } from "./QuestionEditor";
+import { useLanguageTool } from "@/hooks/useLanguageTool";
+import debounce from "lodash.debounce";
+import { GrammarHighlight } from "@/extensions/GrammarHighlight";
 
 // Fonctions d'édition classiques (copier/coller/trouver/remplacer...)
 //... (ces fonctions sont inchangées et nécessaires)
@@ -118,6 +122,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       StarterKit.configure({
         inputRules: false,
       }),
+      GrammarHighlight.configure({ errors: [] }),
       Underline,
       TextStyle,
       Color,
@@ -131,7 +136,35 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       Warning,
     ],
     content: "<p>Commence à écrire…</p>",
+    onUpdate({ editor }) {
+      handleDebouncedCheck(editor.getText());
+    },
   });
+
+  // Gestion de la correction orthographique et grammaticale
+  const { checkText } = useLanguageTool();
+
+  const handleDebouncedCheck = useCallback(
+    debounce(async (text: string) => {
+      if (text.trim().length < 5) return;
+
+      const matches = await checkText(text);
+      // À ce stade, `matches` contient les erreurs à traiter
+      console.log("Suggestions LanguageTool :", matches);
+      const decorations = matches.map((m: any) => ({
+        from: m.offset,
+        to: m.offset + m.length,
+        message: m.message,
+      }));
+
+      editor?.view.dispatch(
+        editor.state.tr.setMeta("grammarHighlightErrors", decorations)
+      );
+
+      // ➕ TODO : ici, tu pourrais déclencher des surlignages, tooltips, etc.
+    }, 1500),
+    []
+  );
 
   // Gestion des commandes vocales
 
@@ -504,6 +537,42 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     };
   }, [handleMouseMove, handleMouseUp]);
 
+  useEffect(() => {
+    const dom = editor?.view.dom;
+    if (!dom) return;
+
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.classList.contains("grammar-error")) {
+        const message = target.getAttribute("data-message") || "";
+        const suggestions = (
+          target.getAttribute("data-suggestions") || ""
+        ).split(",");
+
+        setPopup({
+          x: event.clientX,
+          y: event.clientY,
+          suggestions,
+          message,
+          from: editor.view.posAtDOM(target, 0),
+          to: editor.view.posAtDOM(target, 0) + target.textContent!.length,
+        });
+      } else {
+        setPopup(null);
+      }
+    };
+
+    dom.addEventListener("click", handleClick);
+    return () => dom.removeEventListener("click", handleClick);
+  }, [editor]);
+
+  const [popup, setPopup] = useState<null | PopupProps>(null);
+
+  const handleReplace = (suggestion: string, from: number, to: number) => {
+    editor?.commands.insertContentAt({ from, to }, suggestion);
+    setPopup(null);
+  };
+
   return (
     <Card
       ref={centralEditorRef}
@@ -805,7 +874,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       </div>
 
       <div className="flex flex-col flex-grow overflow-hidden">
-        <div className="flex-grow overflow-auto p-4 bg-white">
+        <div className="flex-grow overflow-auto p-4 bg-white relative">
           {isXmlView ? (
             <pre className="bg-gray-100 rounded p-4 font-mono text-xs whitespace-pre-wrap">
               {editor?.getHTML()}
@@ -814,10 +883,21 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
             <EditorContent
               editor={editor}
               className="no-border-editor"
-              spellCheck={true}
+              spellCheck={false}
               autoCapitalize="off"
               autoCorrect="off"
               autoComplete="off"
+            />
+          )}
+
+          {/* ✅ Menu contextuel de suggestion, en overlay */}
+          {popup && !isXmlView && (
+            <PopupSuggestion
+              {...popup}
+              onReplace={(text, from, to) => {
+                editor?.commands.insertContentAt({ from, to }, text);
+                setPopup(null);
+              }}
             />
           )}
         </div>

@@ -20,10 +20,9 @@ export const TopBar = ({ currentScreen = "desktop" }: TopBarProps) => {
     <header className="w-full h-[103px] bg-black rounded-[15px] flex items-center justify-between px-5">
       {/* Logo */}
       <img
-        className="w-[131px] h-[70px] object-cover"
+        className="w-36 h-20 sm:w-34 brightness-125 object-contain"
         alt="Logo"
         src="/logo.png"
-        className="w-36 h-20 sm:w-34 brightness-125 object-contain"
       />
 
       {/* Texte bienvenue */}

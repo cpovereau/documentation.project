@@ -17,6 +17,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .serializers import ProjetSerializer, GammeSerializer, MapSerializer, RubriqueSerializer, UserSerializer
 from django.utils.timezone import now
+import requests
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 # Initialisation du logger
 logger = logging.getLogger(__name__)
@@ -134,6 +138,25 @@ def login_view(request):
     else:
         logger.warning(f"Failed login attempt for user '{username}' from IP {request.META.get('REMOTE_ADDR', 'IP not found')}")
         return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+    
+# Vue pour la vérification de l'orthographe
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def check_orthographe(request):
+    texte = request.data.get("text", "")
+    langue = request.data.get("language", "fr")
+
+    if not texte.strip():
+        return Response({"error": "Le texte est vide."}, status=400)
+
+    try:
+        lt_response = requests.post("http://localhost:8010/v2/check", data={
+            "text": texte,
+            "language": langue
+        })
+        return Response(lt_response.json())
+    except requests.exceptions.RequestException as e:
+        return Response({"error": "Erreur de connexion à LanguageTool", "details": str(e)}, status=500)
 
 # Vue pour la déconnexion
 @csrf_exempt
