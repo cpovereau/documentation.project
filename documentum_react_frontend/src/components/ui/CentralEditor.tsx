@@ -55,6 +55,8 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   isRightSidebarFloating,
 }) => {
   // États
+  const [initialContent, setInitialContent] = useState<string>("");
+  const [hasChanges, setHasChanges] = useState(false);
   const [isQuestionEditorVisible, setIsQuestionEditorVisible] = useState(false);
   const [questionEditorHeight, setQuestionEditorHeight] = useState(200);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -140,6 +142,29 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       handleDebouncedCheck(editor.getText());
     },
   });
+
+  // Etat initial de l'éditeur (bouton "Enregistrer" désactivé)
+  useEffect(() => {
+    if (editor) {
+      setInitialContent(editor.getHTML());
+      setHasChanges(false);
+    }
+  }, [editor]);
+
+  // Fonctions pour enregistrer une rubrique
+  const onSaveRubrique = () => {
+    toast.promise(new Promise((resolve) => setTimeout(resolve, 800)), {
+      loading: "Enregistrement en cours...",
+      success: "Rubrique enregistrée avec succès !",
+      error: "Échec de l’enregistrement",
+    });
+
+    if (editor) {
+      const current = editor.getHTML();
+      setInitialContent(current);
+      setHasChanges(false);
+    }
+  };
 
   // Gestion de la correction orthographique et grammaticale
   const { checkText } = useLanguageTool();
@@ -359,22 +384,28 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     },
   ];
 
-  // Effet pour compteur de mots + comportements automatiques (majuscule, virgule)
+  // Effet pour compteur de mots + comportements automatiques (majuscule, virgule) + Enregistrement des changements
   useEffect(() => {
     if (!editor || isDictating) {
       console.log("Keydown désactivé (isDictating = true)");
       return;
     }
 
-    const updateWordCount = () => {
+    const updateEditorState = () => {
+      // 1. Compteur de mots
       const text = editor.getText();
       const words = text.trim().split(/\s+/).filter(Boolean);
       setWordCount(words.length === 1 && words[0] === "" ? 0 : words.length);
+
+      // 2. Détection de modification
+      const currentContent = editor.getHTML();
+      setHasChanges(currentContent !== initialContent);
     };
 
-    updateWordCount();
-    editor.on("update", updateWordCount);
+    updateEditorState(); // appel initial
+    editor.on("update", updateEditorState);
 
+    // 3. Raccourcis clavier (majuscule après point, virgule suivie d'espace)
     const handleKeyDown = (event: KeyboardEvent) => {
       if (inputSourceRef.current === "voice") return;
 
@@ -400,10 +431,10 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     dom.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      editor.off("update", updateWordCount);
+      editor.off("update", updateEditorState);
       dom.removeEventListener("keydown", handleKeyDown);
     };
-  }, [editor, isDictating]);
+  }, [editor, isDictating, initialContent]);
 
   const renderMenuItems = () => (
     <NavigationMenuList className="flex items-center gap-2">
@@ -605,6 +636,21 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
             onClick={onPreviewToggle}
           >
             {isPreviewMode ? "Cancel Preview" : "Preview"}
+          </Button>
+          <Button
+            className={`h-11 px-5 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 ${
+              hasChanges
+                ? "bg-[#15803d] hover:bg-[#166534]"
+                : "bg-gray-400 cursor-not-allowed"
+            }`}
+            onClick={() => {
+              toast.success("Rubrique enregistrée !");
+              setInitialContent(editor?.getHTML() || "");
+              setHasChanges(false);
+            }}
+            disabled={!hasChanges}
+          >
+            Enregistrer
           </Button>
           <Button
             className="h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 bg-[#2463eb] hover:bg-[#1d4ed8]"

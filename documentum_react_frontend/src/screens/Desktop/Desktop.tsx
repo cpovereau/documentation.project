@@ -6,13 +6,25 @@ import { CentralEditor } from "components/ui/CentralEditor";
 import type { MapItem } from "@/types/MapItem";
 
 const initialMapItems: MapItem[] = [
-  { id: 1, title: "Racine", level: 0, expanded: true },
-  { id: 2, title: "Introduction", level: 1, expanded: true },
-  { id: 3, title: "Connexion à l'application", level: 1, expanded: true },
-  { id: 4, title: "Dossier de l'Usager", level: 1, expanded: true },
-  { id: 5, title: "Administratif", level: 2, expanded: true },
-  { id: 6, title: "Etablissement", level: 3, expanded: true },
-  { id: 7, title: "Etat Civil", level: 3, expanded: true },
+  { id: 1, title: "Racine", level: 0, isMaster: false, expanded: true },
+  { id: 2, title: "Introduction", level: 1, isMaster: false, expanded: true },
+  {
+    id: 3,
+    title: "Connexion à l'application",
+    level: 1,
+    isMaster: false,
+    expanded: true,
+  },
+  {
+    id: 4,
+    title: "Dossier de l'Usager",
+    level: 1,
+    isMaster: false,
+    expanded: true,
+  },
+  { id: 5, title: "Administratif", level: 2, isMaster: false, expanded: true },
+  { id: 6, title: "Etablissement", level: 3, isMaster: false, expanded: true },
+  { id: 7, title: "Etat Civil", level: 3, isMaster: false, expanded: true },
 ];
 
 export const Desktop: React.FC = () => {
