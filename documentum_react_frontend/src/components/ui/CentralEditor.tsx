@@ -29,10 +29,18 @@ import Reference from "extensions/Reference";
 import Important from "extensions/Important";
 import Note from "extensions/Note";
 import Warning from "extensions/Warning";
+import { FindReplaceDialog } from "components/ui//FindReplaceDialog";
+import { EditorHistoryPanel } from "components/ui/EditorHistoryPanel";
 import { QuestionEditor } from "./QuestionEditor";
 import { useLanguageTool } from "@/hooks/useLanguageTool";
-import debounce from "lodash.debounce";
+import { useFindReplaceTipTap } from "@/hooks/useFindReplaceTipTap";
+import { useRubriqueChangeTracker } from "@/hooks/useRubriqueChangeTracker";
+import { useSpeechCommands } from "@/hooks/useSpeechCommands";
+import { useEditorShortcuts } from "@/hooks/useEditorShortcuts";
 import { GrammarHighlight } from "@/extensions/GrammarHighlight";
+import { useGrammarChecker } from "@/hooks/useGrammarChecker";
+import { useEditorHistoryTracker } from "@/hooks/useEditorHistoryTracker";
+import debounce from "lodash.debounce";
 
 // Fonctions d'édition classiques (copier/coller/trouver/remplacer...)
 //... (ces fonctions sont inchangées et nécessaires)
@@ -56,17 +64,9 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
 }) => {
   // États
   const [initialContent, setInitialContent] = useState<string>("");
-  const [hasChanges, setHasChanges] = useState(false);
   const [isQuestionEditorVisible, setIsQuestionEditorVisible] = useState(false);
   const [questionEditorHeight, setQuestionEditorHeight] = useState(200);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [isFindOpen, setIsFindOpen] = useState(false);
-  const [findValue, setFindValue] = useState("");
-  const [replaceValue, setReplaceValue] = useState("");
-  const [historyLog, setHistoryLog] = useState<
-    { action: string; ts: number; content?: string }[]
-  >([]);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isXmlView, setIsXmlView] = useState(false);
   const [lastXmlValidation, setLastXmlValidation] = useState<null | {
     ok: boolean;
@@ -113,11 +113,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     });
   }
 
-  // Historique local des actions
-  function logAction(action: string, content?: string) {
-    setHistoryLog((logs) => [...logs, { action, ts: Date.now(), content }]);
-  }
-
   // Initialisation de l'éditeur TipTap avec extensions personnalisées
   const editor = useEditor({
     extensions: [
@@ -139,15 +134,35 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     ],
     content: "<p>Commence à écrire…</p>",
     onUpdate({ editor }) {
-      handleDebouncedCheck(editor.getText());
+      checkGrammar(editor.getText());
     },
   });
+
+  // Recherche et remplacement de texte
+  const [isFindOpen, setIsFindOpen] = useState(false);
+  const [findValue, setFindValue] = useState("");
+  const [replaceValue, setReplaceValue] = useState("");
+  const { find, replace, replaceAll } = useFindReplaceTipTap(editor);
+
+  // Gestion de l'historique de l'éditeur
+  const {
+    historyLog,
+    isHistoryOpen,
+    setIsHistoryOpen,
+    logAction,
+    clearHistory,
+  } = useEditorHistoryTracker();
+
+  // Référence pour le suivi de la source d'entrée (clavier, voix, etc.)
+  const { hasChanges, resetInitialContent } = useRubriqueChangeTracker(editor);
+
+  // Gestion des commandes vocales
+  const { handleVoiceCommand } = useSpeechCommands(editor);
 
   // Etat initial de l'éditeur (bouton "Enregistrer" désactivé)
   useEffect(() => {
     if (editor) {
-      setInitialContent(editor.getHTML());
-      setHasChanges(false);
+      resetInitialContent();
     }
   }, [editor]);
 
@@ -161,38 +176,14 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
 
     if (editor) {
       const current = editor.getHTML();
-      setInitialContent(current);
-      setHasChanges(false);
+      resetInitialContent();
     }
   };
 
-  // Gestion de la correction orthographique et grammaticale
-  const { checkText } = useLanguageTool();
+  //Vérification de la grammaire
+  const { checkGrammar } = useGrammarChecker(editor);
 
-  const handleDebouncedCheck = useCallback(
-    debounce(async (text: string) => {
-      if (text.trim().length < 5) return;
-
-      const matches = await checkText(text);
-      // À ce stade, `matches` contient les erreurs à traiter
-      console.log("Suggestions LanguageTool :", matches);
-      const decorations = matches.map((m: any) => ({
-        from: m.offset,
-        to: m.offset + m.length,
-        message: m.message,
-      }));
-
-      editor?.view.dispatch(
-        editor.state.tr.setMeta("grammarHighlightErrors", decorations)
-      );
-
-      // ➕ TODO : ici, tu pourrais déclencher des surlignages, tooltips, etc.
-    }, 1500),
-    []
-  );
-
-  // Gestion des commandes vocales
-
+  // État de la dictée vocale
   const [isDictating, setIsDictating] = useState(false);
 
   const { start, stop, isRecording, isStopping, error } = useSpeechToText({
@@ -215,119 +206,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       }, 100);
     },
 
-    onCommand: (cmd) => {
-      if (!editor) return;
-
-      editor.chain().focus().run();
-
-      const { state, commands } = editor;
-      const { from } = state.selection;
-
-      switch (cmd) {
-        case "deletePreviousWord":
-          if (!state.selection.empty) {
-            commands.deleteSelection().run();
-            return;
-          }
-
-          if (from <= 1) return;
-
-          const textBefore = editor.getText().slice(0, from);
-          const match = textBefore.match(/(\S+)\s*$/);
-
-          if (match) {
-            const start = from - match[0].length;
-            commands
-              .setTextSelection({ from: start, to: from })
-              .deleteSelection()
-              .run();
-          } else {
-            commands.deleteBackward().run();
-          }
-          return;
-
-        case "start":
-          commands.setTextSelection({ from: 1 }).run();
-          return;
-
-        case "end":
-          const end = state.doc.content.size || 1;
-          commands.setTextSelection({ from: end }).run();
-          return;
-
-        case "newline":
-          commands.insertContent("\n\n").run();
-          return;
-
-        case "selectAll":
-          commands.selectAll().run();
-          return;
-
-        case "selectParagraph": {
-          const { doc, selection } = state;
-          const pos = selection.$from.pos;
-
-          let start = pos;
-          let end = pos;
-
-          // Cherche le bloc parent (paragraph ou heading)
-          doc.descendants((node, posStart, parent) => {
-            if (
-              node.type.name === "paragraph" ||
-              node.type.name === "heading"
-            ) {
-              if (pos >= posStart && pos <= posStart + node.nodeSize) {
-                start = posStart + 1;
-                end = posStart + node.nodeSize - 1;
-                return false; // stop walking
-              }
-            }
-            return true;
-          });
-
-          commands.setTextSelection({ from: start, to: end }).run();
-          return;
-        }
-        case "undo":
-          commands.undo().run();
-          return;
-
-        case "redo":
-          commands.redo().run();
-          return;
-
-        case "bold":
-          commands.toggleBold().run();
-          return;
-
-        case "italic":
-          commands.toggleItalic().run();
-          return;
-
-        case "underline":
-          commands.toggleUnderline().run();
-          return;
-
-        case "cut":
-          handleCut(editor);
-          return;
-
-        case "copy":
-          handleCopy(editor);
-          return;
-
-        case "paste":
-          handlePaste(editor);
-          return;
-
-        case "save":
-          alert("💾 Sauvegarde simulée !");
-          return;
-
-        default:
-          console.warn("Commande vocale inconnue :", cmd);
-      }
-    },
+    onCommand: handleVoiceCommand,
   });
 
   // Toast au lancement de la dictée vocale
@@ -364,6 +243,9 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     }
   }, [isStopping]);
 
+  // Gestion des raccourcis clavier de l'éditeur
+  useEditorShortcuts(editor, isDictating, inputSourceRef);
+
   // Menu du haut (Edition, Insérer, Outils...)
   const menuItems = [
     {
@@ -384,58 +266,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     },
   ];
 
-  // Effet pour compteur de mots + comportements automatiques (majuscule, virgule) + Enregistrement des changements
-  useEffect(() => {
-    if (!editor || isDictating) {
-      console.log("Keydown désactivé (isDictating = true)");
-      return;
-    }
-
-    const updateEditorState = () => {
-      // 1. Compteur de mots
-      const text = editor.getText();
-      const words = text.trim().split(/\s+/).filter(Boolean);
-      setWordCount(words.length === 1 && words[0] === "" ? 0 : words.length);
-
-      // 2. Détection de modification
-      const currentContent = editor.getHTML();
-      setHasChanges(currentContent !== initialContent);
-    };
-
-    updateEditorState(); // appel initial
-    editor.on("update", updateEditorState);
-
-    // 3. Raccourcis clavier (majuscule après point, virgule suivie d'espace)
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (inputSourceRef.current === "voice") return;
-
-      const { state, view } = editor;
-      const { selection } = state;
-      const pos = selection.$from.pos;
-      const docText = editor.getText();
-      const preceding = docText.slice(Math.max(0, pos - 3), pos);
-
-      if (preceding.endsWith(". ") && /^[a-z]$/.test(event.key)) {
-        event.preventDefault();
-        const uppercase = event.key.toUpperCase();
-        view.dispatch(state.tr.insertText(uppercase, pos));
-      }
-
-      if (event.key === "," && docText[pos] !== " ") {
-        event.preventDefault();
-        view.dispatch(state.tr.insertText(", ", pos));
-      }
-    };
-
-    const dom = editor.view.dom;
-    dom.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      editor.off("update", updateEditorState);
-      dom.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [editor, isDictating, initialContent]);
-
+  // Fonction pour rendre les éléments du menu
   const renderMenuItems = () => (
     <NavigationMenuList className="flex items-center gap-2">
       {menuItems.map((menuItem, index) => (
@@ -599,11 +430,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
 
   const [popup, setPopup] = useState<null | PopupProps>(null);
 
-  const handleReplace = (suggestion: string, from: number, to: number) => {
-    editor?.commands.insertContentAt({ from, to }, suggestion);
-    setPopup(null);
-  };
-
   return (
     <Card
       ref={centralEditorRef}
@@ -645,8 +471,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
             }`}
             onClick={() => {
               toast.success("Rubrique enregistrée !");
-              setInitialContent(editor?.getHTML() || "");
-              setHasChanges(false);
+              resetInitialContent();
             }}
             disabled={!hasChanges}
           >
@@ -660,7 +485,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           </Button>
         </div>
       </header>
-
       <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b bg-[#fcfcfc]">
         <button
           onClick={() => editor?.chain().focus().undo().run()}
@@ -918,7 +742,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           </select>
         </div>
       </div>
-
       <div className="flex flex-col flex-grow overflow-hidden">
         <div className="flex-grow overflow-auto p-4 bg-white relative">
           {isXmlView ? (
@@ -966,14 +789,12 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           </>
         )}
       </div>
-
       <footer className="flex h-10 items-center justify-between px-4 py-0 bg-[#fcfcfc] border-t border-[#e1e1e2]">
         <div className="font-text-base-font-medium text-[#1a1a1ab2] text-center whitespace-nowrap">
           {wordCount} mot{wordCount > 1 ? "s" : ""}
         </div>
         <GripVertical className="w-6 h-6" aria-label="Handler" />
       </footer>
-
       {/* <Dialog open={isHelpOpen} onOpenChange={setIsHelpOpen}>
         <DialogContent>
           <DialogHeader>
@@ -987,94 +808,24 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           </DialogClose>
         </DialogContent>
       </Dialog> */}
-
       {isFindOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-[600px] max-w-[96vw] animate-in fade-in slide-in-from-top-4">
-            <div className="flex flex-col gap-3">
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                🔍 Rechercher / Remplacer
-              </h3>
-              <input
-                className="border border-gray-200 focus:border-blue-500 outline-none rounded-lg px-3 py-2 text-base"
-                placeholder="Rechercher…"
-                value={findValue}
-                autoFocus
-                onChange={(e) => setFindValue(e.target.value)}
-              />
-              <input
-                className="border border-gray-200 focus:border-blue-500 outline-none rounded-lg px-3 py-2 text-base"
-                placeholder="Remplacer par…"
-                value={replaceValue}
-                onChange={(e) => setReplaceValue(e.target.value)}
-              />
-              <div className="flex flex-row gap-3 mt-2 flex-wrap justify-end">
-                <button
-                  className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition"
-                  onClick={() => handleFind(editor, findValue)}
-                >
-                  Suivant
-                </button>
-                <button
-                  className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition"
-                  onClick={() => handleReplace(editor, findValue, replaceValue)}
-                >
-                  Remplacer
-                </button>
-                <button
-                  className="px-4 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold transition"
-                  onClick={() =>
-                    handleReplaceAll(editor, findValue, replaceValue)
-                  }
-                >
-                  Remplacer tout
-                </button>
-                <button
-                  className="px-4 py-1.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold transition"
-                  onClick={() => setIsFindOpen(false)}
-                >
-                  Fermer
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <FindReplaceDialog
+          findValue={findValue}
+          replaceValue={replaceValue}
+          onChangeFind={setFindValue}
+          onChangeReplace={setReplaceValue}
+          onFind={() => find(findValue)}
+          onReplace={() => replace(findValue, replaceValue)}
+          onReplaceAll={() => replaceAll(findValue, replaceValue)}
+          onClose={() => setIsFindOpen(false)}
+        />
       )}
-
-      {isHistoryOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-[430px] max-w-[96vw] animate-in fade-in slide-in-from-top-4">
-            <h3 className="font-semibold mb-3">Historique des actions</h3>
-            <div className="max-h-[400px] overflow-y-auto flex flex-col gap-2">
-              {historyLog.length === 0 ? (
-                <div className="text-gray-500">Aucune action enregistrée.</div>
-              ) : (
-                historyLog
-                  .slice()
-                  .reverse()
-                  .map((item, i) => (
-                    <div key={i} className="flex flex-col text-sm">
-                      <span className="font-medium text-gray-800">
-                        {new Date(item.ts).toLocaleTimeString()} — {item.action}
-                      </span>
-                      {item.content && (
-                        <span className="text-gray-500 line-clamp-1">
-                          {item.content}
-                        </span>
-                      )}
-                    </div>
-                  ))
-              )}
-            </div>
-            <button
-              className="mt-4 px-4 py-1.5 rounded bg-gray-200 hover:bg-gray-300"
-              onClick={() => setIsHistoryOpen(false)}
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-      )}
+      <EditorHistoryPanel
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        history={historyLog}
+        onClear={clearHistory}
+      />
     </Card>
   );
 };

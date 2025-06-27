@@ -5,4 +5,6 @@ export interface FeatureItem {
   expanded?: boolean;
   active?: boolean;
   hasUpdate?: boolean;
+  hasEvolution?: boolean;
+  hasCorrectif?: boolean;
 }

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SyncLeftSidebar } from "components/ui/SyncLeftSidebar";
-import { SyncCentralEditor } from "components/ui/SyncCentralEditor";
+import { SyncEditor } from "components/ui/SyncEditor";
+import { SyncBottombar } from "components/ui/SyncBottombar";
 import { SyncRightSidebar } from "components/ui/SyncRightSidebar";
 import { TopBar } from "components/ui/TopBar";
 import { ImpactMapModal } from "components/ui/ImpactMapModal";
@@ -29,6 +30,8 @@ export const ProductDocSync: React.FC = () => {
       level: 1,
       expanded: true,
       hasUpdate: true,
+      hasEvolution: true,
+      hasCorrectif: false,
     },
     {
       id: 2,
@@ -36,6 +39,8 @@ export const ProductDocSync: React.FC = () => {
       level: 2,
       expanded: true,
       hasUpdate: false,
+      hasEvolution: false,
+      hasCorrectif: true,
     },
     {
       id: 3,
@@ -43,6 +48,8 @@ export const ProductDocSync: React.FC = () => {
       level: 1,
       expanded: true,
       hasUpdate: true,
+      hasEvolution: true,
+      hasCorrectif: true,
     },
   ]);
 
@@ -73,6 +80,10 @@ export const ProductDocSync: React.FC = () => {
       `Le suivi de ${selectedProduct} version ${selectedVersion} a été publié !`
     );
   };
+
+  const [selectedArticleType, setSelectedArticleType] = useState<
+    "evolution" | "correctif"
+  >("evolution");
 
   const [showImpactMap, setShowImpactMap] = useState(false);
 
@@ -186,24 +197,35 @@ export const ProductDocSync: React.FC = () => {
             version={selectedVersion}
           />
         </div>
-        <div className="flex-grow flex">
-          <SyncCentralEditor
-            selectedFeature={selectedFeature}
-            features={features}
-            isRightSidebarExpanded={isRightSidebarExpanded}
-          />
-          <div
-            className={`$${
-              isRightSidebarExpanded ? "w-[248px]" : "w-0"
-            } transition-all duration-300`}
-          >
-            <SyncRightSidebar
-              isExpanded={isRightSidebarExpanded}
-              onToggle={() =>
-                setIsRightSidebarExpanded(!isRightSidebarExpanded)
+        <div
+          className="flex flex-grow transition-all duration-300 ease-in-out"
+          style={{
+            width: isRightSidebarExpanded ? "calc(100% - 248px)" : "100%",
+          }}
+        >
+          <div className="flex flex-col flex-grow min-w-0">
+            <SyncEditor
+              selectedType={selectedArticleType}
+              onTypeChange={setSelectedArticleType}
+            />
+            <SyncBottombar
+              selectedFeatureName={
+                selectedFeature
+                  ? features.find((f) => f.id === selectedFeature)?.name || "-"
+                  : "-"
               }
             />
           </div>
+        </div>
+        <div
+          className={`${
+            isRightSidebarExpanded ? "w-[248px]" : "w-0"
+          } transition-all duration-300`}
+        >
+          <SyncRightSidebar
+            isExpanded={isRightSidebarExpanded}
+            onToggle={() => setIsRightSidebarExpanded(!isRightSidebarExpanded)}
+          />
         </div>
       </div>
     </div>

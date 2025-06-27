@@ -107,6 +107,20 @@ export const FeatureItem: React.FC<FeatureItemProps> = ({
       <div className="flex-1 text-xs text-[#515a6e] font-['Roboto',Helvetica] whitespace-nowrap">
         {item.name}
       </div>
+      {(item.hasEvolution || item.hasCorrectif) && (
+        <div className="ml-2 flex gap-1">
+          {item.hasEvolution && (
+            <span className="text-[10px] px-1 rounded-full bg-blue-100 text-blue-800 opacity-70">
+              Évo
+            </span>
+          )}
+          {item.hasCorrectif && (
+            <span className="text-[10px] px-1 rounded-full bg-red-100 text-red-800 opacity-70">
+              Corr
+            </span>
+          )}
+        </div>
+      )}
       {item.hasUpdate && (
         <span
           className="w-2 h-2 bg-orange-500 rounded-full ml-2"
