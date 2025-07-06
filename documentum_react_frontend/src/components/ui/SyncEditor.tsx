@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
+import { Card } from "components/ui/card";
 import { ToolbarCorrection } from "./ToolbarCorrection";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -10,6 +11,7 @@ import TextStyle from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import TextAlign from "@tiptap/extension-text-align";
 import { Button } from "components/ui/button";
+import { FindReplaceDialog } from "components/ui/FindReplaceDialog";
 import { useContentChangeTracker } from "hooks/useContentChangeTracker";
 import { useGrammarChecker } from "hooks/useGrammarChecker";
 import { useSpeechCommands } from "hooks/useSpeechCommands";
@@ -19,11 +21,13 @@ import { useFindReplaceTipTap } from "hooks/useFindReplaceTipTap";
 interface SyncEditorProps {
   selectedType: "evolution" | "correctif";
   onTypeChange: (type: "evolution" | "correctif") => void;
+  height: number;
 }
 
 export const SyncEditor: React.FC<SyncEditorProps> = ({
   selectedType,
   onTypeChange,
+  height,
 }) => {
   const [color, setColor] = useState("#000000");
 
@@ -65,7 +69,7 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
     editorProps: {
       attributes: {
         class:
-          "prose max-w-none p-4 min-h-[300px] border rounded overflow-auto",
+          "prose max-w-none p-4 min-h-[400px] overflow-auto border-none outline-none",
       },
     },
     onUpdate: ({ editor }) => {
@@ -77,6 +81,12 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
   useSpeechCommands(editor);
   useFindReplaceTipTap(editor);
   useEditorHistoryTracker(editor);
+
+  // Recherche et remplacement de texte
+  const [isFindOpen, setIsFindOpen] = useState(false);
+  const [findValue, setFindValue] = useState("");
+  const [replaceValue, setReplaceValue] = useState("");
+  const { find, replace, replaceAll } = useFindReplaceTipTap(editor);
 
   // Fonction pour sauvegarder le contenu de l'éditeur
   const handleSave = () => {
@@ -104,7 +114,10 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
   if (!editor) return null;
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <Card
+      className="flex flex-col w-full overflow-hidden border-none shadow-none"
+      style={{ height: `${height}px` }}
+    >
       <ToolbarCorrection
         selectedType={selectedType}
         onTypeChange={onTypeChange}
@@ -116,66 +129,86 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
         onNext={handleNext}
         onShowView={handleShowView}
       />
-      <div className="flex items-center gap-2 border-b px-4 py-2 mx-[30px]">
+      {/* Toolbar secondaire */}
+      <div className="h-[50px] border-b px-4 mx-[30px] bg-[#fcfcfc] flex items-center gap-0">
+        {/* Undo / Redo */}
         <button
-          size="sm"
-          variant="outline"
-          onClick={() => editor.chain().focus().undo().run()}
+          onClick={() => editor?.chain().focus().undo().run()}
+          title="Annuler"
+          className="w-8 h-10 text-[16px] font-semibold flex items-center justify-center hover:bg-gray-200"
         >
           ↺
         </button>
         <button
-          size="sm"
-          variant="outline"
           onClick={() => editor.chain().focus().redo().run()}
+          title="Rétablir"
+          className="w-8 h-10 text-[16px] font-semibold flex items-center justify-center hover:bg-gray-200"
         >
           ↻
         </button>
+
+        {/* Séparateur */}
+        <div className="border-l h-6 mx-2 border-gray-300" />
+
+        {/* Mise en forme */}
         <button
-          size="sm"
-          variant="outline"
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={editor.isActive("bold") ? "bg-gray-200" : ""}
+          title="Gras"
+          className={`w-8 h-10 text-[16px] font-semibold flex items-center justify-center hover:bg-gray-200 ${
+            editor.isActive("bold") ? "bg-gray-200 font-bold" : ""
+          }`}
         >
           B
         </button>
         <button
-          size="sm"
-          variant="outline"
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={editor.isActive("italic") ? "bg-gray-200" : ""}
+          title="Italique"
+          className={`w-8 h-10 text-[16px] font-semibold flex items-center justify-center hover:bg-gray-200 ${
+            editor.isActive("italic") ? "bg-gray-200 italic" : ""
+          }`}
         >
           I
         </button>
         <button
-          size="sm"
-          variant="outline"
           onClick={() => editor.chain().focus().toggleUnderline().run()}
-          className={editor.isActive("underline") ? "bg-gray-200" : ""}
+          title="Souligné"
+          className={`w-8 h-10 text-[16px] font-semibold flex items-center justify-center hover:bg-gray-200 ${
+            editor.isActive("underline") ? "bg-gray-200 underline" : ""
+          }`}
         >
           U
         </button>
+
+        {/* Séparateur */}
+        <div className="border-l h-6 mx-2 border-gray-300" />
+
+        {/* Alignements */}
         <button
-          size="sm"
-          variant="outline"
           onClick={() => editor.chain().focus().setTextAlign("left").run()}
+          title="Aligner à gauche"
+          className="w-8 h-10 text-[16px] flex items-center justify-center hover:bg-gray-200"
         >
-          ◧
+          ⯇
         </button>
         <button
-          size="sm"
-          variant="outline"
           onClick={() => editor.chain().focus().setTextAlign("center").run()}
+          title="Centrer"
+          className="w-8 h-10 text-[16px] flex items-center justify-center hover:bg-gray-200"
         >
-          ⊶
+          ≡
         </button>
         <button
-          size="sm"
-          variant="outline"
           onClick={() => editor.chain().focus().setTextAlign("right").run()}
+          title="Aligner à droite"
+          className="w-8 h-10 text-[16px] flex items-center justify-center hover:bg-gray-200"
         >
-          ◨
+          ⯈
         </button>
+
+        {/* Séparateur */}
+        <div className="border-l h-6 mx-2 border-gray-300" />
+
+        {/* Couleur */}
         <input
           type="color"
           value={color}
@@ -183,20 +216,27 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
             setColor(e.target.value);
             editor.chain().focus().setColor(e.target.value).run();
           }}
-          className="h-8 w-10 border border-gray-300 rounded"
+          className="h-8 w-10 mt-[2px]"
         />
+
+        {/* Séparateur */}
+        <div className="border-l h-6 mx-2 border-gray-300" />
+
+        {/* Recherche */}
         <button
-          size="sm"
-          variant="ghost"
-          onClick={() => alert("Recherche / Remplacement...")}
+          onClick={() => setIsFindOpen(true)}
+          title="Rechercher / Remplacer"
+          className="ml-2 px-3 py-1 rounded bg-gray-100 hover:bg-blue-100 text-gray-700"
         >
           🔍 Rechercher / Remplacer
         </button>
+
+        {/* Enregistrement */}
         <div className="ml-auto mr-[36px]">
           <Button
             onClick={onSaveCorrection}
             disabled={!hasChanges}
-            className={`h-11 px-5 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 ${
+            className={`px-5 h-11 mt-1 mb-1 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 ${
               hasChanges
                 ? "bg-[#15803d] hover:bg-[#166534]"
                 : "bg-gray-400 cursor-not-allowed"
@@ -206,7 +246,31 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
           </Button>
         </div>
       </div>
-      <EditorContent editor={editor} className="flex-grow" />
-    </div>
+
+      {/* Zone éditable principale */}
+      <div className="flex-grow overflow-auto px-[30px]">
+        <EditorContent
+          editor={editor}
+          className="h-full px-4"
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+        />
+      </div>
+
+      {isFindOpen && (
+        <FindReplaceDialog
+          findValue={findValue}
+          replaceValue={replaceValue}
+          onChangeFind={setFindValue}
+          onChangeReplace={setReplaceValue}
+          onFind={() => find(findValue)}
+          onReplace={() => replace(findValue, replaceValue)}
+          onReplaceAll={() => replaceAll(findValue, replaceValue)}
+          onClose={() => setIsFindOpen(false)}
+        />
+      )}
+    </Card>
   );
 };

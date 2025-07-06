@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TopBar } from "components/ui/TopBar";
 import { LeftSidebar } from "components/ui/LeftSidebar";
 import { RightSidebar } from "components/ui/RightSidebar";
@@ -37,6 +37,12 @@ export const Desktop: React.FC = () => {
   const [previousRightSidebarState, setPreviousRightSidebarState] =
     useState(true);
   const [mapItems, setMapItems] = useState<MapItem[]>(initialMapItems);
+  const [questionEditorHeight, setQuestionEditorHeight] = useState(200);
+  const [isQuestionEditorVisible, setIsQuestionEditorVisible] = useState(false);
+
+  const handleResizeQuestionEditorHeight = (newHeight: number) => {
+    setQuestionEditorHeight(newHeight);
+  };
 
   const togglePreviewMode = () => {
     if (!isPreviewMode) {
@@ -69,7 +75,7 @@ export const Desktop: React.FC = () => {
   return (
     <div className="bg-white flex flex-col h-screen w-full">
       <TopBar currentScreen="desktop" className="z-50" />
-      <div className="flex flex-row flex-1 relative">
+      <div className="flex flex-row flex-1 min-h-0 relative overflow-hidden">
         <LeftSidebar
           isExpanded={isLeftSidebarExpanded}
           onToggle={() =>
@@ -80,7 +86,7 @@ export const Desktop: React.FC = () => {
           onToggleExpand={handleToggleExpandMapNode}
         />
         <div
-          className="flex-1 z-0 transition-all duration-300 ease-in-out"
+          className="flex-1 z-0 flex flex-col min-h-0 h-full"
           style={{
             marginLeft: isLeftSidebarExpanded ? "351px" : "6px",
             marginRight:
@@ -95,6 +101,13 @@ export const Desktop: React.FC = () => {
             isLeftSidebarExpanded={isLeftSidebarExpanded}
             isRightSidebarExpanded={isRightSidebarExpanded}
             isRightSidebarFloating={isRightSidebarFloating}
+            height={0}
+            isQuestionEditorVisible={isQuestionEditorVisible}
+            onToggleQuestionEditor={() =>
+              setIsQuestionEditorVisible(!isQuestionEditorVisible)
+            }
+            questionEditorHeight={questionEditorHeight}
+            onResizeQuestionEditorHeight={handleResizeQuestionEditorHeight}
           />
         </div>
         <RightSidebar

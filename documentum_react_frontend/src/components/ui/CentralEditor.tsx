@@ -1,11 +1,8 @@
-// CentralEditor.tsx
-// Éditeur central principal de l'application Desktop
-
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useSpeechToText } from "hooks/useSpeechToText";
 import { Button } from "components/ui/button";
-import { Card } from "components/ui/card"; // CardContent non utilisé
+import { Card } from "components/ui/card";
 import { Checkbox } from "components/ui/checkbox"; // À intégrer dans la barre d'outils plus tard
 import { PopupProps } from "components/ui/PopupSuggestion";
 import { GripVertical } from "lucide-react";
@@ -31,6 +28,7 @@ import Note from "extensions/Note";
 import Warning from "extensions/Warning";
 import { FindReplaceDialog } from "components/ui//FindReplaceDialog";
 import { EditorHistoryPanel } from "components/ui/EditorHistoryPanel";
+import { VerticalDragHandle } from "components/ui/VerticalDragHandle";
 import { QuestionEditor } from "./QuestionEditor";
 import { useLanguageTool } from "@/hooks/useLanguageTool";
 import { useFindReplaceTipTap } from "@/hooks/useFindReplaceTipTap";
@@ -42,9 +40,6 @@ import { useGrammarChecker } from "@/hooks/useGrammarChecker";
 import { useEditorHistoryTracker } from "@/hooks/useEditorHistoryTracker";
 import debounce from "lodash.debounce";
 
-// Fonctions d'édition classiques (copier/coller/trouver/remplacer...)
-//... (ces fonctions sont inchangées et nécessaires)
-
 // Props du composant
 interface CentralEditorProps {
   isPreviewMode: boolean;
@@ -52,6 +47,10 @@ interface CentralEditorProps {
   isLeftSidebarExpanded: boolean;
   isRightSidebarExpanded: boolean;
   isRightSidebarFloating: boolean;
+  questionEditorHeight: number;
+  isQuestionEditorVisible: boolean;
+  onToggleQuestionEditor: () => void;
+  onResizeQuestionEditorHeight: (newHeight: number) => void;
 }
 
 // Début du composant CentralEditor
@@ -61,11 +60,13 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   isLeftSidebarExpanded,
   isRightSidebarExpanded,
   isRightSidebarFloating,
+  questionEditorHeight,
+  isQuestionEditorVisible,
+  onToggleQuestionEditor,
+  onResizeQuestionEditorHeight,
 }) => {
-  // États
+  // États pour la gestion de l'éditeur
   const [initialContent, setInitialContent] = useState<string>("");
-  const [isQuestionEditorVisible, setIsQuestionEditorVisible] = useState(false);
-  const [questionEditorHeight, setQuestionEditorHeight] = useState(200);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isXmlView, setIsXmlView] = useState(false);
   const [lastXmlValidation, setLastXmlValidation] = useState<null | {
@@ -75,11 +76,38 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   const [wordCount, setWordCount] = useState(0);
   const inputSourceRef = useRef<string | null>(null);
 
-  // Références
+  // Référence pour l'éditeur central
+  const MIN_QUESTION_EDITOR_HEIGHT = 180;
+  const MAX_QUESTION_EDITOR_HEIGHT = 600;
   const centralEditorRef = useRef<HTMLDivElement>(null);
-  const dragStartY = useRef<number | null>(null);
-  const initialHeight = useRef<number>(200);
-  const dragOffset = useRef<number>(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Fonctions pour redimensionner la barre de séparation horizontale
+  const handleResizeStart = (e: React.MouseEvent) => {
+    const startY = e.clientY;
+    const startHeight = questionEditorHeight;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientY - startY;
+      const newHeight = Math.max(
+        MIN_QUESTION_EDITOR_HEIGHT,
+        Math.min(MAX_QUESTION_EDITOR_HEIGHT, startHeight - delta)
+      );
+      onResizeQuestionEditorHeight(newHeight);
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.body.style.userSelect = "";
+      setIsDragging(false);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    document.body.style.userSelect = "none";
+    setIsDragging(true);
+  };
 
   // Fonctions pour copier, coller, couper
   function handleCut(editor: Editor | null) {
@@ -324,46 +352,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     </NavigationMenuList>
   );
 
-  const [isDragging, setIsDragging] = useState(false);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    dragStartY.current = e.clientY;
-    initialHeight.current = questionEditorHeight;
-    const handleRect = (e.target as HTMLElement).getBoundingClientRect();
-    dragOffset.current = e.clientY - handleRect.top;
-    // Ajoute la classe pour empêcher la sélection pendant le drag
-    document.body.classList.add("select-none");
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-  };
-
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (isDragging && centralEditorRef.current) {
-        const editorRect = centralEditorRef.current.getBoundingClientRect();
-        // Y du curseur par rapport au top du CentralEditor
-        const relativeY = e.clientY - editorRect.top;
-        // Calcul de la hauteur du QUestionEditor : tout ce qui est sous le curseur
-        const newHeight = Math.max(
-          50,
-          Math.min(editorRect.height - relativeY, editorRect.height - 200)
-        );
-        setQuestionEditorHeight(newHeight);
-      }
-    },
-    [isDragging]
-  );
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    dragStartY.current = null;
-    // Retire la classe à la fin du drag
-    document.body.classList.remove("select-none");
-    window.removeEventListener("mousemove", handleMouseMove);
-    window.removeEventListener("mouseup", handleMouseUp);
-  }, [handleMouseMove]);
-
   function validateXML() {
     const xmlString = `<racine>${editor?.getHTML()}</racine>`;
     let valid = false;
@@ -391,13 +379,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   function returnToEdit() {
     setIsXmlView(false);
   }
-
-  useEffect(() => {
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [handleMouseMove, handleMouseUp]);
 
   useEffect(() => {
     const dom = editor?.view.dom;
@@ -433,7 +414,8 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   return (
     <Card
       ref={centralEditorRef}
-      className="flex flex-col w-full h-full border border-[#e1e1e2] shadow-shadow-md rounded-xl overflow-hidden"
+      style={{ height: "100%" }}
+      className="flex flex-col h-full w-full min-h-0 border border-[#e1e1e2] shadow-shadow-md rounded-xl overflow-hidden"
     >
       <header className="flex items-center justify-between px-6 py-3 bg-[#fcfcfc] border-b border-[#e1e1e2]">
         <NavigationMenu>{renderMenuItems()}</NavigationMenu>
@@ -464,6 +446,12 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
             {isPreviewMode ? "Cancel Preview" : "Preview"}
           </Button>
           <Button
+            className="h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 bg-[#2463eb] hover:bg-[#1d4ed8]"
+            onClick={onToggleQuestionEditor}
+          >
+            Q\R
+          </Button>
+          <Button
             className={`h-11 px-5 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 ${
               hasChanges
                 ? "bg-[#15803d] hover:bg-[#166534]"
@@ -476,12 +464,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
             disabled={!hasChanges}
           >
             Enregistrer
-          </Button>
-          <Button
-            className="h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 bg-[#2463eb] hover:bg-[#1d4ed8]"
-            onClick={() => setIsQuestionEditorVisible(!isQuestionEditorVisible)}
-          >
-            Q\R
           </Button>
         </div>
       </header>
@@ -500,7 +482,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         >
           ↻
         </button>
-        <div className="h-5 border-l mx-2"></div>
+        <div className="h-5 border-l border-gray-300 mx-2"></div>
         <button
           onClick={() => {
             editor?.chain().focus().toggleBold().run();
@@ -537,7 +519,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         >
           U
         </button>
-        <div className="h-5 border-l mx-2"></div>
+        <div className="h-5 border-l border-gray-300 mx-2"></div>
         <button
           onClick={() => editor?.chain().focus().setTextAlign("left").run()}
           title="Aligner à gauche"
@@ -574,7 +556,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         >
           ☰
         </button>
-        <div className="h-5 border-l mx-2"></div>
+        <div className="h-5 border-l border-gray-300 mx-2"></div>
         <input
           type="color"
           onChange={(e) =>
@@ -584,7 +566,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           title="Changer la couleur"
           className="ml-2"
         />
-        <div className="h-5 border-l mx-2"></div>
+        <div className="h-5 border-l border-gray-300 mx-2"></div>
         <button
           onClick={() => {
             const url = prompt("Entrez l'URL :");
@@ -604,9 +586,12 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           ❌
         </button>
 
+        {/* Séparateur */}
+        <div className="border-l h-6 mx-2 border-gray-300" />
+
         <Button
           onClick={isRecording ? stop : start}
-          className={`ml-2 px-3 py-1 font-semibold rounded-xl transition duration-200
+          className={`ml-2 border-l px-3 py-1 font-semibold rounded-xl transition duration-200
     ${
       isRecording
         ? "bg-red-600 hover:bg-red-700 text-white border border-red-700"
@@ -742,7 +727,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           </select>
         </div>
       </div>
-      <div className="flex flex-col flex-grow overflow-hidden">
+      <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
         <div className="flex-grow overflow-auto p-4 bg-white relative">
           {isXmlView ? (
             <pre className="bg-gray-100 rounded p-4 font-mono text-xs whitespace-pre-wrap">
@@ -758,8 +743,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
               autoComplete="off"
             />
           )}
-
-          {/* ✅ Menu contextuel de suggestion, en overlay */}
           {popup && !isXmlView && (
             <PopupSuggestion
               {...popup}
@@ -770,31 +753,28 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
             />
           )}
         </div>
-
+        <footer className="flex h-10 items-center justify-between px-4 py-0 bg-[#fcfcfc] border-t border-[#e1e1e2]">
+          <div className="font-text-base-font-medium text-[#1a1a1ab2] text-center whitespace-nowrap">
+            {wordCount} mot{wordCount > 1 ? "s" : ""}
+          </div>
+          <GripVertical className="w-6 h-6" aria-label="Handler" />
+        </footer>
         {isQuestionEditorVisible && (
           <>
-            <div
-              className="h-[12px] bg-gray-200 cursor-ns-resize flex items-center justify-center"
-              onMouseDown={handleMouseDown}
-            >
-              <div className="w-16 h-1 bg-gray-400 rounded-full"></div>
+            <VerticalDragHandle onResizeStart={handleResizeStart} />
+            <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
+              <QuestionEditor
+                height={questionEditorHeight}
+                onResizeQuestionEditorHeight={onResizeQuestionEditorHeight}
+                isLeftSidebarExpanded={isLeftSidebarExpanded}
+                isRightSidebarExpanded={isRightSidebarExpanded}
+                isRightSidebarFloating={isRightSidebarFloating}
+                isPreviewMode={isPreviewMode}
+              />
             </div>
-            <QuestionEditor
-              height={questionEditorHeight}
-              isLeftSidebarExpanded={isLeftSidebarExpanded}
-              isRightSidebarExpanded={isRightSidebarExpanded}
-              isRightSidebarFloating={isRightSidebarFloating}
-              isPreviewMode={isPreviewMode}
-            />
           </>
         )}
       </div>
-      <footer className="flex h-10 items-center justify-between px-4 py-0 bg-[#fcfcfc] border-t border-[#e1e1e2]">
-        <div className="font-text-base-font-medium text-[#1a1a1ab2] text-center whitespace-nowrap">
-          {wordCount} mot{wordCount > 1 ? "s" : ""}
-        </div>
-        <GripVertical className="w-6 h-6" aria-label="Handler" />
-      </footer>
       {/* <Dialog open={isHelpOpen} onOpenChange={setIsHelpOpen}>
         <DialogContent>
           <DialogHeader>

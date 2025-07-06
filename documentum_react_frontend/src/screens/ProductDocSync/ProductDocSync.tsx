@@ -23,6 +23,10 @@ export const ProductDocSync: React.FC = () => {
   const [isRightSidebarExpanded, setIsRightSidebarExpanded] = useState(true);
   const [copiedFeature, setCopiedFeature] = useState<FeatureItem | null>(null);
 
+  const [bottomBarHeight, setBottomBarHeight] = useState(200);
+  const TOTAL_HEIGHT = window.innerHeight - 130; // TopBar + marges estimées
+  const editorHeight = TOTAL_HEIGHT - bottomBarHeight;
+
   const [features, setFeatures] = useState<FeatureItem[]>([
     {
       id: 1,
@@ -84,8 +88,8 @@ export const ProductDocSync: React.FC = () => {
   const [selectedArticleType, setSelectedArticleType] = useState<
     "evolution" | "correctif"
   >("evolution");
-
   const [showImpactMap, setShowImpactMap] = useState(false);
+  const [impactMapHeight, setImpactMapHeight] = useState(160);
 
   const handleShowImpactMap = () => setShowImpactMap(true);
   const handleCloseImpactMap = () => setShowImpactMap(false);
@@ -99,7 +103,6 @@ export const ProductDocSync: React.FC = () => {
   const handleReorder = (newItems: FeatureItem[]) => {
     setFeatures(newItems);
   };
-
   const handleIndent = (id: number) => {
     setFeatures((prev) =>
       prev.map((f) =>
@@ -107,7 +110,6 @@ export const ProductDocSync: React.FC = () => {
       )
     );
   };
-
   const handleOutdent = (id: number) => {
     setFeatures((prev) =>
       prev.map((f) =>
@@ -115,11 +117,9 @@ export const ProductDocSync: React.FC = () => {
       )
     );
   };
-
   const handleDeleteFeature = (id: number) => {
     setFeatures((prev) => prev.filter((f) => f.id !== id));
   };
-
   const handleAddFeature = () => {
     const newId = Math.max(...features.map((f) => f.id)) + 1;
     setFeatures((prev) => [
@@ -151,14 +151,15 @@ export const ProductDocSync: React.FC = () => {
   };
 
   return (
-    <div className="relative flex flex-col min-h-screen overflow-visible">
+    <div className="relative flex flex-col h-screen overflow-hidden">
       <TopBar
         currentScreen="product-doc-sync"
         onToggleScreen={handleScreenSwitch}
       />
       <div className="flex flex-grow">
+        {/* Sidebar gauche */}
         <div
-          className={`$${
+          className={`${
             isLeftSidebarExpanded ? "w-[345px]" : "w-0"
           } transition-all duration-300`}
         >
@@ -195,32 +196,34 @@ export const ProductDocSync: React.FC = () => {
             onClose={handleCloseImpactMap}
             product={selectedProduct}
             version={selectedVersion}
+            height={impactMapHeight}
           />
         </div>
-        <div
-          className="flex flex-grow transition-all duration-300 ease-in-out"
-          style={{
-            width: isRightSidebarExpanded ? "calc(100% - 248px)" : "100%",
-          }}
-        >
+        {/* Éditeur central + bottomBar */}
+        <div className="flex flex-grow min-w-0">
           <div className="flex flex-col flex-grow min-w-0">
             <SyncEditor
               selectedType={selectedArticleType}
               onTypeChange={setSelectedArticleType}
+              height={editorHeight}
             />
+            {/* Bottom bar */}
             <SyncBottombar
               selectedFeatureName={
                 selectedFeature
                   ? features.find((f) => f.id === selectedFeature)?.name || "-"
                   : "-"
               }
+              height={bottomBarHeight}
+              onResize={(newHeight) => setBottomBarHeight(newHeight)}
             />
           </div>
         </div>
+        {/* Sidebar droite */}
         <div
           className={`${
             isRightSidebarExpanded ? "w-[248px]" : "w-0"
-          } transition-all duration-300`}
+          } transition-all duration-300 h-full`}
         >
           <SyncRightSidebar
             isExpanded={isRightSidebarExpanded}

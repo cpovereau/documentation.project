@@ -5,12 +5,14 @@ import { cn } from "lib/utils";
 import { Editor } from "@tiptap/react";
 import QuestionItem from "./QuestionItem";
 
+// Type pour les réponses
 type Answer = {
   id: string;
   answerText: string;
   correct: boolean;
 };
 
+// Type pour les blocs de questions
 type QuestionBlock = {
   id: string;
   questionText: string;
@@ -18,14 +20,17 @@ type QuestionBlock = {
   active: boolean;
 };
 
+// Props pour le composant QuestionEditor
 interface QuestionEditorProps {
   height: number;
   isLeftSidebarExpanded: boolean;
   isRightSidebarExpanded: boolean;
   isRightSidebarFloating: boolean;
   isPreviewMode: boolean;
+  onResizeQuestionEditorHeight: (newHeight: number) => void;
 }
 
+// Composant QuestionEditor
 export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   height,
   isLeftSidebarExpanded,
@@ -173,32 +178,15 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
       .join("\n");
   }
 
-  // Style
-  const getStyle = (): React.CSSProperties => {
-    let style: React.CSSProperties = {
-      height: `${height}px`,
-      backgroundColor: "white",
-      transition: "all 0.3s ease-in-out",
-    };
+  const validHeight =
+    typeof height === "number" && !isNaN(height) && height > 0
+      ? `${height}px`
+      : undefined;
 
-    // En mode Preview = aucune marge, on force full width
-    if (isPreviewMode) {
-      style.marginLeft = 0;
-      style.marginRight = 0;
-    } else {
-      // Barre de gauche rétractée
-      if (!isLeftSidebarExpanded) style.marginLeft = "0";
-      else style.marginLeft = "0"; // ou "351px" si besoin pour compenser un padding du parent
-
-      // Barre de droite rétractée OU flottante
-      if (!isRightSidebarExpanded || isRightSidebarFloating)
-        style.marginRight = "0";
-      else style.marginRight = "0"; // ou "254px" idem
-
-      // Si tu utilises un layout avec padding, adapte ici pour coller au layout réel
-    }
-
-    return style;
+  const style: React.CSSProperties = {
+    ...(validHeight && { height: validHeight }),
+    backgroundColor: "white",
+    transition: "all 0.3s ease-in-out",
   };
 
   // Barre d’outils unique pour l’éditeur actif
@@ -253,7 +241,10 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   );
 
   return (
-    <div style={getStyle()} className="overflow-auto flex flex-col p-4">
+    <div
+      style={{ height: `${height}px`, minHeight: "180px" }}
+      className="flex flex-col flex-grow min-h-0 overflow-hidden p-4"
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-2">
@@ -286,7 +277,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
       </div>
 
       {/* Questions dynamiques */}
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 flex-grow min-h-0 overflow-y-auto">
         {questions.map((q, i) => (
           <div
             key={q.id}

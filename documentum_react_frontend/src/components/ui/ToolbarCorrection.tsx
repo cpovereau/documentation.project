@@ -33,7 +33,7 @@ export const ToolbarCorrection: React.FC<ToolbarCorrectionProps> = ({
   onShowView,
 }) => {
   return (
-    <div className="flex items-center gap-3 border-b px-4 py-2 mx-[30px] relative z-10">
+    <div className="flex items-center gap-3 border-b border-[#e5e7eb] bg-[#fcfcfc] px-4 py-2 mx-[30px] relative">
       {/* Sélecteur Evolution/Correctif */}
       <Select value={selectedType ?? "evolution"} onValueChange={onTypeChange}>
         <SelectTrigger className="min-w-[110px] max-w-[160px] px-3 truncate">
@@ -69,7 +69,7 @@ export const ToolbarCorrection: React.FC<ToolbarCorrectionProps> = ({
       <Button
         size="icon"
         variant="ghost"
-        className="ml-auto mr-[48px]"
+        className="w-6 ml-auto mr-[100px]"
         onClick={onShowView}
         title={`Afficher les ${
           selectedType === "evolution" ? "évolutions" : "correctifs"
