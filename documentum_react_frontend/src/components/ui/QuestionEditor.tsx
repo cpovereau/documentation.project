@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "components/ui/button";
 import { Checkbox } from "components/ui/checkbox";
+import { Trash2 } from "lucide-react";
 import { cn } from "lib/utils";
 import { Editor } from "@tiptap/react";
 import QuestionItem from "./QuestionItem";
@@ -144,6 +145,40 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
     );
   };
 
+  // SUPPRESSION d'une réponse
+  const handleDeleteAnswer = (qIndex, aIndex) => {
+    setQuestions((prev) =>
+      prev.map((q, idx) => {
+        if (idx !== qIndex) return q;
+        const answerToDelete = q.answers[aIndex];
+        const isCorrect = answerToDelete.correct;
+        const answersRemaining = q.answers.length;
+        const otherCorrect = q.answers.some(
+          (a, i) => i !== aIndex && a.correct
+        );
+
+        if (answersRemaining <= 1 || (isCorrect && !otherCorrect)) return q;
+
+        return {
+          ...q,
+          answers: q.answers.filter((_, i) => i !== aIndex),
+        };
+      })
+    );
+  };
+
+  // SUPPRESSION d'une question entière
+  const handleDeleteQuestion = (qIndex: number) => {
+    if (questions.length <= 1) return;
+    setQuestions((prev) => {
+      const newQuestions = prev.filter((_, i) => i !== qIndex);
+      // Réactive une autre question si celle supprimée était active
+      if (prev[qIndex].active && newQuestions.length)
+        newQuestions[0].active = true;
+      return newQuestions;
+    });
+  };
+
   // Génération XML
   function escapeXml(text: string): string {
     return text.replace(
@@ -193,7 +228,6 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   const Toolbar = () => (
     <div className="flex gap-1 ml-auto">
       <Button
-        size="icon"
         variant="ghost"
         onClick={() => activeEditor?.chain().focus().undo().run()}
         title="Annuler"
@@ -202,7 +236,6 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
         ↺
       </Button>
       <Button
-        size="icon"
         variant="ghost"
         onClick={() => activeEditor?.chain().focus().redo().run()}
         title="Rétablir"
@@ -211,7 +244,6 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
         ↻
       </Button>
       <Button
-        size="icon"
         variant="ghost"
         onClick={() => activeEditor?.chain().focus().toggleBold().run()}
         title="Gras"
@@ -220,7 +252,6 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
         <span className="font-bold">B</span>
       </Button>
       <Button
-        size="icon"
         variant="ghost"
         onClick={() => activeEditor?.chain().focus().toggleItalic().run()}
         title="Italique"
@@ -229,7 +260,6 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
         <span className="italic">I</span>
       </Button>
       <Button
-        size="icon"
         variant="ghost"
         onClick={() => activeEditor?.chain().focus().toggleUnderline().run()}
         title="Souligné"
@@ -282,12 +312,26 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
           <div
             key={q.id}
             className={cn(
-              "p-4 rounded-xl transition-all border shadow-sm cursor-pointer",
+              "relative p-4 rounded-xl transition-all border shadow-sm cursor-pointer",
               i % 2 === 1 ? "bg-gray-50" : "bg-white",
               q.active ? "border-2 border-blue-500" : "border border-gray-200"
             )}
             onClick={() => setActiveQuestion(i)}
           >
+            {/* Bouton suppression question */}
+            {questions.length > 1 && (
+              <Button
+                variant="ghost"
+                title="Supp. Question"
+                className="absolute top-2 right-2 opacity-100 transition"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteQuestion(i);
+                }}
+              >
+                <Trash2 className="w-4 h-4 text-red-500" />
+              </Button>
+            )}
             {/* Champ Question */}
             <QuestionItem
               value={q.questionText}
@@ -298,21 +342,43 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             />
             {/* Réponses */}
             <div className="flex flex-col gap-2 ml-5 mt-2">
-              {q.answers.map((a, j) => (
-                <div key={a.id} className="flex items-center gap-2">
-                  <Checkbox
-                    id={a.id}
-                    checked={a.correct}
-                    onChange={() => handleCorrectToggle(i, j)}
-                  />
-                  <QuestionItem
-                    value={a.answerText}
-                    onChange={(html) => handleAnswerTextChange(i, j, html)}
-                    setActiveEditor={setActiveEditor}
-                    label=""
-                  />
-                </div>
-              ))}
+              {q.answers.map((a, j) => {
+                const cannotDelete =
+                  q.answers.length <= 1 ||
+                  (a.correct &&
+                    q.answers.filter((ans) => ans.correct).length === 1);
+                return (
+                  <div
+                    key={a.id}
+                    className="flex items-center gap-2 group relative"
+                  >
+                    <Checkbox
+                      id={a.id}
+                      checked={a.correct}
+                      onChange={() => handleCorrectToggle(i, j)}
+                    />
+                    <QuestionItem
+                      value={a.answerText}
+                      onChange={(html) => handleAnswerTextChange(i, j, html)}
+                      setActiveEditor={setActiveEditor}
+                      label=""
+                    />
+                    {!cannotDelete && (
+                      <Button
+                        variant="ghost"
+                        className="absolute right-3 opacity-0 group-hover:opacity-100"
+                        title="Supp. Réponse"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteAnswer(i, j);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
