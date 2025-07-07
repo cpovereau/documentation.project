@@ -28,7 +28,6 @@ interface QuestionEditorProps {
   isRightSidebarExpanded: boolean;
   isRightSidebarFloating: boolean;
   isPreviewMode: boolean;
-  onResizeQuestionEditorHeight: (newHeight: number) => void;
 }
 
 // Composant QuestionEditor
