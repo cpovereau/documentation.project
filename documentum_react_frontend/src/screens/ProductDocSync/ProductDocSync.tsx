@@ -150,18 +150,20 @@ export const ProductDocSync: React.FC = () => {
     console.log("Fonctionnalité collée :", newFeature.name);
   };
 
+  console.log("TOTAL_HEIGHT", TOTAL_HEIGHT, "EditorHeight", editorHeight);
+
   return (
     <div className="relative flex flex-col h-screen overflow-hidden">
       <TopBar
         currentScreen="product-doc-sync"
         onToggleScreen={handleScreenSwitch}
       />
-      <div className="flex flex-grow">
+      <div className="flex flex-row flex-grow h-full relative overflow-hidden">
         {/* Sidebar gauche */}
         <div
           className={`${
             isLeftSidebarExpanded ? "w-[345px]" : "w-0"
-          } transition-all duration-300`}
+          } transition-all duration-300 h-full flex-shrink-0`}
         >
           <SyncLeftSidebar
             isExpanded={isLeftSidebarExpanded}
@@ -190,6 +192,7 @@ export const ProductDocSync: React.FC = () => {
             onPasteFeature={handlePasteFeature}
             onShowImpactMap={handleShowImpactMap}
             onToggleExpandFeature={handleToggleExpand}
+            className="h-full"
           />
           <ImpactMapModal
             open={showImpactMap}
@@ -200,28 +203,27 @@ export const ProductDocSync: React.FC = () => {
           />
         </div>
         {/* Éditeur central + bottomBar */}
-        <div className="flex flex-grow min-w-0">
-          <div className="flex flex-col flex-grow min-w-0">
-            <SyncEditor
-              selectedType={selectedArticleType}
-              onTypeChange={setSelectedArticleType}
-              height={editorHeight}
-            />
-            {/* Bottom bar */}
-            <SyncBottombar
-              selectedFeatureName={
-                selectedFeature
-                  ? features.find((f) => f.id === selectedFeature)?.name || "-"
-                  : "-"
-              }
-              height={bottomBarHeight}
-              onResize={(newHeight) => setBottomBarHeight(newHeight)}
-            />
-          </div>
+        <div className="flex flex-col flex-grow min-w-0 min-h-0 h-full">
+          <SyncEditor
+            selectedType={selectedArticleType}
+            onTypeChange={setSelectedArticleType}
+            height={editorHeight}
+          />
+          {/* Bottom bar */}
+          <SyncBottombar
+            selectedFeatureName={
+              selectedFeature
+                ? features.find((f) => f.id === selectedFeature)?.name || "-"
+                : "-"
+            }
+            height={bottomBarHeight}
+            onResize={(newHeight) => setBottomBarHeight(newHeight)}
+          />
         </div>
+
         {/* Sidebar droite */}
         <div
-          className={`${
+          className={`$${
             isRightSidebarExpanded ? "w-[248px]" : "w-0"
           } transition-all duration-300 h-full`}
         >

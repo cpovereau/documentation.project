@@ -72,11 +72,15 @@ export const SyncBottombar: React.FC<SyncBottombarProps> = ({
 
   return (
     <div
-      className="border-t border-gray-300 bg-white flex flex-col"
-      style={{ height: `${height}px`, transition: "height 0.2s ease-in-out" }}
+      className="border-t border-gray-300 bg-white flex flex-col overflow-hidden"
+      style={{
+        height,
+        minHeight: "120px", // Pour respecter le comportement de ResizeHandle
+        maxHeight: "600px",
+      }}
     >
       <VerticalDragHandle onResizeStart={handleResizeStart} />
-      <div className="overflow-auto px-4 pt-2 pb-4 flex-1">
+      <div className="overflow-auto px-4 pt-2 flex-1 h-full">
         <h2 className="text-xl font-bold mb-4">Sujets de documentation</h2>
         <table className="w-full border-collapse text-sm">
           <thead>

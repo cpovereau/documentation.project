@@ -62,77 +62,73 @@ export const SyncLeftSidebar: React.FC<SyncLeftSidebarProps> = ({
 }) => (
   <>
     <div
-      className="w-[345px] h-full bg-[#f7a900] rounded-r-[15px] shadow-lg flex flex-col"
-      style={{ width: isExpanded ? "345px" : "0px" }}
+      className={cn(
+        "h-full bg-[#f7a900] rounded-r-[15px] shadow-lg transition-all duration-300 ease-in-out flex flex-col",
+        isExpanded ? "w-[345px]" : "w-0",
+        className
+      )}
     >
-      <div className="relative h-full">
-        <div
-          className="h-full bg-[#f7a900] rounded-r-[15px] shadow-lg transition-all duration-300 ease-in-out flex flex-col"
-          style={{
-            width: "345px",
-            transform: isExpanded ? "translateX(0)" : "translateX(-345px)",
-          }}
-        >
-          <div className="pt-20 px-4 flex flex-col h-full p-4">
-            <Separator />
-            <div className="h-[26px] top-[11px] font-bold text-black text-[32px] leading-normal mb-4">
-              Produit / Version
-            </div>
+      {/* Contenu scrollable */}
+      <div className="pt-20 px-4 flex flex-col h-full overflow-hidden">
+        <Separator />
+        <div className="h-[26px] font-bold text-black text-[32px] leading-normal mb-4">
+          Produit / Version
+        </div>
 
-            {/* Produit / Version */}
-            <div className="flex pt-5 gap-2 mb-2">
-              <ProductSelect
-                value={selectedProduct}
-                onChange={(val) => setSelectedProduct(val)}
-                options={productOptions}
+        {/* Sélecteurs produit/version */}
+        <div className="flex pt-5 gap-2 mb-2">
+          <ProductSelect
+            value={selectedProduct}
+            onChange={(val) => setSelectedProduct(val)}
+            options={productOptions}
+          />
+          <VersionSelect
+            value={selectedVersion}
+            onChange={(val) => setSelectedVersion(val)}
+            options={versionOptions}
+            onAdd={onAddVersion}
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-col gap-2 mb-2">
+          <Button
+            variant="primary"
+            className="h-11 px-4 py-0 w-full"
+            onClick={onPublish}
+          >
+            Publier le suivi de version
+          </Button>
+          <Button
+            variant="outline"
+            className="h-11 px-4 py-0 w-full"
+            onClick={onShowImpactMap}
+          >
+            Afficher l'arbre d'impact
+          </Button>
+        </div>
+
+        {/* Bloc Fonctionnalités */}
+        <div className="flex-1 overflow-auto p-2 transition-all duration-300">
+          {isExpanded && (
+            <div className="rounded-xl shadow">
+              <FeatureModule
+                isExpanded={true}
+                onToggle={() => {}}
+                features={features}
+                selectedFeatureId={selectedFeature}
+                onSelectFeature={onSelectFeature}
+                onAdd={onAddFeature}
+                onDelete={onDeleteFeature}
+                onCopy={onCopyFeature}
+                onPaste={onPasteFeature}
+                onReorderFeatures={onReorderFeatures}
+                onToggleExpand={onToggleExpandFeature}
+                onIndent={onIndent}
+                onOutdent={onOutdent}
               />
-              <VersionSelect
-                value={selectedVersion}
-                onChange={(val) => setSelectedVersion(val)}
-                options={versionOptions}
-                onAdd={onAddVersion}
-              />
             </div>
-
-            {/* Actions */}
-            <div className="flex flex-col gap-2 mb-2">
-              <Button
-                variant="primary"
-                className="h-11 px-4 py-0 w-full"
-                onClick={onPublish}
-              >
-                Publier le suivi de version
-              </Button>
-              <Button
-                variant="outline"
-                className="h-11 px-4 py-0 w-full"
-                onClick={onShowImpactMap}
-              >
-                Afficher l'arbre d'impact
-              </Button>
-            </div>
-
-            {/* Bloc Fonctionnalités */}
-            <div className="flex-1">
-              <div className="rounded-xl shadow p-2 h-full flex flex-col">
-                <FeatureModule
-                  isExpanded={true}
-                  onToggle={() => {}}
-                  features={features}
-                  selectedFeatureId={selectedFeature}
-                  onSelectFeature={onSelectFeature}
-                  onAdd={onAddFeature}
-                  onDelete={onDeleteFeature}
-                  onCopy={onCopyFeature}
-                  onPaste={onPasteFeature}
-                  onReorderFeatures={onReorderFeatures}
-                  onToggleExpand={onToggleExpandFeature}
-                  onIndent={onIndent}
-                  onOutdent={onOutdent}
-                />
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

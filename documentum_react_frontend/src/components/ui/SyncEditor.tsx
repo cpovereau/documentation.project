@@ -4,8 +4,6 @@ import { Card } from "components/ui/card";
 import { ToolbarCorrection } from "./ToolbarCorrection";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Bold from "@tiptap/extension-bold";
-import Italic from "@tiptap/extension-italic";
 import Underline from "@tiptap/extension-underline";
 import TextStyle from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
@@ -57,9 +55,10 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
   // Initialisation de l'éditeur avec les extensions nécessaires
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      Bold,
-      Italic,
+      StarterKit.configure({
+        bold: false,
+        italic: false,
+      }),
       Underline,
       TextStyle,
       Color,
@@ -115,8 +114,8 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
 
   return (
     <Card
-      className="flex flex-col w-full overflow-hidden border-none shadow-none"
-      style={{ height: `${height}px` }}
+      className="flex flex-col w-full border-none shadow-none overflow-auto"
+      style={{ height }}
     >
       <ToolbarCorrection
         selectedType={selectedType}
@@ -248,10 +247,10 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
       </div>
 
       {/* Zone éditable principale */}
-      <div className="flex-grow overflow-auto px-[30px]">
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden px-[30px]">
         <EditorContent
           editor={editor}
-          className="h-full px-4"
+          className="flex-1 min-h-0"
           spellCheck={false}
           autoCapitalize="off"
           autoCorrect="off"
