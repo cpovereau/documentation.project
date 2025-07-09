@@ -8,7 +8,7 @@ export const Dialog = RadixDialog.Root;
 export const DialogTrigger = RadixDialog.Trigger;
 
 export const DialogContent = React.forwardRef<
-  React.ElementRef<typeof RadixDialog.Content>,
+  HTMLDivElement,
   React.ComponentPropsWithoutRef<typeof RadixDialog.Content>
 >(({ className, children, ...props }, ref) => (
   <RadixDialog.Portal>
@@ -16,7 +16,7 @@ export const DialogContent = React.forwardRef<
     <RadixDialog.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-lg",
+        "fixed left-1/2 top-1/2 z-50 w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white px-6 pb-6 shadow-lg",
         className
       )}
       {...props}

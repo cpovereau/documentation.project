@@ -150,8 +150,6 @@ export const ProductDocSync: React.FC = () => {
     console.log("Fonctionnalité collée :", newFeature.name);
   };
 
-  console.log("TOTAL_HEIGHT", TOTAL_HEIGHT, "EditorHeight", editorHeight);
-
   return (
     <div className="relative flex flex-col h-screen overflow-hidden">
       <TopBar

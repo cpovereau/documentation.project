@@ -77,8 +77,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   const inputSourceRef = useRef<string | null>(null);
 
   // Référence pour l'éditeur central
-  const MIN_QUESTION_EDITOR_HEIGHT = 180;
-  const MAX_QUESTION_EDITOR_HEIGHT = 600;
+  const MIN_QUESTION_EDITOR_HEIGHT = 200;
   const centralEditorRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -91,7 +90,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       const delta = moveEvent.clientY - startY;
       const newHeight = Math.max(
         MIN_QUESTION_EDITOR_HEIGHT,
-        Math.min(MAX_QUESTION_EDITOR_HEIGHT, startHeight - delta)
+        startHeight - delta
       );
       onResizeQuestionEditorHeight(newHeight);
     };
@@ -728,7 +727,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         </div>
       </div>
       <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
-        <div className="flex-grow overflow-auto p-4 bg-white relative">
+        <div className="h-full overflow-auto p-4 bg-white relative">
           {isXmlView ? (
             <pre className="bg-gray-100 rounded p-4 font-mono text-xs whitespace-pre-wrap">
               {editor?.getHTML()}
