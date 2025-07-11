@@ -2,6 +2,7 @@ import * as React from "react";
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?:
+    | "default"
     | "primary"
     | "secondary"
     | "danger"
@@ -14,7 +15,10 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ children, className = "", variant = "primary", ...props }, ref) => {
     let variantClass = "";
-
+    if (variant === "default") {
+      variantClass =
+        "bg-gray-100 text-black border border-gray-300 hover:bg-gray-200";
+    }
     if (variant === "primary") {
       variantClass =
         "bg-blue-600 text-white border border-blue-800 hover:bg-blue-700";

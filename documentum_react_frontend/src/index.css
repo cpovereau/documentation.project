@@ -187,6 +187,12 @@ h3 {
   background: transparent !important;
 }
 
+.no-select {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+
 body[data-scroll-locked="1"] {
   pointer-events: auto !important;
 }

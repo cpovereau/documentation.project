@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "components/ui/button";
 import { SettingsIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import SettingsModal from "@/screens/Settings/SettingsModal";
 
 interface TopBarProps {
   currentScreen?: "desktop" | "product-doc-sync";
@@ -9,6 +10,7 @@ interface TopBarProps {
 
 export const TopBar = ({ currentScreen = "desktop" }: TopBarProps) => {
   const navigate = useNavigate();
+  const [showSettings, setShowSettings] = useState(false);
 
   // Détermine le bouton switch selon l'écran courant
   const switchLabel =
@@ -45,9 +47,8 @@ export const TopBar = ({ currentScreen = "desktop" }: TopBarProps) => {
         {/* Settings */}
         <Button
           variant="ghost"
-          size="icon"
           className="p-0 h-16 w-16 flex items-center justify-center"
-          aria-label="Paramètres"
+          onClick={() => setShowSettings(true)}
         >
           <SettingsIcon className="h-12 w-12 text-white" />
         </Button>
@@ -59,6 +60,13 @@ export const TopBar = ({ currentScreen = "desktop" }: TopBarProps) => {
         >
           Déconnexion
         </Button>
+
+        {showSettings && (
+          <SettingsModal
+            open={showSettings}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
       </div>
     </header>
   );
