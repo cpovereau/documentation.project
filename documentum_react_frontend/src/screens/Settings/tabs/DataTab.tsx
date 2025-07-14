@@ -3,6 +3,7 @@ import AddItemModal from "components/ui/AddItemModal";
 import DataListPanel from "components/ui/DataListPanel";
 import { Button } from "components/ui/button";
 import { Plus } from "lucide-react";
+import { cn } from "lib/utils";
 
 const initialGammes = [
   {
@@ -245,55 +246,90 @@ const DataTab = () => {
     <>
       <div className="flex h-full">
         {/* Colonne gauche FIXE */}
-        <div className="w-48 shrink-0 border-r p-2 space-y-2 pt-6 bg-orange-100">
+        <div className="w-48 shrink-0 p-2 space-y-2 pt-6 bg-orange-100">
           <Button
-            variant={selectedItem === "gammes" ? "default" : "ghost"}
-            className="w-full justify-start"
             onClick={() => setSelectedItem("gammes")}
+            variant={selectedItem === "gammes" ? "default" : "ghost"}
+            className={cn(
+              "w-full text-left justify-start px-3 py-2 rounded font-medium text-sm",
+              selectedItem === "gammes"
+                ? "bg-white text-orange-600 shadow"
+                : "hover:bg-orange-200 text-gray-700"
+            )}
           >
             Gammes
           </Button>
           <Button
-            variant={selectedItem === "produits" ? "default" : "ghost"}
-            className="w-full justify-start"
             onClick={() => setSelectedItem("produits")}
+            variant={selectedItem === "produits" ? "default" : "ghost"}
+            className={cn(
+              "w-full text-left justify-start px-3 py-2 rounded font-medium text-sm",
+              selectedItem === "produits"
+                ? "bg-white text-orange-600 shadow"
+                : "hover:bg-orange-200 text-gray-700"
+            )}
           >
             Produits
           </Button>
           <Button
-            variant={selectedItem === "fonctionnalites" ? "default" : "ghost"}
-            className="w-full justify-start"
             onClick={() => setSelectedItem("fonctionnalites")}
+            variant={selectedItem === "fonctionnalites" ? "default" : "ghost"}
+            className={cn(
+              "w-full text-left justify-start px-3 py-2 rounded font-medium text-sm",
+              selectedItem === "fonctionnalites"
+                ? "bg-white text-orange-600 shadow"
+                : "hover:bg-orange-200 text-gray-700"
+            )}
           >
             Fonctionnalités
           </Button>
           <Button
-            variant={selectedItem === "audiences" ? "default" : "ghost"}
-            className="w-full justify-start"
             onClick={() => setSelectedItem("audiences")}
+            variant={selectedItem === "audiences" ? "default" : "ghost"}
+            className={cn(
+              "w-full text-left justify-start px-3 py-2 rounded font-medium text-sm",
+              selectedItem === "audiences"
+                ? "bg-white text-orange-600 shadow"
+                : "hover:bg-orange-200 text-gray-700"
+            )}
           >
             Audiences
           </Button>
           <Button
-            variant={selectedItem === "tags" ? "default" : "ghost"}
-            className="w-full justify-start"
             onClick={() => setSelectedItem("tags")}
+            variant={selectedItem === "tags" ? "default" : "ghost"}
+            className={cn(
+              "w-full text-left justify-start px-3 py-2 rounded font-medium text-sm",
+              selectedItem === "tags"
+                ? "bg-white text-orange-600 shadow"
+                : "hover:bg-orange-200 text-gray-700"
+            )}
           >
             Tags
           </Button>
           <Button
+            onClick={() => setSelectedItem("profils_publication")}
             variant={
               selectedItem === "profils_publication" ? "default" : "ghost"
             }
-            className="w-full justify-start"
-            onClick={() => setSelectedItem("profils_publication")}
+            className={cn(
+              "w-full text-left justify-start px-3 py-2 rounded font-medium text-sm",
+              selectedItem === "profils_publication"
+                ? "bg-white text-orange-600 shadow"
+                : "hover:bg-orange-200 text-gray-700"
+            )}
           >
             Profils de publication
           </Button>
           <Button
-            variant={selectedItem === "interface_ui" ? "default" : "ghost"}
-            className="w-full justify-start"
             onClick={() => setSelectedItem("interface_ui")}
+            variant={selectedItem === "interface_ui" ? "default" : "ghost"}
+            className={cn(
+              "w-full text-left justify-start px-3 py-2 rounded font-medium text-sm",
+              selectedItem === "interface_ui"
+                ? "bg-white text-orange-600 shadow"
+                : "hover:bg-orange-200 text-gray-700"
+            )}
           >
             Interface utilisateur
           </Button>

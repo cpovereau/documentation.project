@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "components/ui/button";
 import { Plus, RefreshCcw } from "lucide-react";
+import { cn } from "lib/utils";
 
 interface Profil {
   id: number;
@@ -129,16 +130,26 @@ export default function AccessTab() {
       <div className="w-48 border-r border-gray-200 pr-2 mr-6 bg-orange-100">
         <div className="flex flex-col space-y-2 pt-6 ml-2">
           <Button
-            variant={activeSubTab === "profils" ? "default" : "ghost"}
-            className="justify-start"
             onClick={() => setActiveSubTab("profils")}
+            variant={activeSubTab === "profils" ? "default" : "ghost"}
+            className={cn(
+              "w-full text-left justify-start px-3 py-2 rounded font-medium text-sm",
+              activeSubTab === "profils"
+                ? "bg-white text-orange-600 shadow"
+                : "hover:bg-orange-200 text-gray-700"
+            )}
           >
             Profils
           </Button>
           <Button
-            variant={activeSubTab === "utilisateurs" ? "default" : "ghost"}
-            className="justify-start"
             onClick={() => setActiveSubTab("utilisateurs")}
+            variant={activeSubTab === "utilisateurs" ? "default" : "ghost"}
+            className={cn(
+              "w-full text-left justify-start px-3 py-2 rounded font-medium text-sm",
+              activeSubTab === "utilisateurs"
+                ? "bg-white text-orange-600 shadow"
+                : "hover:bg-orange-200 text-gray-700"
+            )}
           >
             Utilisateurs
           </Button>
