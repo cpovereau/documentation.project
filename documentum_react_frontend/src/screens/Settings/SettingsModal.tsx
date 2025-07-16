@@ -73,7 +73,7 @@ export default function SettingsModal({
             <X className="w-6 h-6" />
           </button>
         </div>
-        <div className="h-[90vh] overflow-y-auto">
+        <div className="h-[90vh] overflow-y-auto relative z-10">
           <SettingsScreen />
         </div>
       </div>

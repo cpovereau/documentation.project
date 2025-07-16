@@ -12,7 +12,7 @@ import {
 import AccessTab from "./tabs/AccessTab";
 import DataTab from "./tabs/DataTab";
 import FormatTab from "./tabs/FormatTab";
-import NamingTab from "./tabs/NamingTab.tsx";
+import NamingTab from "./tabs/NamingTab";
 import LogsTab from "./tabs/LogsTab";
 import TechTab from "./tabs/TechTab";
 import MaintenanceTab from "./tabs/MaintenanceTab";

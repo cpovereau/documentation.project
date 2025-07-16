@@ -2,6 +2,12 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
+type CloneVersionPayload = {
+  projetId: number;
+  sourceVersionId: number;
+  nouveauNom: string;
+};
+
 export const useMaintenanceActions = () => {
   const [loading, setLoading] = useState(false);
 
@@ -17,6 +23,19 @@ export const useMaintenanceActions = () => {
     });
   };
 
+  const cloneVersion = async ({ projetId, sourceVersionId, nouveauNom }: CloneVersionPayload) => {
+    setLoading(true);
+    toast.info(`Clonage de la version ${sourceVersionId}...`);
+    // Simulation du clonage
+    return new Promise<void>((resolve) => {
+      setTimeout(() => {
+        toast.success(`Version ${nouveauNom} clonée avec succès !`);
+        setLoading(false);
+        resolve();
+      }, 2000);
+    });
+  };
+
   return {
     loading,
     archiveOldVersions: () => simulateAction("Archivage des anciennes versions"),
@@ -25,5 +44,6 @@ export const useMaintenanceActions = () => {
     clearCache: () => simulateAction("Nettoyage du cache applicatif"),
     exportLogs: () => simulateAction("Export des logs"),
     exportConfig: () => simulateAction("Export de la configuration"),
+    cloneVersion,
   };
 };
