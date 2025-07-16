@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "components/ui/button";
 import { NamingConfig } from "types/NamingConfig";
+import { useNamingConfig } from "store/useNamingConfig";
 
 export default function NamingTab() {
   const [activeCategory, setActiveCategory] = useState("conventions");
@@ -43,6 +44,8 @@ export default function NamingTab() {
   const getFinalFormat = (format: string, custom: string): string =>
     format === "custom" ? custom : format;
 
+  const { setVersion } = useNamingConfig();
+
   const handleSave = () => {
     const config: NamingConfig = {
       projet: getFinalFormat(projectFormat, customProjectFormat),
@@ -50,6 +53,8 @@ export default function NamingTab() {
       fonctionnalite: getFinalFormat(featureFormat, customFeatureFormat),
       rubrique: getFinalFormat(rubriqueFormat, customRubriqueFormat),
     };
+
+    setVersion(config.version);
 
     console.log("Configuration enregistrée (simulation) :", config);
     alert("Paramètres enregistrés avec succès (simulation).");

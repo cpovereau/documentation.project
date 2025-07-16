@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import { Checkbox } from "components/ui/checkbox";
 import { Input } from "components/ui/input";
 import { Label } from "components/ui/label";
+import { useNamingConfig } from "store/useNamingConfig";
+import { cn } from "lib/utils";
 
 const MOCK_PROJETS = [
   { id: 1, nom: "Projet Usager" },
@@ -82,6 +84,22 @@ export default function MaintenanceTab() {
     setNouveauNom("");
   };
 
+  const { version } = useNamingConfig();
+
+  const isValidVersion = (input: string) => {
+    if (!version) return true; // aucune règle
+
+    const regexMap: { [key: string]: RegExp } = {
+      "X.Y": /^[0-9]+\.[0-9]+$/,
+      "X.Y.Z": /^[0-9]+\.[0-9]+\.[0-9]+$/,
+      "AAAA.X.Y": /^[0-9]{4}\.[0-9]+\.[0-9]+$/,
+      "Rel-X.Y": /^Rel-[0-9]+\.[0-9]+$/,
+    };
+
+    const regex = regexMap[version] ?? null;
+    return regex ? regex.test(input) : true;
+  };
+
   return (
     <div className="space-y-6">
       {/* Section : Versions */}
@@ -156,7 +174,19 @@ export default function MaintenanceTab() {
                   id="nouveauNom"
                   value={nouveauNom}
                   onChange={(e) => setNouveauNom(e.target.value)}
+                  className={cn(
+                    "w-full border px-3 py-2 rounded",
+                    nouveauNom &&
+                      !isValidVersion(nouveauNom) &&
+                      "border-red-500"
+                  )}
                 />
+                {nouveauNom && !isValidVersion(nouveauNom) && (
+                  <p className="text-red-600 text-sm mt-1">
+                    Le nom ne correspond pas au format requis&nbsp;:{" "}
+                    <strong>{version}</strong>
+                  </p>
+                )}
               </div>
               <div className="flex justify-end pt-2">
                 <Button
