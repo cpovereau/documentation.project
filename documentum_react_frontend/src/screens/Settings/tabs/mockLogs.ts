@@ -1,0 +1,51 @@
+import { LogEntry } from './types';
+
+export const logsMockData: LogEntry[] = [
+  {
+    id: 1,
+    type: 'modification',
+    date: '2025-07-15T10:15:00Z',
+    utilisateur: 'alice',
+    action: 'Modification de rubrique',
+    cible: 'Rubrique:123',
+    description: 'Changement du titre et ajout d’un paragraphe',
+    projet: 'Planning',
+  },
+  {
+    id: 2,
+    type: 'export',
+    date: '2025-07-14T17:30:00Z',
+    utilisateur: 'bob',
+    action: 'Export PDF',
+    map: 'Map principale',
+    format: 'PDF',
+    projet: 'Usager',
+  },
+  {
+    id: 3,
+    type: 'login',
+    date: '2025-07-13T08:02:00Z',
+    utilisateur: 'carol',
+    action: 'Connexion',
+    description: 'Connexion réussie depuis l’IP 192.168.1.45',
+  },
+  {
+    id: 4,
+    type: 'audit',
+    date: '2025-07-12T15:45:00Z',
+    utilisateur: 'david',
+    action: 'Suppression de projet',
+    cible: 'Projet:456',
+    description: 'Projet obsolète supprimé manuellement',
+  },
+  {
+    id: 5,
+    type: 'modification',
+    date: '2025-07-11T13:20:00Z',
+    utilisateur: 'alice',
+    action: 'Ajout de fonctionnalité',
+    cible: 'Fonctionnalité:789',
+    description: 'Nouvelle fonctionnalité BUT ajoutée',
+    projet: 'Planning',
+  },
+];
