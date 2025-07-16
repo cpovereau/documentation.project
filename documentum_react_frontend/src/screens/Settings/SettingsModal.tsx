@@ -13,15 +13,16 @@ export default function SettingsModal({
 }: Readonly<SettingsModalProps>) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
-      const newX = e.clientX - offset.x;
-      const newY = e.clientY - offset.y;
-      setPosition({ x: newX, y: newY });
+      setPosition({
+        x: e.clientX - offset.x,
+        y: e.clientY - offset.y,
+      });
     };
 
     const handleMouseUp = () => setIsDragging(false);
@@ -52,17 +53,21 @@ export default function SettingsModal({
     <div className="fixed inset-0 z-[100] bg-black/60 flex items-start justify-center p-6">
       <div
         ref={modalRef}
-        style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+        style={{
+          position: "absolute",
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+        }}
         className="w-full max-w-6xl bg-white rounded-xl shadow-2xl shadow-black/40 overflow-hidden"
       >
         <div
           className="flex items-center justify-between px-6 py-4 bg-black text-white border-t-4 border-l-4 border-r-4 border-orange-400 shadow-[0_4px_6px_rgba(255,115,0,0.4)] rounded-t-xl"
           onMouseDown={(e) => {
             if (modalRef.current) {
-              const bounds = modalRef.current.getBoundingClientRect();
+              const rect = modalRef.current.getBoundingClientRect();
               setOffset({
-                x: e.clientX - bounds.left - position.x,
-                y: e.clientY - bounds.top - position.y,
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
               });
               setIsDragging(true);
             }
