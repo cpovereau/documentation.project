@@ -75,6 +75,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     projects.find((p) => p.id === selectedProjectId)?.mapItems ?? []
   );
 
+  const [showExportCard, setShowExportCard] = useState(false);
+
   // callbacks pour gestion
   const handleSelect = (id: number) => setSelectedProjectId(id);
   const handleAdd = () => {
@@ -112,7 +114,9 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     setProjects(projects.filter((x) => x.id !== id));
     setSelectedProjectId(projects.length > 1 ? projects[0].id : null);
   };
-  const handlePublish = (id: number) => alert("Publier projet id: " + id);
+  const handlePublish = (id: number) => {
+    setShowExportCard(true);
+  };
   const handleLoad = () => alert("Charger projet (à implémenter)");
 
   // Les callbacks d'interaction MapModule
@@ -226,10 +230,12 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   onClone={handleClone}
                   onDelete={handleDelete}
                   onPublish={handlePublish}
+                  showExportCard={showExportCard}
+                  setShowExportCard={setShowExportCard}
                 />
               </div>
               {isExpanded && (
-                <div className="mt-[62px] min-h-[48px]">
+                <div className="mt-[10px] min-h-[48px]">
                   <MapModule
                     isExpanded={isMapExpanded}
                     onToggle={toggleMapExpand}
