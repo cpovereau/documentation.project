@@ -4,7 +4,7 @@ import { useSpeechToText } from "hooks/useSpeechToText";
 import { Button } from "components/ui/button";
 import { Card } from "components/ui/card";
 import { Checkbox } from "components/ui/checkbox"; // À intégrer dans la barre d'outils plus tard
-import { PopupProps } from "components/ui/PopupSuggestion";
+import PopupProps from "components/ui/PopupSuggestion";
 import { GripVertical } from "lucide-react";
 import {
   NavigationMenu,
@@ -30,6 +30,7 @@ import { FindReplaceDialog } from "components/ui//FindReplaceDialog";
 import { EditorHistoryPanel } from "components/ui/EditorHistoryPanel";
 import { VerticalDragHandle } from "components/ui/VerticalDragHandle";
 import { QuestionEditor } from "./QuestionEditor";
+import { ExerciceEditor } from "./ExerciceEditor";
 import { useLanguageTool } from "@/hooks/useLanguageTool";
 import { useFindReplaceTipTap } from "@/hooks/useFindReplaceTipTap";
 import { useRubriqueChangeTracker } from "@/hooks/useRubriqueChangeTracker";
@@ -47,10 +48,14 @@ interface CentralEditorProps {
   isLeftSidebarExpanded: boolean;
   isRightSidebarExpanded: boolean;
   isRightSidebarFloating: boolean;
-  questionEditorHeight: number;
-  isQuestionEditorVisible: boolean;
+  visibleDockEditor: "question" | "exercice" | null;
+  setVisibleDockEditor: React.Dispatch<
+    React.SetStateAction<"question" | "exercice" | null>
+  >;
   onToggleQuestionEditor: () => void;
-  onResizeQuestionEditorHeight: (newHeight: number) => void;
+  onToggleExerciceEditor: () => void;
+  dockEditorHeight: number;
+  onResizeDockEditorHeight: (newHeight: number) => void;
 }
 
 // Début du composant CentralEditor
@@ -60,10 +65,12 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   isLeftSidebarExpanded,
   isRightSidebarExpanded,
   isRightSidebarFloating,
-  questionEditorHeight,
-  isQuestionEditorVisible,
+  visibleDockEditor,
+  setVisibleDockEditor,
   onToggleQuestionEditor,
-  onResizeQuestionEditorHeight,
+  onToggleExerciceEditor,
+  dockEditorHeight,
+  onResizeDockEditorHeight,
 }) => {
   // États pour la gestion de l'éditeur
   const [initialContent, setInitialContent] = useState<string>("");
@@ -78,21 +85,20 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
 
   // Référence pour l'éditeur central
   const MIN_QUESTION_EDITOR_HEIGHT = 200;
+  const MIN_EXERCICE_EDITOR_HEIGHT = 300;
   const centralEditorRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   // Fonctions pour redimensionner la barre de séparation horizontale
   const handleResizeStart = (e: React.MouseEvent) => {
     const startY = e.clientY;
-    const startHeight = questionEditorHeight;
+
+    const startHeight = dockEditorHeight;
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientY - startY;
-      const newHeight = Math.max(
-        MIN_QUESTION_EDITOR_HEIGHT,
-        startHeight - delta
-      );
-      onResizeQuestionEditorHeight(newHeight);
+      const newHeight = Math.max(150, startHeight - delta);
+      onResizeDockEditorHeight(newHeight);
     };
 
     const onMouseUp = () => {
@@ -143,9 +149,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   // Initialisation de l'éditeur TipTap avec extensions personnalisées
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        inputRules: false,
-      }),
+      StarterKit.configure({}),
       GrammarHighlight.configure({ errors: [] }),
       Underline,
       TextStyle,
@@ -446,10 +450,28 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           </Button>
           <Button
             className="h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 bg-[#2463eb] hover:bg-[#1d4ed8]"
-            onClick={onToggleQuestionEditor}
+            onClick={() =>
+              setVisibleDockEditor((prev) =>
+                prev === "question" ? null : "question"
+              )
+            }
+            disabled={visibleDockEditor === "exercice"}
           >
             Q\R
           </Button>
+
+          <Button
+            className="h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 bg-[#2463eb] hover:bg-[#1d4ed8]"
+            onClick={() =>
+              setVisibleDockEditor((prev) =>
+                prev === "exercice" ? null : "exercice"
+              )
+            }
+            disabled={visibleDockEditor === "question"}
+          >
+            Exercices
+          </Button>
+
           <Button
             className={`h-11 px-5 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 ${
               hasChanges
@@ -758,18 +780,32 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           </div>
           <GripVertical className="w-6 h-6" aria-label="Handler" />
         </footer>
-        {isQuestionEditorVisible && (
+        {visibleDockEditor && (
           <>
             <VerticalDragHandle onResizeStart={handleResizeStart} />
             <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
-              <QuestionEditor
-                height={questionEditorHeight}
-                onResizeQuestionEditorHeight={onResizeQuestionEditorHeight}
-                isLeftSidebarExpanded={isLeftSidebarExpanded}
-                isRightSidebarExpanded={isRightSidebarExpanded}
-                isRightSidebarFloating={isRightSidebarFloating}
-                isPreviewMode={isPreviewMode}
-              />
+              {visibleDockEditor === "question" && (
+                <QuestionEditor
+                  height={dockEditorHeight}
+                  onResizeDockEditorHeight={onResizeDockEditorHeight}
+                  isLeftSidebarExpanded={isLeftSidebarExpanded}
+                  isRightSidebarExpanded={isRightSidebarExpanded}
+                  isRightSidebarFloating={isRightSidebarFloating}
+                  isPreviewMode={isPreviewMode}
+                  onClose={onToggleQuestionEditor}
+                />
+              )}
+              {visibleDockEditor === "exercice" && (
+                <ExerciceEditor
+                  height={dockEditorHeight}
+                  onResizeDockEditorHeight={onResizeDockEditorHeight}
+                  isLeftSidebarExpanded={isLeftSidebarExpanded}
+                  isRightSidebarExpanded={isRightSidebarExpanded}
+                  isRightSidebarFloating={isRightSidebarFloating}
+                  isPreviewMode={isPreviewMode}
+                  onClose={onToggleExerciceEditor}
+                />
+              )}
             </div>
           </>
         )}

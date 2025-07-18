@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "components/ui/button";
 import { Checkbox } from "components/ui/checkbox";
-import { Trash2 } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import { cn } from "lib/utils";
 import { Editor } from "@tiptap/react";
 import QuestionItem from "./QuestionItem";
@@ -24,15 +24,19 @@ type QuestionBlock = {
 // Props pour le composant QuestionEditor
 interface QuestionEditorProps {
   height: number;
+  onResizeDockEditorHeight: (newHeight: number) => void;
   isLeftSidebarExpanded: boolean;
   isRightSidebarExpanded: boolean;
   isRightSidebarFloating: boolean;
   isPreviewMode: boolean;
+  onClose: () => void;
 }
 
 // Composant QuestionEditor
 export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   height,
+  onClose,
+  onResizeDockEditorHeight,
   isLeftSidebarExpanded,
   isRightSidebarExpanded,
   isRightSidebarFloating,
@@ -301,6 +305,14 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             className="h-11 min-w-[140px] ml-3"
           >
             {showXML ? "Cacher XML" : "Voir XML généré"}
+          </Button>
+          <Button
+            variant="ghost"
+            title="Fermer l’éditeur"
+            onClick={onClose}
+            className="text-gray-500 hover:text-black"
+          >
+            <X className="w-5 h-5" />
           </Button>
         </div>
       </div>

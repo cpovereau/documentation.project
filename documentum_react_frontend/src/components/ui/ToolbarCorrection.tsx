@@ -36,7 +36,6 @@ export const ToolbarCorrection: React.FC<ToolbarCorrectionProps> = ({
     <div className="flex items-center gap-3 border-b border-[#e5e7eb] bg-[#fcfcfc] px-4 py-2 mx-[30px] relative">
       {/* Vue globale */}
       <Button
-        size="icon"
         variant="ghost"
         className="w-6"
         onClick={onShowView}
@@ -65,15 +64,10 @@ export const ToolbarCorrection: React.FC<ToolbarCorrectionProps> = ({
       </span>
 
       {/* Navigation */}
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={!hasPrevious}
-        onClick={onPrevious}
-      >
+      <Button variant="ghost" disabled={!hasPrevious} onClick={onPrevious}>
         ◀ Précédent
       </Button>
-      <Button size="sm" variant="ghost" disabled={!hasNext} onClick={onNext}>
+      <Button variant="ghost" disabled={!hasNext} onClick={onNext}>
         Suivant ▶
       </Button>
     </div>

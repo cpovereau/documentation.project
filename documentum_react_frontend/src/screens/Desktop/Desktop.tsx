@@ -37,12 +37,11 @@ export const Desktop: React.FC = () => {
   const [previousRightSidebarState, setPreviousRightSidebarState] =
     useState(true);
   const [mapItems, setMapItems] = useState<MapItem[]>(initialMapItems);
-  const [questionEditorHeight, setQuestionEditorHeight] = useState(200);
-  const [isQuestionEditorVisible, setIsQuestionEditorVisible] = useState(false);
 
-  const handleResizeQuestionEditorHeight = (newHeight: number) => {
-    setQuestionEditorHeight(newHeight);
-  };
+  const [visibleDockEditor, setVisibleDockEditor] = useState<
+    "question" | "exercice" | null
+  >(null);
+  const [dockEditorHeight, setDockEditorHeight] = useState(250);
 
   const togglePreviewMode = () => {
     if (!isPreviewMode) {
@@ -70,6 +69,18 @@ export const Desktop: React.FC = () => {
         item.id === itemId ? { ...item, expanded: expand } : item
       )
     );
+  };
+
+  const handleResizeDockEditorHeight = (newHeight: number) => {
+    setDockEditorHeight(newHeight);
+  };
+
+  const toggleQuestionEditor = () => {
+    setVisibleDockEditor((prev) => (prev === "question" ? null : "question"));
+  };
+
+  const toggleExerciceEditor = () => {
+    setVisibleDockEditor((prev) => (prev === "exercice" ? null : "exercice"));
   };
 
   return (
@@ -101,13 +112,12 @@ export const Desktop: React.FC = () => {
             isLeftSidebarExpanded={isLeftSidebarExpanded}
             isRightSidebarExpanded={isRightSidebarExpanded}
             isRightSidebarFloating={isRightSidebarFloating}
-            height={0}
-            isQuestionEditorVisible={isQuestionEditorVisible}
-            onToggleQuestionEditor={() =>
-              setIsQuestionEditorVisible(!isQuestionEditorVisible)
-            }
-            questionEditorHeight={questionEditorHeight}
-            onResizeQuestionEditorHeight={handleResizeQuestionEditorHeight}
+            visibleDockEditor={visibleDockEditor}
+            setVisibleDockEditor={setVisibleDockEditor}
+            onToggleQuestionEditor={toggleQuestionEditor}
+            onToggleExerciceEditor={toggleExerciceEditor}
+            dockEditorHeight={dockEditorHeight}
+            onResizeDockEditorHeight={handleResizeDockEditorHeight}
           />
         </div>
         <RightSidebar
