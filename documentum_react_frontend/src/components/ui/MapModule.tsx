@@ -2,8 +2,15 @@ import React from "react";
 import { Button } from "components/ui/button";
 import { ScrollArea, ScrollBar } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
-import { ChevronDown, FilePlus, Download, Copy, Trash } from "lucide-react";
-import { MapItem as MapItemComponent } from "@/components/ui/MapItem";
+import {
+  ChevronDown,
+  FilePlus,
+  FolderSearch,
+  Download,
+  Copy,
+  Trash,
+} from "lucide-react";
+import { MapItem as MapItemComponent } from "components/ui/MapItem";
 import {
   DndContext,
   closestCenter,
@@ -25,6 +32,11 @@ export interface MapModuleProps {
   onToggle: () => void;
   mapItems: MapItem[];
   selectedMapItemId: number | null;
+  onRename: (itemId: number) => void;
+  editingItemId: number | null;
+  onRenameSave: (itemId: number, newTitle: string) => void;
+  setLoadMapOpen: (open: boolean) => void;
+  onLoadMapDialog: () => void;
   onSelect: (itemId: number) => void;
   onAdd: () => void;
   onImportWord: () => void;
@@ -56,7 +68,12 @@ export const MapModule: React.FC<MapModuleProps> = ({
   onToggle,
   mapItems,
   selectedMapItemId,
+  setLoadMapOpen,
+  onLoadMapDialog,
   onSelect,
+  onRename,
+  editingItemId,
+  onRenameSave,
   onAdd,
   onImportWord,
   onClone,
@@ -123,6 +140,17 @@ export const MapModule: React.FC<MapModuleProps> = ({
               title="Créer une rubrique"
             >
               <FilePlus
+                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
+                strokeWidth={2.5}
+              />
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
+              onClick={onLoadMapDialog}
+              title="Charger une map existante"
+            >
+              <FolderSearch
                 className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
                 strokeWidth={2.5}
               />
@@ -199,6 +227,9 @@ export const MapModule: React.FC<MapModuleProps> = ({
                           idx={origIdx}
                           selectedMapItemId={selectedMapItemId}
                           onSelect={onSelect}
+                          onRename={onRename}
+                          editing={editingItemId === item.id}
+                          onRenameSave={onRenameSave}
                           mapItems={mapItems}
                           onToggleExpand={onToggleExpand}
                           onIndent={onIndent}

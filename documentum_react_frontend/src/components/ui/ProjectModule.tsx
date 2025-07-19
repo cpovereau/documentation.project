@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import type { ProjectItem } from "@/types/ProjectItem";
 import { Button } from "components/ui/button";
 import { ScrollArea, ScrollBar } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
@@ -25,13 +26,6 @@ import {
   SelectItem,
 } from "components/ui/select";
 import { toast } from "sonner";
-
-export type ProjectItem = {
-  id: number;
-  title: string;
-  gamme: string;
-  active?: boolean;
-};
 
 export interface ProjectModuleProps {
   isExpanded: boolean;

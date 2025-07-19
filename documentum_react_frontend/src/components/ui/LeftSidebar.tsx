@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "components/ui/button";
-import { ProjectModule, ProjectItem } from "components/ui/ProjectModule";
+import { ProjectModule } from "components/ui/ProjectModule";
 import { MapModule } from "components/ui/MapModule";
 import type { MapItem } from "@/types/MapItem";
+import type { ProjectItem } from "@/types/ProjectItem";
+import { LoadMapDialog } from "components/ui/LoadMapDialog";
 import { ImportModal } from "components/ui/import-modal";
 import { ArrowLeftCircle } from "lucide-react";
 
@@ -17,33 +19,68 @@ interface LeftSidebarProps {
 const initialProjects: ProjectItem[] = [
   {
     id: 1,
-    title: "Documentation Utilisateur Planning",
+    title: "Documentation Utilisateur - Planning",
     gamme: "Planning",
     mapItems: [
       {
         id: 101,
-        title: "Vue générale",
+        title: "Vue d’ensemble",
         isMaster: true,
+        level: 0,
+        expanded: true,
+        versionOrigine: "2.0.0",
+      },
+      {
+        id: 102,
+        title: "Module RDV",
+        isMaster: false,
         level: 1,
         expanded: true,
+        versionOrigine: "2.0.0",
       },
-      { id: 102, title: "Module RDV", isMaster: false, level: 2 },
     ],
   },
   {
     id: 2,
-    title: "Documentation Utilisateur",
+    title: "Documentation Utilisateur - Usager",
     gamme: "Usager",
     mapItems: [
       {
         id: 201,
         title: "Vue globale",
         isMaster: true,
-        level: 1,
+        level: 0,
         expanded: true,
+        versionOrigine: "1.3.0",
       },
-      { id: 202, title: "Module AN", isMaster: false, level: 2 },
+      {
+        id: 202,
+        title: "Module AN",
+        isMaster: false,
+        level: 1,
+        expanded: false,
+        versionOrigine: "1.3.0",
+      },
     ],
+  },
+];
+
+const availableMaps = [
+  {
+    id: 5001,
+    title: "Carte Profil Planning",
+    isMaster: true,
+    versionOrigine: "2.0.0",
+    projet: "Profil Utilisateur",
+    gamme: "Planning",
+  },
+  {
+    id: 5002,
+    title: "Vue Établissement",
+    isMaster: false,
+    versionOrigine: "2.1.0",
+    projet: "Dossier Usager",
+    gamme: "Usager",
   },
 ];
 
@@ -60,6 +97,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const toggleProjectExpand = () => setIsProjectExpanded(!isProjectExpanded);
   const toggleMapExpand = () => setIsMapExpanded(!isMapExpanded);
 
+  const [loadMapOpen, setLoadMapOpen] = useState(false);
   const [importWordOpen, setImportWordOpen] = useState(false);
 
   // Ajoute l’état des projets et sélection
@@ -121,13 +159,36 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
   // Les callbacks d'interaction MapModule
   const handleSelectMapItem = (id: number) => setSelectedMapItemId(id);
+
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+
+  const handleRename = (itemId: number) => {
+    setEditingItemId(itemId); // active le champ <input>
+  };
+
+  const handleRenameSave = (itemId: number, newTitle: string) => {
+    setMapItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId ? { ...item, title: newTitle } : item
+      )
+    );
+    setEditingItemId(null);
+  };
+
   const handleAddMapItem = () => {
     const newId = mapItems.length
       ? Math.max(...mapItems.map((i) => i.id)) + 1
       : 1;
     setMapItems([
       ...mapItems,
-      { id: newId, title: `Nouvelle rubrique ${newId}`, level: 1 },
+      {
+        id: newId,
+        title: `Nouvelle rubrique ${newId}`,
+        level: 1,
+        isMaster: false,
+        expanded: false,
+        versionOrigine: "",
+      },
     ]);
     setSelectedMapItemId(newId);
   };
@@ -204,6 +265,16 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         }}
       />
       ;
+      <LoadMapDialog
+        open={loadMapOpen}
+        onClose={() => setLoadMapOpen(false)}
+        availableMaps={availableMaps}
+        onLoad={(newMapItems) => {
+          setMapItems(newMapItems);
+          setSelectedMapItemId(newMapItems[0]?.id ?? null);
+        }}
+      />
+      ;
       <div
         className={`fixed top-[103px] bottom-0 left-0 transition-all duration-300 ease-in-out ${className}`}
         style={{ width: isExpanded ? "345px" : "0" }}
@@ -241,8 +312,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                     onToggle={toggleMapExpand}
                     mapItems={mapItems}
                     selectedMapItemId={selectedMapItemId}
+                    setLoadMapOpen={setLoadMapOpen}
+                    onLoadMapDialog={() => setLoadMapOpen(true)}
                     onReorder={handleReorder}
                     onSelect={handleSelectMapItem}
+                    onRename={handleRename}
+                    editingItemId={editingItemId}
+                    onRenameSave={handleRenameSave}
                     onAdd={handleAddMapItem}
                     onImportWord={() => setImportWordOpen(true)}
                     onClone={handleCloneMapItem}

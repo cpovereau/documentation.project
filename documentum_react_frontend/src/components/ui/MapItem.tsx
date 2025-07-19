@@ -11,6 +11,9 @@ interface MapItemProps {
   selectedMapItemId: number | null;
   onSelect: (id: number) => void;
   mapItems: MapItemType[];
+  onRename: (itemId: number) => void;
+  editing: boolean;
+  onRenameSave: (itemId: number, newTitle: string) => void;
   onToggleExpand: (id: number, expand: boolean) => void;
   onIndent: (id: number) => void;
   onOutdent: (id: number) => void;
@@ -43,6 +46,9 @@ export const MapItem: React.FC<MapItemProps> = ({
   selectedMapItemId,
   onSelect,
   mapItems,
+  onRename,
+  onRenameSave,
+  editing,
   onToggleExpand,
   onIndent,
   onOutdent,
@@ -102,9 +108,44 @@ export const MapItem: React.FC<MapItemProps> = ({
           <ChevronRight size={16} />
         </button>
       )}
-      <div className="flex-1 text-xs text-[#515a6e] font-['Roboto',Helvetica] whitespace-nowrap">
-        {item.title}
-      </div>
+
+      {/* ✅ Titre cliquable avec renommage */}
+      {editing ? (
+        <input
+          autoFocus
+          defaultValue={item.title}
+          onClick={(e) => e.stopPropagation()}
+          onBlur={(e) => onRenameSave(item.id, e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onRenameSave(item.id, (e.target as HTMLInputElement).value);
+            }
+          }}
+          className="text-xs px-1 py-0.5 border rounded w-full bg-white text-black"
+        />
+      ) : (
+        <div
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onRename(item.id);
+          }}
+          className="cursor-text"
+          title="Double-clic pour renommer"
+        >
+          {item.title}
+          {item.isMaster && (
+            <span className="ml-2 px-2 py-0.5 rounded bg-blue-200 text-blue-800 text-[10px] font-semibold">
+              maître
+            </span>
+          )}
+          {item.versionOrigine && (
+            <span className="ml-2 text-[10px] text-gray-500">
+              v{item.versionOrigine}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="ml-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
         <button
           onClick={(e) => {
