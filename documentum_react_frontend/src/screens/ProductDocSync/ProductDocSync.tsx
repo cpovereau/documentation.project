@@ -150,6 +150,11 @@ export const ProductDocSync: React.FC = () => {
     console.log("Fonctionnalité collée :", newFeature.name);
   };
 
+  const handleGenerateTestPlan = () => {
+    alert("Simulation de génération du plan de test..."); // à remplacer plus tard
+    // TODO: appel API + récupération des rubriques de type task
+  };
+
   return (
     <div className="relative flex flex-col h-screen overflow-hidden">
       <TopBar
@@ -198,6 +203,7 @@ export const ProductDocSync: React.FC = () => {
             product={selectedProduct}
             version={selectedVersion}
             height={impactMapHeight}
+            onGenerateTestPlan={handleGenerateTestPlan}
           />
         </div>
         {/* Éditeur central + bottomBar */}

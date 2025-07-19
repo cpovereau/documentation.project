@@ -23,13 +23,7 @@ export const ProductSelect: React.FC<ProductSelectProps> = ({
   disabled = false,
   className = "",
 }) => (
-  <Select
-    value={value}
-    onValueChange={onChange}
-    disabled={disabled}
-    modal={false}
-    position="popper"
-  >
+  <Select value={value} onValueChange={onChange} disabled={disabled}>
     <SelectTrigger className={className}>
       <SelectValue placeholder="Produit ?">
         {value ? options.find((opt) => opt.value === value)?.label : null}
