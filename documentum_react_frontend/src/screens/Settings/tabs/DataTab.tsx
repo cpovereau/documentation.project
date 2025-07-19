@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { ImportModal } from "components/ui/import-modal";
 import AddItemModal from "components/ui/AddItemModal";
 import DataListPanel from "components/ui/DataListPanel";
 import { Button } from "components/ui/button";
@@ -242,6 +243,8 @@ const DataTab = () => {
     }
   };
 
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
   return (
     <>
       <div className="flex h-full">
@@ -338,7 +341,21 @@ const DataTab = () => {
         {/* Colonne droite */}
         <div className="flex-1 overflow-auto">
           <div className="flex justify-between items-center px-4">
-            <h2 className="text-xl font-semibold">{getTitle()}</h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-semibold">{getTitle()}</h2>
+              {selectedItem === "fonctionnalites" && (
+                <div className="flex justify-end mt-3">
+                  <Button
+                    className={cn(
+                      "px-3 text-sm font-medium bg-orange-500 text-white hover:bg-orange-600"
+                    )}
+                    onClick={() => setIsImportOpen(true)}
+                  >
+                    Importer
+                  </Button>
+                </div>
+              )}
+            </div>
             <Button
               variant="ghost"
               onClick={handleAdd}
@@ -389,6 +406,17 @@ const DataTab = () => {
           }
         }}
       />
+      {selectedItem === "fonctionnalites" && (
+        <ImportModal
+          open={isImportOpen}
+          title="Importer des fonctionnalités"
+          onClose={() => setIsImportOpen(false)}
+          onNext={(file) => {
+            console.log("Fichier à importer :", file);
+            setIsImportOpen(false);
+          }}
+        />
+      )}
     </>
   );
 };
