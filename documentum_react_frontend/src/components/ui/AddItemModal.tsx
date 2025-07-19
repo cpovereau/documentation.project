@@ -169,10 +169,12 @@ function AddItemModal({
         </DialogDescription>
         <div className="space-y-4 mt-2">{renderFields()}</div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" className="h-8 px-4" onClick={onClose}>
             Annuler
           </Button>
-          <Button onClick={handleSave}>Ajouter</Button>
+          <Button className="h-8 px-4" onClick={handleSave}>
+            Ajouter
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
