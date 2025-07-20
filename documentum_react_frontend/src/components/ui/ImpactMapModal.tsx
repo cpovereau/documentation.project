@@ -6,8 +6,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from "components/ui/dialog";
-import { ImpactMapGraph } from "components/ui/ImpactMapGraph";
 import { Button } from "components/ui/button";
+import { ImpactMapGraph } from "components/ui/ImpactMapGraph";
+import { cn } from "@/lib/utils";
+
+import type { TaskNode } from "components/ui/TestPlanModal";
 
 interface ImpactMapModalProps {
   open: boolean;
@@ -15,7 +18,7 @@ interface ImpactMapModalProps {
   product: string;
   version: string;
   height?: number;
-  onGenerateTestPlan?: () => void; // 🔧 Callback pour déclencher la génération
+  onGenerateTestPlan?: (tasks: TaskNode[]) => void;
 }
 
 export const ImpactMapModal: React.FC<ImpactMapModalProps> = ({
@@ -34,27 +37,17 @@ export const ImpactMapModal: React.FC<ImpactMapModalProps> = ({
       style={{ height }}
     >
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl h-full flex flex-col">
+        <DialogContent className="max-w-5xl h-full flex flex-col">
           <DialogHeader>
             <DialogTitle>{`Arbre d’impact : ${product} ${version}`}</DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden border rounded bg-white">
-            <ImpactMapGraph />
+          <div className="flex-1 overflow-hidden">
+            <ImpactMapGraph onGenerateTestPlan={onGenerateTestPlan} />
           </div>
 
-          <DialogFooter className="mt-4 flex flex-col gap-2">
-            <Button
-              variant="secondary"
-              className="h-11 w-full"
-              onClick={onGenerateTestPlan}
-            >
-              Générer le plan de test
-            </Button>
-
-            <Button className="h-11 w-full" onClick={onClose}>
-              Fermer
-            </Button>
+          <DialogFooter>
+            <></>
           </DialogFooter>
         </DialogContent>
       </Dialog>

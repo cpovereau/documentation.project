@@ -5,8 +5,9 @@ import { SyncEditor } from "components/ui/SyncEditor";
 import { SyncBottombar } from "components/ui/SyncBottombar";
 import { SyncRightSidebar } from "components/ui/SyncRightSidebar";
 import { TopBar } from "components/ui/TopBar";
-import { ImpactMapModal } from "components/ui/ImpactMapModal";
-import type { FeatureItem } from "@/types/FeatureItem";
+import ImpactMapModal from "components/ui/ImpactMapModal";
+import { TestPlanModal } from "components/ui/TestPlanModal";
+import type { FeatureItem } from "types/FeatureItem";
 import { toast } from "sonner";
 
 const products = ["Planning", "Usager", "Finance"];
@@ -150,10 +151,13 @@ export const ProductDocSync: React.FC = () => {
     console.log("Fonctionnalité collée :", newFeature.name);
   };
 
-  const handleGenerateTestPlan = () => {
-    alert("Simulation de génération du plan de test..."); // à remplacer plus tard
-    // TODO: appel API + récupération des rubriques de type task
+  const handleGenerateTestPlan = (tasks: TaskNode[]) => {
+    setOrderedTasks(tasks);
+    setShowTestPlanModal(true);
   };
+
+  const [showTestPlanModal, setShowTestPlanModal] = useState(false);
+  const [orderedTasks, setOrderedTasks] = useState<TaskNode[]>([]);
 
   return (
     <div className="relative flex flex-col h-screen overflow-hidden">
@@ -204,6 +208,18 @@ export const ProductDocSync: React.FC = () => {
             version={selectedVersion}
             height={impactMapHeight}
             onGenerateTestPlan={handleGenerateTestPlan}
+            setShowTestPlan={setShowImpactMap}
+          />
+          <TestPlanModal
+            open={showTestPlanModal}
+            onClose={() => setShowTestPlanModal(false)}
+            tasks={orderedTasks}
+            onReorder={setOrderedTasks}
+            onGenerate={(tasks) => {
+              console.log("Plan de test validé :", tasks);
+              setShowTestPlanModal(false);
+              // TODO : appel API ou génération de map
+            }}
           />
         </div>
         {/* Éditeur central + bottomBar */}
