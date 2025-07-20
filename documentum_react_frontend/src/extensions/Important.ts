@@ -14,10 +14,18 @@ const Important = Node.create({
   },
   addCommands() {
     return {
-      setImportant:
-        () =>
-        ({ commands }) =>
-          commands.setNode("important"),
+      insertImportant:
+  () =>
+  ({ commands }) =>
+    commands.insertContent({
+      type: "important",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Nouveau bloc Important..." }],
+        },
+      ],
+    }),
     };
   },
 });

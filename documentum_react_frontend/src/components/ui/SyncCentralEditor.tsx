@@ -129,12 +129,10 @@ export const SyncCentralEditor: React.FC<SyncCentralEditorProps> = ({
                   <td className="border p-2">{topic.version}</td>
                   <td className="border p-2">{topic.assignee}</td>
                   <td className="border p-2">
-                    <Button size="sm" variant="outline" className="mr-2">
+                    <Button variant="outline" className="mr-2">
                       Terminé
                     </Button>
-                    <Button size="sm" variant="outline">
-                      Marquer comme à jour
-                    </Button>
+                    <Button variant="outline">Marquer comme à jour</Button>
                   </td>
                 </tr>
               ))}

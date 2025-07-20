@@ -1,5 +1,13 @@
 import { Card, CardContent } from "components/ui/card";
 
+interface MediaCardProps {
+  title: string;
+  updatedText: string;
+  imageUrl?: string;
+  className?: string;
+  isListMode?: boolean;
+}
+
 export const MediaCard: React.FC<
   MediaCardProps & { className?: string; isListMode?: boolean }
 > = ({ title, updatedText, imageUrl, className = "", isListMode = false }) => {

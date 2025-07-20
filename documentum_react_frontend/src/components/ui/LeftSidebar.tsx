@@ -12,7 +12,6 @@ interface LeftSidebarProps {
   isExpanded: boolean;
   onToggle: () => void;
   className?: string;
-  mapItems: MapItem[];
   onToggleExpand: (itemId: number, expand: boolean) => void;
 }
 

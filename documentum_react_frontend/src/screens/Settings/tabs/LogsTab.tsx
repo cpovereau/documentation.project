@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "components/ui/button";
 import LogTable from "../components/LogTable";
 import { logsMockData } from "./mockLogs";
-import { LogEntry, LogType } from "types/LogsTypes";
+import { LogType } from "types/LogsTypes";
 
 const FILTERS: { label: string; value: LogType | "all" }[] = [
   { label: "Tous", value: "all" },

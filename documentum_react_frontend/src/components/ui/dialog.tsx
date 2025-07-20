@@ -38,21 +38,29 @@ export const DialogHeader = ({ children }: { children: React.ReactNode }) => (
   <div className="mb-4">{children}</div>
 );
 
-export const DialogTitle = ({ children }: { children: React.ReactNode }) => (
-  <RadixDialog.Title className="text-lg font-semibold">
-    {children}
-  </RadixDialog.Title>
-);
+export const DialogTitle = React.forwardRef<
+  React.ComponentRef<typeof RadixDialog.Title>,
+  React.ComponentPropsWithoutRef<typeof RadixDialog.Title>
+>(({ className, ...props }, ref) => (
+  <RadixDialog.Title
+    ref={ref}
+    className={cn("text-lg font-semibold", className)}
+    {...props}
+  />
+));
+DialogTitle.displayName = "DialogTitle";
 
-export const DialogDescription = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => (
-  <RadixDialog.Description className="sr-only">
-    {children}
-  </RadixDialog.Description>
-);
+export const DialogDescription = React.forwardRef<
+  React.ComponentRef<typeof RadixDialog.Description>,
+  React.ComponentPropsWithoutRef<typeof RadixDialog.Description>
+>(({ className, ...props }, ref) => (
+  <RadixDialog.Description
+    ref={ref}
+    className={cn("sr-only", className)}
+    {...props}
+  />
+));
+DialogDescription.displayName = "DialogDescription";
 
 export const DialogFooter = ({ children }: { children: React.ReactNode }) => (
   <div className="mt-6 flex justify-end gap-2">{children}</div>

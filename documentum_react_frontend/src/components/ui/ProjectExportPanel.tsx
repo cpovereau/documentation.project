@@ -44,7 +44,7 @@ const EXPORT_OPTIONS = [
 ];
 
 interface ProjectExportPanelProps {
-  projectId: number;
+  readonly projectId: number;
 }
 
 export default function ProjectExportPanel({
@@ -59,6 +59,7 @@ export default function ProjectExportPanel({
 
       // TODO: branchement vers POST /api/export/ avec projectId + selectedFormat
     } catch (error) {
+      console.error("Error during export:", error);
       toast.error("Erreur lors de la publication");
     }
   };

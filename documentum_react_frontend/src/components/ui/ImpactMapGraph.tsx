@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -100,8 +100,8 @@ export const ImpactMapGraph: React.FC<ImpactMapGraphProps> = ({
   onGenerateTestPlan,
 }) => {
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
-  const [nodes, setNodes] = useNodesState(initialNodes);
-  const [edges, setEdges] = useEdgesState(initialEdges);
+  const [nodes] = useNodesState(initialNodes);
+  const [edges] = useEdgesState(initialEdges);
 
   const handleNodeClick = (_event: React.MouseEvent, node: Node) => {
     if (node.data.type !== "task") return;

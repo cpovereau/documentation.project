@@ -28,8 +28,8 @@ export const EditorHistoryPanel: React.FC<EditorHistoryPanelProps> = ({
             history
               .slice()
               .reverse()
-              .map((item, i) => (
-                <div key={i} className="flex flex-col text-sm">
+              .map((item) => (
+                <div key={item.ts} className="flex flex-col text-sm">
                   <span className="font-medium text-gray-800">
                     {new Date(item.ts).toLocaleTimeString()} — {item.action}
                   </span>

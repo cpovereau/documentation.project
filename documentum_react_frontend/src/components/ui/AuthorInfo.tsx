@@ -13,7 +13,7 @@ export const AuthorInfo: React.FC<AuthorInfoProps> = ({ auteur, date }) => {
 
   return (
     <div className="relative w-full">
-      <Separator className="h-px w-full" />
+      <Separator />
       {/* Chevron + Titre */}
       <div className="flex items-start justify-start font-bold text-black text-[32px] leading-normal mb-1 pl-1">
         <Button

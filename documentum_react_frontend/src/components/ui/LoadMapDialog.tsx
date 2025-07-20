@@ -38,12 +38,14 @@ export const LoadMapDialog: React.FC<LoadMapDialogProps> = ({
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const filteredMaps = availableMaps.filter((m) => {
-    const value =
-      filterBy === "projet"
-        ? m.projet
-        : filterBy === "gamme"
-        ? m.gamme
-        : m.title;
+    let value: string;
+    if (filterBy === "projet") {
+      value = m.projet;
+    } else if (filterBy === "gamme") {
+      value = m.gamme;
+    } else {
+      value = m.title;
+    }
     return value.toLowerCase().includes(searchText.toLowerCase());
   });
 
@@ -72,7 +74,7 @@ export const LoadMapDialog: React.FC<LoadMapDialogProps> = ({
           />
         </div>
 
-        <Separator className="my-2" />
+        <Separator />
 
         <div className="max-h-[250px] overflow-y-auto space-y-1">
           {filteredMaps.map((map) => (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { TopBar } from "components/ui/TopBar";
 import { LeftSidebar } from "components/ui/LeftSidebar";
 import { RightSidebar } from "components/ui/RightSidebar";
@@ -106,7 +106,7 @@ export const Desktop: React.FC = () => {
 
   return (
     <div className="bg-white flex flex-col h-screen w-full">
-      <TopBar currentScreen="desktop" className="z-50" />
+      <TopBar currentScreen="desktop" />
       <div className="flex flex-row flex-1 min-h-0 relative overflow-hidden">
         <LeftSidebar
           isExpanded={isLeftSidebarExpanded}
@@ -114,7 +114,6 @@ export const Desktop: React.FC = () => {
             !isPreviewMode && setIsLeftSidebarExpanded(!isLeftSidebarExpanded)
           }
           className="z-40"
-          mapItems={mapItems}
           onToggleExpand={handleToggleExpandMapNode}
         />
         <div

@@ -7,7 +7,7 @@ export const GrammarHighlight = Extension.create({
   addState() {
     return {
       init: () => DecorationSet.empty,
-      apply: (tr, old) => {
+      apply: (tr: import('@tiptap/pm/state').Transaction, old: DecorationSet) => {
         const errors = tr.getMeta('grammarHighlightErrors');
 
         if (errors) {
@@ -28,7 +28,7 @@ export const GrammarHighlight = Extension.create({
 
   props() {
     return {
-      decorations(state) {
+      decorations(state: import('@tiptap/pm/state').EditorState) {
         return this.getState()(state);
       },
     };

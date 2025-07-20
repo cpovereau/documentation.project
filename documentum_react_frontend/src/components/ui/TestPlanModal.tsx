@@ -7,7 +7,7 @@ import {
   DialogFooter,
 } from "components/ui/dialog";
 import { Button } from "components/ui/button";
-import { ChevronUp, ChevronDown, X } from "lucide-react";
+import { ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface TaskNode {

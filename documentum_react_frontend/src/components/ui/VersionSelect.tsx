@@ -28,13 +28,7 @@ export const VersionSelect: React.FC<VersionSelectProps> = ({
   className = "",
 }) => (
   <div className="flex items-center gap-1 w-full">
-    <Select
-      value={value}
-      onValueChange={onChange}
-      disabled={disabled}
-      modal={false}
-      position="popper"
-    >
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className={className}>
         <SelectValue placeholder="Version ?" />
         {value ? options.find((opt) => opt.value === value)?.label : null}
@@ -52,7 +46,6 @@ export const VersionSelect: React.FC<VersionSelectProps> = ({
         variant="outline"
         className="ml-1 px-2 py-2"
         style={{ minWidth: 36, minHeight: 36 }}
-        strokeWidth={2.5}
         aria-label="Ajouter une version"
         title="Ajouter une version"
         onClick={onAdd}

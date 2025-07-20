@@ -1,9 +1,14 @@
-export const ScrollArea = ({
-  children,
-  maxHeight,
-}: {
+import * as React from "react";
+import type { HTMLAttributes } from "react";
+
+interface ScrollAreaProps {
   children: React.ReactNode;
   maxHeight?: string;
+}
+
+export const ScrollArea: React.FC<ScrollAreaProps> = ({
+  children,
+  maxHeight,
 }) => {
   return (
     <div
@@ -15,4 +20,10 @@ export const ScrollArea = ({
   );
 };
 
-export const ScrollBar = () => null;
+interface ScrollBarProps extends HTMLAttributes<HTMLDivElement> {
+  orientation?: "vertical" | "horizontal";
+}
+
+export const ScrollBar = (_props: ScrollBarProps) => null;
+
+ScrollBar.displayName = "ScrollBar";

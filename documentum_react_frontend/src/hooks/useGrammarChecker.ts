@@ -2,7 +2,7 @@
 import { useCallback } from "react";
 import { Editor } from "@tiptap/react";
 import debounce from "lodash.debounce";
-import { useLanguageTool } from "@/hooks/useLanguageTool";
+import { useLanguageTool } from "hooks/useLanguageTool";
 
 export function useGrammarChecker(editor: Editor | null) {
   const { checkText } = useLanguageTool();

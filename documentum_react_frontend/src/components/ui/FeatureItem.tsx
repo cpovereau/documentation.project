@@ -80,7 +80,15 @@ export const FeatureItem: React.FC<FeatureItemProps> = ({
           ? "bg-blue-100 font-bold"
           : "hover:bg-gray-100"
       )}
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(item.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(item.id);
+        }
+      }}
     >
       {hasChildren(features, idx) && item.expanded !== false && (
         <button

@@ -71,7 +71,15 @@ export const FindReplaceDialog: React.FC<FindReplaceDialogProps> = ({
       >
         <div
           className="cursor-move text-lg font-semibold text-gray-900 mb-3 select-none"
+          role="button"
+          tabIndex={0}
           onMouseDown={handleMouseDown}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleMouseDown(e as unknown as React.MouseEvent);
+            }
+          }}
         >
           🔍 Rechercher / Remplacer
         </div>

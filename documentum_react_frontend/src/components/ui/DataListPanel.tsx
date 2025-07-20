@@ -37,10 +37,17 @@ const DataListPanel: React.FC<DataListPanelProps> = ({
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-3">
-          <label className="text-sm text-muted-foreground">
+          <label
+            htmlFor="toggle-archived"
+            className="text-sm text-muted-foreground"
+          >
             Afficher archivés
           </label>
-          <Switch checked={archived} onCheckedChange={onToggleArchived} />
+          <Switch
+            id="toggle-archived"
+            checked={archived}
+            onCheckedChange={onToggleArchived}
+          />
         </div>
       </div>
 

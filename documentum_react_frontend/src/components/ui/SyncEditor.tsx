@@ -34,7 +34,7 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
 
   // État pour la navigation dans les corrections
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [totalCount, setTotalCount] = useState(1); // ou 0 par défaut
+  const [totalCount] = useState(1); // ou 0 par défaut
 
   // Fonctions pour la navigation dans les corrections
   const handlePrevious = () => {
@@ -79,20 +79,13 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
   useGrammarChecker(editor);
   useSpeechCommands(editor);
   useFindReplaceTipTap(editor);
-  useEditorHistoryTracker(editor);
+  useEditorHistoryTracker();
 
   // Recherche et remplacement de texte
   const [isFindOpen, setIsFindOpen] = useState(false);
   const [findValue, setFindValue] = useState("");
   const [replaceValue, setReplaceValue] = useState("");
   const { find, replace, replaceAll } = useFindReplaceTipTap(editor);
-
-  // Fonction pour sauvegarder le contenu de l'éditeur
-  const handleSave = () => {
-    const html = editor?.getHTML();
-    console.log("Contenu sauvegardé:", html);
-    alert("Correctif enregistré (mock)");
-  };
 
   const { hasChanges, resetInitialContent } = useContentChangeTracker(content);
 

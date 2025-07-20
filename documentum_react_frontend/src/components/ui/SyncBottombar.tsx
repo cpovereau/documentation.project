@@ -152,21 +152,6 @@ export const SyncBottombar: React.FC<SyncBottombarProps> = ({
     r.toLowerCase().includes(filterText.toLowerCase())
   );
 
-  // Fonction pour ajouter un nouveau sujet de documentation
-  const handleAddNewTopic = () => {
-    const nextId = documentationTopics.length
-      ? Math.max(...documentationTopics.map((t) => t.id)) + 1
-      : 1;
-    const newTopic: Topic = {
-      id: nextId,
-      title: `Nouvelle rubrique ${nextId}`,
-      status: "À réviser",
-      version: "1.0",
-      assignee: "Non assigné",
-    };
-    setDocumentationTopics((prev) => [...prev, newTopic]);
-  };
-
   return (
     <div
       className="border-t border-gray-300 bg-white flex flex-col overflow-hidden"

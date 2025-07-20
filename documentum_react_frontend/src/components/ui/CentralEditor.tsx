@@ -4,7 +4,9 @@ import { useSpeechToText } from "hooks/useSpeechToText";
 import { Button } from "components/ui/button";
 import { Card } from "components/ui/card";
 import { Checkbox } from "components/ui/checkbox"; // À intégrer dans la barre d'outils plus tard
-import PopupProps from "components/ui/PopupSuggestion";
+import PopupSuggestion from "components/ui/PopupSuggestion";
+import type { PopupProps } from "types/PopupSuggestion";
+import type { Editor } from "@tiptap/react";
 import { GripVertical } from "lucide-react";
 import {
   NavigationMenu,
@@ -114,6 +116,29 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     setIsDragging(true);
   };
 
+  // Initialisation de l'éditeur TipTap avec extensions personnalisées
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({}),
+      GrammarHighlight.configure({ errors: [] }),
+      Underline,
+      TextStyle,
+      Color,
+      Link,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Task,
+      Concept,
+      Reference,
+      Important,
+      Note,
+      Warning,
+    ],
+    content: "<p>Commence à écrire…</p>",
+    onUpdate({ editor }) {
+      checkGrammar(editor.getText());
+    },
+  });
+
   // Fonctions pour copier, coller, couper
   function handleCut(editor: Editor | null) {
     if (!editor) return;
@@ -145,29 +170,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       logAction("Texte collé", text);
     });
   }
-
-  // Initialisation de l'éditeur TipTap avec extensions personnalisées
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({}),
-      GrammarHighlight.configure({ errors: [] }),
-      Underline,
-      TextStyle,
-      Color,
-      Link,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Task,
-      Concept,
-      Reference,
-      Important,
-      Note,
-      Warning,
-    ],
-    content: "<p>Commence à écrire…</p>",
-    onUpdate({ editor }) {
-      checkGrammar(editor.getText());
-    },
-  });
 
   // Recherche et remplacement de texte
   const [isFindOpen, setIsFindOpen] = useState(false);
@@ -379,10 +381,12 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     setTimeout(() => alert(msg), 100);
   }
 
+  // Fonction pour revenir à l'édition après validation XML
   function returnToEdit() {
     setIsXmlView(false);
   }
 
+  // Compteur de mots
   useEffect(() => {
     const dom = editor?.view.dom;
     if (!dom) return;
@@ -402,6 +406,10 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           message,
           from: editor.view.posAtDOM(target, 0),
           to: editor.view.posAtDOM(target, 0) + target.textContent!.length,
+          onReplace: (text, from, to) => {
+            editor.commands.insertContentAt({ from, to }, text);
+            setPopup(null);
+          },
         });
       } else {
         setPopup(null);

@@ -12,7 +12,7 @@ export function useSpeechCommands(editor: Editor | null) {
     switch (cmd) {
       case "deletePreviousWord": {
         if (!state.selection.empty) {
-          commands.deleteSelection().run();
+          commands.deleteSelection();
           return;
         }
         if (from <= 1) return;

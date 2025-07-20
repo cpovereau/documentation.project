@@ -63,8 +63,8 @@ export const BottomBar: React.FC<BottomBarProps> = ({
     <div style={getStyle()} className="overflow-auto flex flex-col p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          {toolbarIcons.map((icon, index) => (
-            <Button key={index} variant="ghost" size="icon" className="p-1">
+          {toolbarIcons.map((icon) => (
+            <Button key={icon.alt} variant="ghost" className="p-1">
               <img src={icon.src} alt={icon.alt} className="w-6 h-6" />
             </Button>
           ))}
@@ -96,16 +96,11 @@ export const BottomBar: React.FC<BottomBarProps> = ({
       </div>
       <div className="bg-gray-100 p-4 rounded-lg">
         <div className="flex justify-end mb-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-blue-600 hover:bg-blue-100"
-          >
+          <Button variant="ghost" className="text-blue-600 hover:bg-blue-100">
             Copier
           </Button>
           <Button
             variant="ghost"
-            size="sm"
             className="text-blue-600 hover:bg-blue-100 ml-2"
           >
             Modifier

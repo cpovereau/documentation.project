@@ -12,12 +12,21 @@ const Note = Node.create({
   renderHTML({ HTMLAttributes }) {
     return ["note", mergeAttributes(HTMLAttributes), 0];
   },
-  addCommands() {
+ addCommands() {
     return {
-      setNote:
-        () =>
+      insertNote:
+        (attrs = {}) =>
         ({ commands }) =>
-          commands.setNode("note"),
+          commands.insertContent({
+            type: "note",
+            attrs,
+            content: [
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: "Nouveau bloc Note..." }],
+              },
+            ],
+          }),
     };
   },
 });

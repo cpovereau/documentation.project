@@ -93,7 +93,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         {/* Zone Drag & Drop */}
         <div
           className="flex flex-col items-center justify-center border-2 border-dashed border-[#65558f] rounded-xl bg-gray-50 py-8 px-4 cursor-pointer hover:bg-[#f7a90022] transition"
+          role="button"
+          tabIndex={0}
           onClick={() => inputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
           onDrop={(e) => {
             e.preventDefault();
             if (e.dataTransfer.files.length > 0)

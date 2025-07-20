@@ -23,7 +23,6 @@ interface SyncLeftSidebarProps {
   features: FeatureItem[];
   selectedFeature: number | null;
   onSelectFeature: (id: number) => void;
-  setSelectedFeature: (id: number) => void;
   onAddFeature: () => void;
   onIndent: (id: number) => void;
   onOutdent: (id: number) => void;
@@ -113,8 +112,6 @@ export const SyncLeftSidebar: React.FC<SyncLeftSidebarProps> = ({
           {isExpanded && (
             <div className="rounded-xl shadow">
               <FeatureModule
-                isExpanded={true}
-                onToggle={() => {}}
                 features={features}
                 selectedFeatureId={selectedFeature}
                 onSelectFeature={onSelectFeature}

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { ProjectItem } from "@/types/ProjectItem";
+import type { ProjectItem } from "types/ProjectItem";
 import { Button } from "components/ui/button";
 import { ScrollArea, ScrollBar } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
@@ -89,6 +89,7 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
       toast.success(`Export lancé au format ${selectedFormat}`);
       setShowExportCard(false); // ⬅️ fermeture automatique après succès
     } catch (error) {
+      console.error("Error during project export:", error);
       toast.error("Erreur lors de la publication");
     }
   };
@@ -188,7 +189,7 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
           </div>
 
           <div style={{ maxHeight: "180px", overflowY: "auto" }}>
-            <ScrollArea className="h-full w-full">
+            <ScrollArea>
               <div>
                 {projects.map((project, idx) => (
                   <div

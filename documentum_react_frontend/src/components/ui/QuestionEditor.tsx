@@ -149,7 +149,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   };
 
   // SUPPRESSION d'une réponse
-  const handleDeleteAnswer = (qIndex, aIndex) => {
+  const handleDeleteAnswer = (qIndex: number, aIndex: number) => {
     setQuestions((prev) =>
       prev.map((q, idx) => {
         if (idx !== qIndex) return q;
@@ -193,7 +193,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
           "&": "&amp;",
           "'": "&apos;",
           '"': "&quot;",
-        }[c])
+        }[c] || "")
     );
   }
   function questionBlocksToXML(blocks: QuestionBlock[]): string {

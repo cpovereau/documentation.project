@@ -14,15 +14,12 @@ export interface LabelProps
   className?: string;
 }
 
-const Label = React.forwardRef<React.ElementRef<typeof ShadLabel>, LabelProps>(
-  ({ className, ...props }, ref) => (
-    <ShadLabel
-      ref={ref}
-      className={cn(labelVariants(), className)}
-      {...props}
-    />
-  )
-);
+const Label = React.forwardRef<
+  React.ComponentRef<typeof ShadLabel>,
+  LabelProps
+>(({ className, ...props }, ref) => (
+  <ShadLabel ref={ref} className={cn(labelVariants(), className)} {...props} />
+));
 Label.displayName = "Label";
 
 export { Label };

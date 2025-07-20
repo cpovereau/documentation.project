@@ -110,7 +110,7 @@ export const MapModule: React.FC<MapModuleProps> = ({
       {/* --- EN-TÊTE --- */}
       <div className="relative w-[310px] h-12">
         <div className="absolute top-0.5 left-3 w-[298px]">
-          <Separator className="h-px w-full" />
+          <Separator />
         </div>
         <Button
           variant="ghost"
@@ -204,8 +204,8 @@ export const MapModule: React.FC<MapModuleProps> = ({
             </Button>
           </div>
           {/* --- LISTE AVEC SCROLL --- */}
-          <div style={{ maxHeight: "450px", overflowY: "auto" }}>
-            <ScrollArea className="w-full">
+          <div style={{ maxHeight: "380px", overflowY: "auto" }}>
+            <ScrollArea>
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}

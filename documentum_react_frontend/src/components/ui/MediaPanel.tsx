@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -22,7 +22,7 @@ import {
   Text,
   Filter,
 } from "lucide-react";
-import { parseMediaFilename, matchesMediaFilter } from "@/lib/mediaUtils";
+import { matchesMediaFilter } from "@/lib/mediaUtils";
 
 const produitOptions = [
   { value: "PLA", label: "PLA - Planning" },
@@ -73,11 +73,12 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
   onImportClick,
   isFloating = false,
 }) => {
+  type MediaFilterType = "produit" | "fonctionnalite" | "item";
+
   const [activeFilter, setActiveFilter] = useState<MediaFilterType | null>(
     null
   );
   const [filterKeyword, setFilterKeyword] = useState<string>("");
-  const [showFilterMenu, setShowFilterMenu] = useState<boolean>(false);
   const filteredMedia = mediaItems
     .filter((item) => {
       const matchSearchText = item.title
@@ -110,7 +111,7 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
     <>
       <div className="relative w-full h-12">
         <div className="absolute top-0.5 left-0 w-full">
-          <Separator className="h-px w-full" />
+          <Separator />
         </div>
         <div className="absolute font-bold text-black text-[32px] top-[11px] left-0">
           Médias
@@ -132,17 +133,19 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
             className="w-7 h-7 cursor-pointer"
             onClick={() => onToggleType("image")}
           />
-          <div
-            className="relative w-10 h-6 bg-gray-300 rounded-full cursor-pointer"
+          <button
+            type="button"
+            className="relative w-10 h-6 bg-gray-300 rounded-full cursor-pointer focus:outline-none"
             onClick={onToggleMode}
+            aria-label="Toggle mode"
           >
-            <div
+            <span
               className={`absolute w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${
                 isImageMode ? "translate-x-0" : "translate-x-full"
               }`}
               style={{ top: "2px", left: "2px" }}
             />
-          </div>
+          </button>
           <Video
             className="w-7 h-7 cursor-pointer"
             onClick={() => onToggleType("video")}

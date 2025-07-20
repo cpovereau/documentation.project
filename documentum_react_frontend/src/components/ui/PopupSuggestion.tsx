@@ -1,12 +1,6 @@
-type PopupProps = {
-  x: number;
-  y: number;
-  suggestions: string[];
-  message: string;
-  from: number;
-  to: number;
-  onReplace: (text: string, from: number, to: number) => void;
-};
+import type { PopupProps as OriginalPopupProps } from "@/types/PopupSuggestion";
+
+type PopupProps = Readonly<OriginalPopupProps>;
 
 export default function PopupSuggestion({
   x,

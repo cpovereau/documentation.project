@@ -90,7 +90,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     },
   ];
 
-  const [page, setPage] = useState(1);
+  const [setPage] = useState(1);
 
   const toggleSwitch = useCallback(() => setIsImageMode((prev) => !prev), []);
 
@@ -99,23 +99,10 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   const handleLabelClick = () =>
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
 
-  const handleModeClick = () =>
-    setDisplayMode((prev) =>
-      prev === "grid" ? "small" : prev === "small" ? "list" : "grid"
-    );
-
   const handleImportClick = () => {
     setImportType(isImageMode ? "image" : "video");
     setImportModalOpen(true);
   };
-
-  const toggleFloating = useCallback(() => {
-    onToggle(!isFloating);
-    if (!isFloating) {
-      setPosition({ x: window.innerWidth - 248, y: 103 });
-      setSize({ width: 248, height: "auto" });
-    }
-  }, [isFloating, onToggle]);
 
   const toggleExpanded = useCallback(() => {
     if (typeof onExpand === "function") {
@@ -186,15 +173,12 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 
   const mediaPanel = (
     <MediaPanel
-      page={page}
-      setPage={setPage}
       mediaItems={mediaItems}
       isImageMode={isImageMode}
       searchText={searchText}
       sortOrder={sortOrder}
       displayMode={displayMode}
       onSearchChange={(text) => {
-        setPage(1);
         setSearchText(text);
       }}
       onClearSearch={handleClearSearch}
@@ -202,7 +186,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       onToggleType={(type) => setIsImageMode(type === "image")}
       onToggleSort={handleLabelClick}
       onToggleDisplayMode={() => {
-        setPage(1);
         setDisplayMode((prev) =>
           prev === "grid" ? "small" : prev === "small" ? "list" : "grid"
         );
@@ -228,7 +211,15 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         <div className="flex justify-between items-center mb-4">
           <div
             className="cursor-move p-2 rounded-md hover:bg-gray-200"
+            role="button"
+            tabIndex={0}
             onMouseDown={handleDragStart}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleDragStart(e as unknown as React.MouseEvent);
+              }
+            }}
           >
             <Move className="w-8 h-8 text-gray-600" />
           </div>

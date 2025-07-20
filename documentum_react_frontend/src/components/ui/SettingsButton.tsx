@@ -9,12 +9,7 @@ export const SettingsButton = () => {
   };
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="p-0 h-10 w-10"
-      onClick={handleSettings}
-    >
+    <Button variant="ghost" className="p-0 h-10 w-10" onClick={handleSettings}>
       <SettingsIcon className="h-10 w-10 text-white" />
     </Button>
   );

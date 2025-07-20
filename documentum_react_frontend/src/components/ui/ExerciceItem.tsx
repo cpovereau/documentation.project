@@ -2,7 +2,6 @@ import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import React, { useEffect } from "react";
 import { Trash2 } from "lucide-react";
-import { Textarea } from "components/ui/textarea";
 import { Button } from "components/ui/button";
 
 type Exercice = {
@@ -109,13 +108,29 @@ const ExerciceItem: React.FC<ExerciceItemProps> = ({
         />
       </div>
 
-      <label className="text-sm font-medium">Enoncé :</label>
-      <div className="bg-white px-2 py-1 mb-4 min-h-[120px]">
+      <label
+        htmlFor={`contenu-editor-${index}`}
+        className="text-sm font-medium"
+      >
+        Enoncé :
+      </label>
+      <div
+        id={`contenu-editor-${index}`}
+        className="bg-white px-2 py-1 mb-4 min-h-[120px]"
+      >
         <EditorContent editor={contenuEditor} />
       </div>
 
-      <label className="text-sm font-medium">Correction :</label>
-      <div className="bg-white px-2 py-1 min-h-[120px]">
+      <label
+        htmlFor={`correction-editor-${index}`}
+        className="text-sm font-medium"
+      >
+        Correction :
+      </label>
+      <div
+        id={`correction-editor-${index}`}
+        className="bg-white px-2 py-1 min-h-[120px]"
+      >
         <EditorContent editor={correctionEditor} />
       </div>
     </div>

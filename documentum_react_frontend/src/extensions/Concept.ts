@@ -6,19 +6,31 @@ const Concept = Node.create({
   group: "block",
   content: "block*",
   draggable: true,
+
+  addAttributes() {
+    return {
+      id: {
+        default: null,
+      },
+    };
+  },
+
   parseHTML() {
     return [{ tag: "concept" }];
   },
+
   renderHTML({ HTMLAttributes }) {
     return ["concept", mergeAttributes(HTMLAttributes), 0];
   },
+
   addCommands() {
     return {
       insertConcept:
-        () =>
+        (attrs = {}) =>
         ({ commands }) =>
           commands.insertContent({
             type: "concept",
+            attrs,
             content: [
               {
                 type: "paragraph",

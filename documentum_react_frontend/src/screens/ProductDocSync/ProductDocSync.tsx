@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { SyncLeftSidebar } from "components/ui/SyncLeftSidebar";
 import { SyncEditor } from "components/ui/SyncEditor";
 import { SyncBottombar } from "components/ui/SyncBottombar";
 import { SyncRightSidebar } from "components/ui/SyncRightSidebar";
 import { TopBar } from "components/ui/TopBar";
-import ImpactMapModal from "components/ui/ImpactMapModal";
+import { ImpactMapModal } from "components/ui/ImpactMapModal";
 import { TestPlanModal } from "components/ui/TestPlanModal";
 import type { FeatureItem } from "types/FeatureItem";
 import { toast } from "sonner";
@@ -58,12 +57,6 @@ export const ProductDocSync: React.FC = () => {
     },
   ]);
 
-  const navigate = useNavigate();
-
-  const handleScreenSwitch = () => {
-    navigate("/desktop");
-  };
-
   const [versions, setVersions] = useState(["1.0", "1.1", "1.2"]);
 
   const versionOptions = versions.map((v) => ({
@@ -90,7 +83,7 @@ export const ProductDocSync: React.FC = () => {
     "evolution" | "correctif"
   >("evolution");
   const [showImpactMap, setShowImpactMap] = useState(false);
-  const [impactMapHeight, setImpactMapHeight] = useState(160);
+  const [impactMapHeight] = useState(160);
 
   const handleShowImpactMap = () => setShowImpactMap(true);
   const handleCloseImpactMap = () => setShowImpactMap(false);
@@ -151,20 +144,22 @@ export const ProductDocSync: React.FC = () => {
     console.log("Fonctionnalité collée :", newFeature.name);
   };
 
-  const handleGenerateTestPlan = (tasks: TaskNode[]) => {
+  type MinimalTask = {
+    id: string;
+    label: string;
+  };
+
+  const [showTestPlanModal, setShowTestPlanModal] = useState(false);
+  const [orderedTasks, setOrderedTasks] = useState<MinimalTask[]>([]);
+
+  const handleGenerateTestPlan = (tasks: MinimalTask[]) => {
     setOrderedTasks(tasks);
     setShowTestPlanModal(true);
   };
 
-  const [showTestPlanModal, setShowTestPlanModal] = useState(false);
-  const [orderedTasks, setOrderedTasks] = useState<TaskNode[]>([]);
-
   return (
     <div className="relative flex flex-col h-screen overflow-hidden">
-      <TopBar
-        currentScreen="product-doc-sync"
-        onToggleScreen={handleScreenSwitch}
-      />
+      <TopBar currentScreen="product-doc-sync" />
       <div className="flex flex-row flex-grow h-full relative overflow-hidden">
         {/* Sidebar gauche */}
         <div
@@ -177,8 +172,6 @@ export const ProductDocSync: React.FC = () => {
             onToggle={() => setIsLeftSidebarExpanded(!isLeftSidebarExpanded)}
             onAddVersion={handleAddVersion}
             onPublish={handlePublishVersion}
-            products={products}
-            versions={versions}
             features={features}
             selectedProduct={selectedProduct}
             setSelectedProduct={setSelectedProduct}
@@ -187,9 +180,7 @@ export const ProductDocSync: React.FC = () => {
             setSelectedVersion={setSelectedVersion}
             versionOptions={versionOptions}
             selectedFeature={selectedFeature}
-            setSelectedFeature={setSelectedFeature}
             onSelectFeature={setSelectedFeature}
-            onToggleExpand={handleToggleExpand}
             onReorderFeatures={handleReorder}
             onIndent={handleIndent}
             onOutdent={handleOutdent}
@@ -208,7 +199,6 @@ export const ProductDocSync: React.FC = () => {
             version={selectedVersion}
             height={impactMapHeight}
             onGenerateTestPlan={handleGenerateTestPlan}
-            setShowTestPlan={setShowImpactMap}
           />
           <TestPlanModal
             open={showTestPlanModal}

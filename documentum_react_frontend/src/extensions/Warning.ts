@@ -14,10 +14,19 @@ const Warning = Node.create({
   },
   addCommands() {
     return {
-      setWarning:
-        () =>
+      insertWarning:
+        (attrs = {}) =>
         ({ commands }) =>
-          commands.setNode("warning"),
+          commands.insertContent({
+            type: "warning",
+            attrs,
+            content: [
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: "Nouveau bloc Avertissement..." }],
+              },
+            ],
+          }),
     };
   },
 });

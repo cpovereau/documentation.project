@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Editor } from "@tiptap/react";
 import { Button } from "components/ui/button";
 import { X } from "lucide-react";
 import ExerciceItem from "./ExerciceItem";
