@@ -23,33 +23,47 @@ export default function LoginScreen() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 rounded shadow-md w-80"
-      >
-        <h2 className="text-lg font-bold mb-4">Connexion</h2>
-        <input
-          type="text"
-          placeholder="Nom d'utilisateur"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="w-full mb-3 p-2 border rounded"
-        />
-        <input
-          type="password"
-          placeholder="Mot de passe"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full mb-3 p-2 border rounded"
-        />
-        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded w-full"
-        >
-          Se connecter
-        </button>
-      </form>
+      <div className="flex bg-white shadow-lg rounded-lg overflow-hidden">
+        {/* Bloc noir gauche */}
+        <div className="bg-black text-white w-80 p-6 flex flex-col items-center justify-center">
+          <img
+            src="/logo.png"
+            alt="Logo"
+            className="w-38 h-38 object-contain mb-2"
+          />
+          <h1 className="text-xl font-bold text-center">Documentum</h1>
+        </div>
+
+        {/* Bloc formulaire droit */}
+        <div className="p-8 w-96 flex flex-col justify-center">
+          <h2 className="text-xl font-bold text-center mb-6">Connexion</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              type="text"
+              placeholder="Nom d'utilisateur"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full p-2 border rounded"
+            />
+            <input
+              type="password"
+              placeholder="Mot de passe"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-2 border rounded"
+            />
+            {error && (
+              <p className="text-red-500 text-sm text-center">{error}</p>
+            )}
+            <button
+              type="submit"
+              className="bg-blue-600 text-white w-full py-2 rounded hover:bg-blue-700"
+            >
+              Se connecter
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

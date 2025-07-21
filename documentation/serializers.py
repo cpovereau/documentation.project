@@ -69,11 +69,15 @@ class RubriqueSerializer(serializers.ModelSerializer):
     fonctionnalite_id = serializers.PrimaryKeyRelatedField(
         queryset=Fonctionnalite.objects.all(), source='fonctionnalite', write_only=True, allow_null=True
     )
+    locked_by = serializers.StringRelatedField(read_only=True)
+
     class Meta:
         model = Rubrique
         fields = [
-            'id', 'titre', 'contenu_xml', 'projet', 'type_rubrique', 'fonctionnalite', 'fonctionnalite_id',
-            'version_projet', 'is_active', 'is_archived', 'date_creation', 'date_mise_a_jour'
+            'id', 'titre', 'contenu_xml', 'projet', 'type_rubrique',
+            'fonctionnalite', 'fonctionnalite_id', 'version_projet',
+            'is_active', 'is_archived', 'date_creation', 'date_mise_a_jour',
+            'locked_by', 'locked_at', 'revision_numero', 'audience', 'version', 'version_precedente'
         ]
     
     def validate(self, data):

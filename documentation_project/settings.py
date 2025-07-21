@@ -25,13 +25,13 @@ INSTALLED_APPS = [
 # Configuration des middlewares
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
 ]
 
 # Définit la racine des URLs
@@ -93,10 +93,14 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'ngrok-free.app', 'b9e3-2a01-cb19-8a9
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",
 ]
 
+# Autoriser les cookies pour les requêtes CORS
+CORS_ALLOW_CREDENTIALS = True
+
 # Mode debug
-DEBUG = False
+DEBUG =True
 
 # Paramètres régionaux
 LANGUAGE_CODE = 'fr-fr'

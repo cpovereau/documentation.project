@@ -3,6 +3,7 @@ import { Button } from "components/ui/button";
 import { SettingsIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SettingsModal from "@/screens/Settings/SettingsModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TopBarProps {
   currentScreen?: "desktop" | "product-doc-sync";
@@ -11,6 +12,8 @@ interface TopBarProps {
 export const TopBar = ({ currentScreen = "desktop" }: TopBarProps) => {
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
+
+  const { user, logout: handleLogout } = useAuth();
 
   // Détermine le bouton switch selon l'écran courant
   const switchLabel =
@@ -30,7 +33,9 @@ export const TopBar = ({ currentScreen = "desktop" }: TopBarProps) => {
       {/* Texte bienvenue */}
       <div className="flex-1 ml-6 font-body-base text-white">
         <span>Bienvenue, </span>
-        <span className="font-semibold text-2xl">Administrateur</span>
+        <span className="font-semibold text-2xl">
+          {user?.first_name || user?.username || "Utilisateur"}
+        </span>
       </div>
 
       {/* Groupe de boutons à droite */}
@@ -57,6 +62,10 @@ export const TopBar = ({ currentScreen = "desktop" }: TopBarProps) => {
         <Button
           variant="danger"
           className="min-w-[140px] h-11 font-semibold text-base shadow"
+          onClick={() => {
+            handleLogout();
+            navigate("/login");
+          }}
         >
           Déconnexion
         </Button>

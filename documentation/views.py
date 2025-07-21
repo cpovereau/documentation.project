@@ -1,4 +1,4 @@
-import pdb, pprint
+import pprint
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -14,7 +14,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .serializers import ProjetSerializer, GammeSerializer, MapSerializer, FonctionnaliteSerializer, AudienceSerializer, RubriqueSerializer, UserSerializer
+from .serializers import ProjetSerializer, GammeSerializer, MapSerializer, FonctionnaliteSerializer, VersionProjetSerializer, AudienceSerializer, RubriqueSerializer, UserSerializer
 from django.utils.timezone import now
 
 # Initialisation du logger
@@ -51,7 +51,7 @@ class ProjetViewSet(viewsets.ModelViewSet):
 
 class VersionProjetViewSet(viewsets.ModelViewSet):
     queryset = VersionProjet.objects.all()
-    serializer_class = ProjetSerializer
+    serializer_class = VersionProjetSerializer
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
@@ -76,7 +76,7 @@ class VersionProjetViewSet(viewsets.ModelViewSet):
         new_version = clone_version(version_projet)
         return Response({
             "message": "Version clonée avec succès",
-            "new_version": ProjetSerializer(new_version).data
+            "new_version": VersionProjetSerializer(new_version).data
         }, status=status.HTTP_201_CREATED)
     
 # ViewSet pour les fonctionnalités
