@@ -259,7 +259,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                 transform: isExpanded ? "translateX(0)" : "translateX(248px)",
               }}
             >
-              <div className="pt-20 px-4 h-full flex flex-col overflow-hidden">
+              <div className="pt-20 px-4 h-full flex flex-col overflow-y-auto overflow-x-hidden">
                 <div className="absolute top-3 right-3">
                   <Button
                     variant="ghost"

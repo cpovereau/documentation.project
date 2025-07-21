@@ -191,7 +191,7 @@ export const ImpactMapGraph: React.FC<ImpactMapGraphProps> = ({
         <Controls position="bottom-right" />
       </ReactFlow>
 
-      <div className="absolute bottom-6 left-6 max-w-xs bg-white border shadow-lg rounded-md p-4 text-sm z-50">
+      <div className="absolute bottom-1 left-6 max-w-xs bg-white border shadow-lg rounded-md p-4 text-sm z-50">
         {selectedTasks.length < allTaskIds.length && (
           <button
             onClick={() => setSelectedTaskIds(allTaskIds)}

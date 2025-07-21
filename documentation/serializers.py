@@ -1,7 +1,6 @@
-# documentation/serializers.py
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Projet, Gamme, Rubrique, Map
+from .models import Projet, Gamme, Rubrique, Map, VersionProjet, Fonctionnalite, Audience
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -22,18 +21,24 @@ class MapSerializer(serializers.ModelSerializer):
         # Validation ou logique supplémentaire si nécessaire
         return Map.objects.create(**validated_data)
 
+class VersionProjetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VersionProjet
+        fields = ['id', 'version_numero', 'date_lancement', 'is_active', 'is_archived']
+
 class ProjetSerializer(serializers.ModelSerializer):
     gamme = GammeSerializer(read_only=True)
     gamme_id = serializers.PrimaryKeyRelatedField(
         queryset=Gamme.objects.all(), source='gamme', write_only=True
     )
     maps = MapSerializer(many=True, read_only=True)
+    versions = VersionProjetSerializer(many=True, read_only=True, source='versions')
 
     class Meta:
         model = Projet
         fields = [
-            'id', 'nom', 'description', 'gamme', 'gamme_id', 'maps', 'version_numero',
-            'date_creation', 'date_mise_a_jour', 'auteur'
+            'id', 'nom', 'description', 'gamme', 'gamme_id', 'maps', 'versions',
+            'version_numero', 'date_creation', 'date_mise_a_jour', 'auteur'
         ]
         extra_kwargs = {'auteur': {'read_only': True}}
 
@@ -44,8 +49,38 @@ class ProjetSerializer(serializers.ModelSerializer):
 
         return projet
 
+class FonctionnaliteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Fonctionnalite
+        fields = ['id', 'produit', 'nom', 'id_fonctionnalite', 'description']
+
+class AudienceSerializer(serializers.ModelSerializer):
+    fonctionnalites = FonctionnaliteSerializer(many=True, read_only=True)
+    fonctionnalite_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Fonctionnalite.objects.all(), source='fonctionnalites', write_only=True, many=True
+    )
+
+    class Meta:
+        model = Audience
+        fields = ['id', 'nom', 'description', 'fonctionnalites', 'fonctionnalite_ids']
+
 class RubriqueSerializer(serializers.ModelSerializer):
+    fonctionnalite = FonctionnaliteSerializer(read_only=True)
+    fonctionnalite_id = serializers.PrimaryKeyRelatedField(
+        queryset=Fonctionnalite.objects.all(), source='fonctionnalite', write_only=True, allow_null=True
+    )
     class Meta:
         model = Rubrique
-        fields = '__all__'  # Spécifiez ici les champs que vous voulez inclure
+        fields = [
+            'id', 'titre', 'contenu_xml', 'projet', 'type_rubrique', 'fonctionnalite', 'fonctionnalite_id',
+            'version_projet', 'is_active', 'is_archived', 'date_creation', 'date_mise_a_jour'
+        ]
+    
+    def validate(self, data):
+        projet = data.get('projet')
+        version_projet = data.get('version_projet')
 
+        if version_projet and version_projet.projet != projet:
+            raise serializers.ValidationError("La version associée ne correspond pas au projet sélectionné.")
+
+        return data

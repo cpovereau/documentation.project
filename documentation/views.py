@@ -1,26 +1,21 @@
-# documentation/views.py
-import pdb
+import pdb, pprint
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from .models import Projet, Gamme, Map, Rubrique
+from .models import Projet, VersionProjet, Gamme, Map, Fonctionnalite, Audience, Rubrique
+from .utils import get_active_version, clone_version
 #import uuid  # Utilisé pour générer un token unique
 import logging
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
-from django.db import transaction
+from django.db import transaction, connection
 from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
-#from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .serializers import ProjetSerializer, GammeSerializer, MapSerializer, RubriqueSerializer, UserSerializer
+from .serializers import ProjetSerializer, GammeSerializer, MapSerializer, FonctionnaliteSerializer, AudienceSerializer, RubriqueSerializer, UserSerializer
 from django.utils.timezone import now
-import requests
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 # Initialisation du logger
 logger = logging.getLogger(__name__)
@@ -31,6 +26,10 @@ def custom_404(request):
 
 def custom_500(request):
     return render(request, "500.html", status=500)
+
+# Visualisation des requêtes SQL dans la console
+def debug_queries():
+    pprint.pprint(connection.queries)
 
 #ViewSet pour les gammes
 class GammeViewSet(viewsets.ModelViewSet):
@@ -50,10 +49,76 @@ class ProjetViewSet(viewsets.ModelViewSet):
         print(f"Permissions utilisateur : {request.user.get_all_permissions()}")
         return super().list(request, *args, **kwargs)
 
+class VersionProjetViewSet(viewsets.ModelViewSet):
+    queryset = VersionProjet.objects.all()
+    serializer_class = ProjetSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # Assurer qu'une seule version active existe
+        projet = serializer.validated_data['projet']
+        serializer.save(projet=projet, is_active=True)
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        if serializer.validated_data.get('is_active'):
+            # Désactiver les autres versions actives du projet
+            VersionProjet.objects.filter(
+                projet=instance.projet, is_active=True
+            ).exclude(pk=instance.pk).update(is_active=False)
+
+        serializer.save()
+
+    @transaction.atomic
+    def clone(self, request, pk=None):
+        """Cloner une version existante"""
+        version_projet = get_object_or_404(VersionProjet, pk=pk)
+        new_version = clone_version(version_projet)
+        return Response({
+            "message": "Version clonée avec succès",
+            "new_version": ProjetSerializer(new_version).data
+        }, status=status.HTTP_201_CREATED)
+    
+# ViewSet pour les fonctionnalités
+class FonctionnaliteViewSet(viewsets.ModelViewSet):
+    queryset = Fonctionnalite.objects.select_related('produit').all()
+    serializer_class = FonctionnaliteSerializer
+
+# ViewSet pour les audiences
+class AudienceViewSet(viewsets.ModelViewSet):
+    queryset = Audience.objects.prefetch_related('fonctionnalites').all()
+    serializer_class = AudienceSerializer
+
 # ViewSet pour les rubriques
 class RubriqueViewSet(viewsets.ModelViewSet):
-    queryset = Rubrique.objects.all()
+    queryset = Rubrique.objects.select_related('projet', 'version_projet', 'type_rubrique').prefetch_related('fonctionnalite').all()
     serializer_class = RubriqueSerializer
+
+    def perform_create(self, serializer):
+        # Associer la rubrique à la version active du projet
+        projet = serializer.validated_data.get('projet')
+        version_projet = VersionProjet.objects.filter(projet=projet, is_active=True).first()
+
+        if not version_projet:
+            raise ValidationError("Aucune version active n'est disponible pour ce projet.")
+
+        rubrique = serializer.save(version_projet=version_projet)
+        logger.info(f"Rubrique '{rubrique.titre}' créée pour le projet '{rubrique.projet.nom}' par {self.request.user.username}.")
+
+    def perform_update(self, serializer):
+        with transaction.atomic():
+            # Verrouillage de la rubrique pour éviter les conflits
+            rubrique = Rubrique.objects.select_for_update().get(pk=serializer.instance.pk)
+            # Vérification de la cohérence entre version_projet et projet
+            projet = serializer.validated_data.get('projet', rubrique.projet)
+            version_projet = serializer.validated_data.get('version_projet', rubrique.version_projet)
+
+            if version_projet and version_projet.projet != projet:
+                raise ValidationError("La version associée à la rubrique ne correspond pas au projet.")
+
+            # Sauvegarde de la mise à jour
+            rubrique = serializer.save()
+            logger.info(f"Rubrique '{rubrique.titre}' mise à jour pour le projet '{rubrique.projet.nom}' par {self.request.user.username}.")
 
 # Classe pour la création de projet
 class CreateProjectAPIView(APIView):
@@ -65,6 +130,15 @@ class CreateProjectAPIView(APIView):
         serializer = ProjetSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             projet = serializer.save()  # Sauvegarde le projet
+
+            # Créer une version initiale par défaut
+            VersionProjet.objects.create(
+                projet=projet,
+                version_numero="1.0.0",
+                date_lancement=now(),
+                notes_version="Version initiale",
+                is_active=True
+            )
 
             # Vérifie s'il existe déjà une Map associée à ce projet
             if not Map.objects.filter(projet=projet).exists():
@@ -138,25 +212,6 @@ def login_view(request):
     else:
         logger.warning(f"Failed login attempt for user '{username}' from IP {request.META.get('REMOTE_ADDR', 'IP not found')}")
         return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
-    
-# Vue pour la vérification de l'orthographe
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def check_orthographe(request):
-    texte = request.data.get("text", "")
-    langue = request.data.get("language", "fr")
-
-    if not texte.strip():
-        return Response({"error": "Le texte est vide."}, status=400)
-
-    try:
-        lt_response = requests.post("http://localhost:8010/v2/check", data={
-            "text": texte,
-            "language": langue
-        })
-        return Response(lt_response.json())
-    except requests.exceptions.RequestException as e:
-        return Response({"error": "Erreur de connexion à LanguageTool", "details": str(e)}, status=500)
 
 # Vue pour la déconnexion
 @csrf_exempt

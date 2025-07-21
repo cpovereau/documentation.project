@@ -10,7 +10,6 @@ import {
   Copy,
   Trash,
   Upload,
-  Star,
   FileText,
   Globe,
   GraduationCap,
@@ -208,7 +207,7 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
                       <span className="italic">({project.gamme})</span>
                     </div>
                     {selectedProjectId === project.id && (
-                      <Star
+                      <div
                         className="absolute w-6 h-6 top-0 right-0"
                         aria-label="Projet actif"
                       />
