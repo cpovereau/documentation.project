@@ -1,18 +1,34 @@
+// src/extensions/Note.ts
 import { Node, mergeAttributes } from "@tiptap/core";
 
-const Note = Node.create({
+export const Note = Node.create({
   name: "note",
   group: "block",
-  content: "block*",
+  content: "inline*",
   defining: true,
-  draggable: true,
+  isolating: false,
+
+  addAttributes() {
+    return {
+      type: {
+        default: "note",
+        parseHTML: (element) => element.getAttribute("type") || "note",
+        renderHTML: (attributes) => {
+          return { type: attributes.type };
+        },
+      },
+    };
+  },
+
   parseHTML() {
     return [{ tag: "note" }];
   },
+
   renderHTML({ HTMLAttributes }) {
     return ["note", mergeAttributes(HTMLAttributes), 0];
   },
- addCommands() {
+
+  addCommands() {
     return {
       insertNote:
         (attrs = {}) =>
@@ -22,13 +38,15 @@ const Note = Node.create({
             attrs,
             content: [
               {
-                type: "paragraph",
-                content: [{ type: "text", text: "Nouveau bloc Note..." }],
+                type: "text",
+                text: attrs.type === "warning"
+                  ? "⚠️ Attention : contenu critique."
+                  : attrs.type === "important"
+                  ? "🔔 Information importante."
+                  : "💬 Note informative.",
               },
             ],
           }),
     };
   },
 });
-
-export default Note;

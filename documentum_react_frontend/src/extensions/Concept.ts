@@ -1,17 +1,18 @@
 // src/extensions/Concept.ts
 import { Node, mergeAttributes } from "@tiptap/core";
 
-const Concept = Node.create({
+
+// 🧠 Concept node for DITA structure
+export const Concept = Node.create({
   name: "concept",
-  group: "block",
-  content: "block*",
-  draggable: true,
+  group: "document",
+  content: "title prolog? conbody",
+  defining: true,
+  selectable: true,
 
   addAttributes() {
     return {
-      id: {
-        default: null,
-      },
+      id: { default: null },
     };
   },
 
@@ -33,8 +34,21 @@ const Concept = Node.create({
             attrs,
             content: [
               {
-                type: "paragraph",
-                content: [{ type: "text", text: "Nouveau bloc Concept..." }],
+                type: "title",
+                content: [{ type: "text", text: "Titre du concept" }],
+              },
+              {
+                type: "prolog",
+                content: [],
+              },
+              {
+                type: "conbody",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "Contenu initial du concept..." }],
+                  },
+                ],
               },
             ],
           }),
@@ -42,4 +56,29 @@ const Concept = Node.create({
   },
 });
 
-export default Concept;
+
+// Export the Concept node
+export const Conbody = Node.create({
+  name: "conbody",
+  group: "block",
+  content: "block*",
+  defining: true,
+
+  addAttributes() {
+    return {
+      id: { default: null },
+    };
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: "conbody",
+      },
+    ];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ["conbody", mergeAttributes(HTMLAttributes), 0];
+  },
+});

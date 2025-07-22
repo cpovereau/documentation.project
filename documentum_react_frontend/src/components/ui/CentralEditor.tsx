@@ -19,15 +19,10 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
-import Link from "@tiptap/extension-link";
 import Color from "@tiptap/extension-color";
-import TextStyle from "@tiptap/extension-text-style";
-import Task from "extensions/Task";
-import Concept from "extensions/Concept";
-import Reference from "extensions/Reference";
-import Important from "extensions/Important";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Task, Concept, Reference, GrammarHighlight } from "@/extensions";
 import Note from "extensions/Note";
-import Warning from "extensions/Warning";
 import { FindReplaceDialog } from "components/ui//FindReplaceDialog";
 import { EditorHistoryPanel } from "components/ui/EditorHistoryPanel";
 import { VerticalDragHandle } from "components/ui/VerticalDragHandle";
@@ -38,7 +33,6 @@ import { useFindReplaceTipTap } from "@/hooks/useFindReplaceTipTap";
 import { useRubriqueChangeTracker } from "@/hooks/useRubriqueChangeTracker";
 import { useSpeechCommands } from "@/hooks/useSpeechCommands";
 import { useEditorShortcuts } from "@/hooks/useEditorShortcuts";
-import { GrammarHighlight } from "@/extensions/GrammarHighlight";
 import { useGrammarChecker } from "@/hooks/useGrammarChecker";
 import { useEditorHistoryTracker } from "@/hooks/useEditorHistoryTracker";
 import debounce from "lodash.debounce";
@@ -124,14 +118,11 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       Underline,
       TextStyle,
       Color,
-      Link,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Task,
       Concept,
       Reference,
-      Important,
       Note,
-      Warning,
     ],
     content: "<p>Commence à écrire…</p>",
     onUpdate({ editor }) {
@@ -654,80 +645,23 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
                 ? "heading2"
                 : editor?.isActive("heading", { level: 3 })
                 ? "heading3"
-                : editor?.isActive("important")
+                : editor?.isActive("note", { type: "important" })
                 ? "important"
-                : editor?.isActive("note")
+                : editor?.isActive("note", { type: "note" })
                 ? "note"
-                : editor?.isActive("warning")
+                : editor?.isActive("note", { type: "warning" })
                 ? "warning"
                 : "paragraph"
             }
             onChange={(e) => {
               const value = e.target.value;
-              // Transformation en place pour titre et paragraphe
-              if (value === "paragraph")
-                editor?.chain().focus().setParagraph().run();
-              if (value === "heading1")
-                editor?.chain().focus().toggleHeading({ level: 1 }).run();
-              if (value === "heading2")
-                editor?.chain().focus().toggleHeading({ level: 2 }).run();
-              if (value === "heading3")
-                editor?.chain().focus().toggleHeading({ level: 3 }).run();
-              // Insertion de bloc Important, Note, Warning
-              if (value === "important") {
-                editor
-                  ?.chain()
-                  .focus()
-                  .insertContent({
-                    type: "important",
-                    content: [
-                      {
-                        type: "paragraph",
-                        content: [{ type: "text", text: "Texte important..." }],
-                      },
-                    ],
-                  })
-                  .run();
-              }
-              if (value === "note") {
-                editor
-                  ?.chain()
-                  .focus()
-                  .insertContent({
-                    type: "note",
-                    content: [
-                      {
-                        type: "paragraph",
-                        content: [{ type: "text", text: "Texte de note..." }],
-                      },
-                    ],
-                  })
-                  .run();
-              }
-              if (value === "warning") {
-                editor
-                  ?.chain()
-                  .focus()
-                  .insertContent({
-                    type: "warning",
-                    content: [
-                      {
-                        type: "paragraph",
-                        content: [
-                          { type: "text", text: "Texte de warning..." },
-                        ],
-                      },
-                    ],
-                  })
-                  .run();
-              }
+
               if (value === "paragraph") {
                 if (
-                  editor?.isActive("important") ||
-                  editor?.isActive("note") ||
-                  editor?.isActive("warning")
+                  editor?.isActive("note", { type: "important" }) ||
+                  editor?.isActive("note", { type: "note" }) ||
+                  editor?.isActive("note", { type: "warning" })
                 ) {
-                  // Remplace le node courant par un paragraphe contenant son texte
                   const text = editor?.state.doc.textBetween(
                     editor?.state.selection.from,
                     editor?.state.selection.to,
@@ -743,6 +677,35 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
                 } else {
                   editor?.chain().focus().setParagraph().run();
                 }
+              }
+
+              if (value === "heading1")
+                editor?.chain().focus().toggleHeading({ level: 1 }).run();
+              if (value === "heading2")
+                editor?.chain().focus().toggleHeading({ level: 2 }).run();
+              if (value === "heading3")
+                editor?.chain().focus().toggleHeading({ level: 3 }).run();
+
+              if (["important", "note", "warning"].includes(value)) {
+                editor
+                  ?.chain()
+                  .focus()
+                  .insertContent({
+                    type: "note",
+                    attrs: { type: value },
+                    content: [
+                      {
+                        type: "paragraph",
+                        content: [
+                          {
+                            type: "text",
+                            text: `Texte ${value}...`,
+                          },
+                        ],
+                      },
+                    ],
+                  })
+                  .run();
               }
             }}
           >

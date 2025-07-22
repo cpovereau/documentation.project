@@ -4,74 +4,47 @@ from django.core.exceptions import ValidationError
 from .models import Rubrique, VersionProjet
 from .exporters import export_map_to_dita
 
-
 def get_versions(projet, is_active=None, is_archived=None):
-    """
-    Récupère les versions d'un projet avec des filtres optionnels.
-    """
-    versions = VersionProjet.objects.filter(projet=projet)
-    if is_active is not None:
-        versions = versions.filter(is_active=is_active)
-    if is_archived is not None:
-        versions = versions.filter(is_archived=is_archived)
-    return versions
+    ...
 
+# --- Nouvelle fonction pour gabarits DITA ---
+def generate_dita_template(type_dita='concept', auteur='?', titre='Nouvelle rubrique', audience='tous', version='1.0.0'):
+    from datetime import date
 
-def get_active_version(projet):
-    """
-    Retourne la version active pour un projet donné.
-    """
-    return VersionProjet.objects.filter(projet=projet, is_active=True).first()
+    doctype_map = {
+        'concept': 'concept.dtd',
+        'task': 'task.dtd',
+        'reference': 'reference.dtd',
+        'learningAssessment': 'learningAssessment.dtd',
+        'topic': 'topic.dtd'
+    }
 
+    if type_dita not in doctype_map:
+        type_dita = 'topic'
 
-def validate_versions(projet):
-    """
-    Valide que le projet n'a qu'une seule version active.
-    """
-    active_versions = VersionProjet.objects.filter(projet=projet, is_active=True).count()
-    if active_versions > 1:
-        raise ValidationError(f"Le projet {projet.nom} a plusieurs versions actives.")
+    today = date.today().isoformat()
 
+    return f'''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE {type_dita} PUBLIC "-//OASIS//DTD DITA {type_dita.capitalize()}//EN" "{doctype_map[type_dita]}">
+<{type_dita} id="{type_dita}-{today.replace('-', '')}">
+  <title>{titre}</title>
+  <prolog>
+    <author>{auteur}</author>
+    <critdates>
+      <created date="{today}" />
+    </critdates>
+    <metadata>
+      <audience>{audience}</audience>
+      <version>{version}</version>
+    </metadata>
+  </prolog>
+  <body>
+    <p>Contenu initial...</p>
+  </body>
+</{type_dita}>'''
 
-def archive_old_versions(projet):
-    """
-    Archive toutes les versions d'un projet sauf la version active.
-    """
-    active_version = get_active_version(projet)
-    if not active_version:
-        raise ValidationError(f"Aucune version active trouvée pour le projet {projet.nom}.")
-
-    VersionProjet.objects.filter(projet=projet).exclude(pk=active_version.pk).update(
-        is_archived=True,
-        is_active=False
-    )
-
-
-def clone_version(version_source):
-    """
-    Clone une version de projet existante, en dupliquant ses rubriques actives.
-    """
-    new_version = VersionProjet.objects.create(
-        projet=version_source.projet,
-        version_numero=f"{version_source.version_numero}_clone",
-        date_lancement=now(),
-        notes_version=f"Clonage de {version_source.version_numero}",
-        is_active=False
-    )
-
-    rubriques = Rubrique.objects.filter(version_projet=version_source, is_active=True)
-    for r in rubriques:
-        r.pk = None
-        r.version_projet = new_version
-        r.date_creation = now().date()
-        r.date_mise_a_jour = now().date()
-        r.locked_by = None
-        r.locked_at = None
-        r.is_active = True
-        r.is_archived = False
-        r.save()
-
-    return new_version
+# Formats de sortie autorisés pour DITA-OT
+DITA_OUTPUT_FORMATS = ['pdf', 'html5', 'xhtml', 'scorm', 'markdown', 'eclipsehelp']
 
 # Vue Django API pour appeler la publication
 from rest_framework.decorators import api_view, permission_classes
@@ -82,4 +55,11 @@ from rest_framework.permissions import IsAuthenticated
 def publier_map(request, map_id):
     format_output = request.data.get('format', 'pdf')
     result = export_map_to_dita(map_id, output_format=format_output)
+    if result.get("status") == "error":
+        result["formats_supportes"] = DITA_OUTPUT_FORMATS
     return JsonResponse(result)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_formats_publication(request):
+    return JsonResponse({"formats_supportes": DITA_OUTPUT_FORMATS})

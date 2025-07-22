@@ -3,7 +3,8 @@ from django.conf.urls import handler404, handler500
 # from documentation import views
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import GammeViewSet, ProjetViewSet, RubriqueViewSet, VersionProjetViewSet, FonctionnaliteViewSet, AudienceViewSet, login_view, logout_view, CreateProjectAPIView, get_project_details, CreateMapView #check_orthographe, publier_map
+from .views import GammeViewSet, ProjetViewSet, RubriqueViewSet, VersionProjetViewSet, FonctionnaliteViewSet, AudienceViewSet, login_view, logout_view, CreateProjectAPIView, get_project_details, CreateMapView #check_orthographe, 
+from .utils import publier_map, get_formats_publication
 
 router = DefaultRouter()
 router.register(r'gammes', GammeViewSet)
@@ -14,14 +15,15 @@ router.register(r'fonctionnalites', FonctionnaliteViewSet)
 router.register(r'audiences', AudienceViewSet)
 
 urlpatterns = [
-    path('', include(router.urls)),  # Inclut les routes de RubriqueViewSet
+    path('', include(router.urls)),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path('projet/create/', CreateProjectAPIView.as_view(), name='create_project_api'),
     path('projets/<int:pk>/details/', get_project_details, name='project_details'),
     path('api/maps/', CreateMapView.as_view(), name='create_map'),
+    path('api/publier-map/<int:map_id>/', publier_map, name='publier_map'),
+    path('api/formats-publication/', get_formats_publication, name='formats_publication'),
     # path('api/orthographe/', check_orthographe, name='check_orthographe'),
-    # path('api/publier-map/<int:map_id>/', publier_map, name='publier_map'),
 ]
 
 handler404 = 'documentation.views.custom_404'
