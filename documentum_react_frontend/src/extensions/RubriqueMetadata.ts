@@ -1,29 +1,36 @@
 // src/extensions/RubriqueMetadata.ts
 import { Node, mergeAttributes } from '@tiptap/core'
 
-export interface RubriqueMetadataOptions {
-  HTMLAttributes: Record<string, any>
-}
-
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    rubriqueMetadata: {
-      setRubriqueMetadata: (data?: string) => ReturnType
-    }
-  }
-}
-
-export const RubriqueMetadata = Node.create<RubriqueMetadataOptions>({
+export const RubriqueMetadata = Node.create({
   name: 'rubriqueMetadata',
 
   group: 'block',
-  content: 'inline*',
-  defining: true,
-  selectable: true,
+  atom: true,
+  selectable: false,
 
   addOptions() {
     return {
       HTMLAttributes: {},
+    }
+  },
+
+  addAttributes() {
+    return {
+      auteur: {
+        default: '',
+      },
+      dateCreation: {
+        default: '',
+      },
+      dateModification: {
+        default: '',
+      },
+      audience: {
+        default: 'générique',
+      },
+      fonctionnalite: {
+        default: '',
+      },
     }
   },
 
@@ -36,12 +43,26 @@ export const RubriqueMetadata = Node.create<RubriqueMetadataOptions>({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['rubrique-metadata', mergeAttributes(HTMLAttributes), 0]
+    return ['rubrique-metadata', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)]
   },
 
-  addCommands() {
-    return {
-      setRubriqueMetadata:
-        (data = '') =>
-        ({ commands }) => {
-          return commands.
+  addNodeView() {
+    return ({ HTMLAttributes }) => {
+      const container = document.createElement('div')
+      container.className = 'text-sm text-muted-foreground bg-gray-100 px-4 py-2 rounded border border-gray-300 my-2'
+
+      const rows = [
+        `Auteur : ${HTMLAttributes.auteur || 'N/A'}`,
+        `Date création : ${HTMLAttributes.dateCreation || 'N/A'}`,
+        `Dernière modif : ${HTMLAttributes.dateModification || 'N/A'}`,
+        `Audience : ${HTMLAttributes.audience || 'générique'}`,
+        `Fonctionnalité : ${HTMLAttributes.fonctionnalite || 'N/A'}`,
+      ]
+
+      container.innerHTML = rows.map(row => `<div>${row}</div>`).join('')
+      return {
+        dom: container,
+      }
+    }
+  },
+})
