@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from documentation.constants.publication import TYPE_SORTIE_CHOICES
 import xml.etree.ElementTree as ET
 from django.utils.timezone import now
 
@@ -185,17 +186,10 @@ class Media(models.Model):
 # --- Profils de publication ---
 class ProfilPublication(models.Model):
     nom = models.CharField(max_length=255)
-    type_sortie = models.CharField(
-        max_length=50,
-        choices=[
-            ('PDF', 'PDF'),
-            ('Web', 'Web Help'),
-            ('Moodle', 'Moodle'),
-            ('Fiche', 'Fiche Pratique')
-        ]
-    )
-    map = models.ForeignKey(Map, on_delete=models.CASCADE, related_name='profils')
+    type_sortie = models.CharField(max_length=50, choices=TYPE_SORTIE_CHOICES)
+    map = models.ForeignKey(Map, on_delete=models.SET_NULL, null=True, blank=True, related_name='profils')
     parametres = models.JSONField(default=dict)
+    is_archived = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Profil: {self.nom} ({self.type_sortie})"

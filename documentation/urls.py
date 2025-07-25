@@ -3,7 +3,7 @@ from django.conf.urls import handler404, handler500
 # from documentation import views
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import GammeViewSet, ProduitViewSet, ProjetViewSet, RubriqueViewSet, VersionProjetViewSet, FonctionnaliteViewSet, AudienceViewSet, TagViewSet, ProfilPublicationViewSet, InterfaceUtilisateurViewSet, get_csrf_token, login_view, logout_view, CreateProjectAPIView, get_project_details, CreateMapView #check_orthographe, 
+from .views import GammeViewSet, ProduitViewSet, ProjetViewSet, RubriqueViewSet, VersionProjetViewSet, FonctionnaliteViewSet, AudienceViewSet, TagViewSet, ProfilPublicationViewSet, InterfaceUtilisateurViewSet, get_csrf_token, login_view, logout_view, CreateProjectAPIView, get_project_details, CreateMapView, get_type_sortie_choices #check_orthographe, 
 from .utils import publier_map, get_formats_publication
 
 router = DefaultRouter()
@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/maps/', CreateMapView.as_view(), name='create_map'),
     path('api/publier-map/<int:map_id>/', publier_map, name='publier_map'),
     path('api/formats-publication/', get_formats_publication, name='formats_publication'),
+    path("type-sortie/", get_type_sortie_choices, name="type_sortie_choices"),
     # path('api/orthographe/', check_orthographe, name='check_orthographe'),
 ]
 

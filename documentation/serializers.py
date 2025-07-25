@@ -70,7 +70,7 @@ class TagSerializer(serializers.ModelSerializer):
 class ProfilPublicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfilPublication
-        fields = ['id', 'nom', 'type_sortie', 'is_archived']
+        fields = ['id', 'nom', 'type_sortie', 'parametres', 'map', 'is_archived']
 
 class InterfaceUtilisateurSerializer(serializers.ModelSerializer):
     class Meta:

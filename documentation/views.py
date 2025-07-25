@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import AllowAny
 from .models import Projet, VersionProjet, Gamme, Produit, Map, Fonctionnalite, Audience, Tag, ProfilPublication, InterfaceUtilisateur, Rubrique
 from .utils import get_active_version, clone_version
+from documentation.constants.publication import TYPE_SORTIE_CHOICES
 #import uuid  # Utilisé pour générer un token unique
 import logging
 from django.shortcuts import render, get_object_or_404
@@ -347,6 +348,11 @@ class CreateMapView(APIView):
             map_instance = serializer.save()
             return Response(MapSerializer(map_instance).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Vue pour publier les formats de publication
+@api_view(["GET"])
+def get_type_sortie_choices(request):
+    return Response([{"value": val, "label": label} for val, label in TYPE_SORTIE_CHOICES])
 
 # Vue pour la connexion
 @csrf_exempt

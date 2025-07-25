@@ -3,71 +3,11 @@ import { ImportModal } from "components/ui/import-modal";
 import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { getArchivableHooks, resourceLabels } from "@/hooks/useArchivableList";
-import { toggleArchivableResource } from "@/lib/resources";
 import AddItemModal from "components/ui/AddItemModal";
 import DataListPanel from "components/ui/DataListPanel";
 import { Button } from "components/ui/button";
 import { Plus } from "lucide-react";
 import { cn } from "lib/utils";
-
-const initialFonctionnalites = [
-  {
-    id: 1,
-    nom: "Menu Principal",
-    id_fonctionnalite: "MEN",
-    produit: "PLA",
-    is_archived: false,
-  },
-  {
-    id: 2,
-    nom: "Traitement",
-    id_fonctionnalite: "TRA",
-    produit: "USA",
-    is_archived: false,
-  },
-];
-
-const initialAudiences = [
-  {
-    id: 1,
-    nom: "Utilisateurs avancés",
-    description: "Fonctionnalités expertes",
-    is_archived: false,
-  },
-  {
-    id: 2,
-    nom: "Débutants",
-    description: "Fonctions simples",
-    is_archived: false,
-  },
-];
-
-const initialTags = [
-  { id: 1, nom: "Important", is_archived: false },
-  { id: 2, nom: "À vérifier", is_archived: false },
-];
-
-const initialProfils = [
-  { id: 1, nom: "Export PDF", type_sortie: "PDF", is_archived: false },
-  { id: 2, nom: "Export Moodle", type_sortie: "Moodle", is_archived: false },
-];
-
-const initialInterface = [
-  {
-    id: 1,
-    nom: "Bouton Valider",
-    type: "Bouton",
-    description: "Validation formulaire",
-    is_archived: false,
-  },
-  {
-    id: 2,
-    nom: "Écran Connexion",
-    type: "Écran",
-    description: "Connexion utilisateur",
-    is_archived: false,
-  },
-];
 
 const DataTab = () => {
   const [selectedItem, setSelectedItem] = useState<
@@ -79,14 +19,12 @@ const DataTab = () => {
     | "profils_publication"
     | "interface_ui"
   >("gammes");
+  const [editMode, setEditMode] = useState(false);
 
   const [showArchived, setShowArchived] = useState(false);
 
   const hooks = getArchivableHooks(selectedItem, showArchived);
   const currentHook = hooks[selectedItem];
-  const items = currentHook?.items ?? [];
-  const toggleArchive = currentHook?.toggleArchive;
-  const refetch = currentHook?.refetch;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -116,9 +54,6 @@ const DataTab = () => {
       toast.error(err.message || "Erreur lors de l'archivage/restauration.");
     }
   };
-
-  const filterItems = (items: any[]) =>
-    items.filter((i) => i.is_archived === showArchived);
 
   const getTitle = () => {
     return resourceLabels[selectedItem] ?? "";
@@ -169,6 +104,43 @@ const DataTab = () => {
     }
   };
 
+  const shouldShowActions = selectedItem !== "profils_publication";
+
+  const editButton = shouldShowActions && (
+    <Button
+      className={cn(
+        "mt-3 px-3 text-sm font-medium bg-blue-500 text-white hover:bg-blue-600"
+      )}
+      title="Modifier les libellés Nom, Description et Code uniquement"
+      onClick={() => setEditMode(!editMode)}
+    >
+      {editMode ? "Annuler" : "Modifier"}
+    </Button>
+  );
+
+  const importButton = selectedItem === "fonctionnalites" && (
+    <div className="flex justify-end mt-3">
+      <Button
+        className={cn(
+          "px-3 text-sm font-medium bg-orange-500 text-white hover:bg-orange-600"
+        )}
+        onClick={() => setIsImportOpen(true)}
+      >
+        Importer
+      </Button>
+    </div>
+  );
+
+  const addButton = shouldShowActions && (
+    <Button
+      variant="ghost"
+      onClick={handleAdd}
+      title={`Ajouter ${getTitle().toLowerCase()}`}
+    >
+      <Plus className="w-5 h-5" />
+    </Button>
+  );
+
   const [isImportOpen, setIsImportOpen] = useState(false);
 
   useEffect(() => {
@@ -181,6 +153,10 @@ const DataTab = () => {
         console.error("❌ [init] Erreur API /gammes/ :", err);
       });
   }, []);
+
+  useEffect(() => {
+    setEditMode(false); // sort automatiquement du mode édition quand on change d'onglet
+  }, [selectedItem]);
 
   return (
     <>
@@ -277,31 +253,15 @@ const DataTab = () => {
 
         {/* Colonne droite */}
         <div className="flex-1 overflow-auto">
-          <div className="flex justify-between items-center px-4">
+          {/* ➤ Zone entête au-dessus du tableau */}
+          <div className="flex justify-between items-center px-4 py-2">
             <div className="flex items-center gap-4">
               <h2 className="text-xl font-semibold">{getTitle()}</h2>
-              {selectedItem === "fonctionnalites" && (
-                <div className="flex justify-end mt-3">
-                  <Button
-                    className={cn(
-                      "px-3 text-sm font-medium bg-orange-500 text-white hover:bg-orange-600"
-                    )}
-                    onClick={() => setIsImportOpen(true)}
-                  >
-                    Importer
-                  </Button>
-                </div>
-              )}
+              {editButton}
+              {importButton}
             </div>
-            <Button
-              variant="ghost"
-              onClick={handleAdd}
-              title={`Ajouter ${getTitle().toLowerCase()}`}
-            >
-              <Plus className="w-5 h-5" />
-            </Button>
+            {addButton}
           </div>
-
           <DataListPanel
             title={getTitle()}
             items={getItems()}
@@ -310,6 +270,19 @@ const DataTab = () => {
             onArchive={handleArchive}
             archived={showArchived}
             onToggleArchived={setShowArchived}
+            editable={editMode}
+            onUpdate={async (id, changes) => {
+              try {
+                await api.patch(`/${selectedItem}/${id}/`, changes, {
+                  withCredentials: true,
+                });
+                await currentHook.refetch();
+                toast.success("Élément mis à jour.");
+              } catch (err: any) {
+                console.error("Erreur modification :", err);
+                toast.error("Erreur lors de la mise à jour.");
+              }
+            }}
           />
         </div>
       </div>

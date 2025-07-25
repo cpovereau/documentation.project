@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { cn } from "lib/utils";
 import { Button } from "components/ui/button";
 import {
@@ -20,9 +20,59 @@ interface DataListPanelProps {
   onArchive: (id: number, isArchived: boolean) => void;
   archived: boolean;
   onToggleArchived: (value: boolean) => void;
+  editable?: boolean;
+  onUpdate?: (id: number, changes: Record<string, string>) => void;
 }
 
 const ACTION_KEY = "action";
+
+const isEditableColumn = (label: string) =>
+  ["NOM", "DESCRIPTION", "CODE"].includes(label.toUpperCase());
+
+const InlineEditableCell = ({
+  value,
+  onSave,
+}: {
+  value: string;
+  onSave: (val: string) => void;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(value || "");
+
+  return editing ? (
+    <input
+      value={val}
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={() => {
+        setEditing(false);
+        if (val !== value) onSave(val);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          setEditing(false);
+          if (val !== value) onSave(val);
+        }
+        if (e.key === "Escape") {
+          setVal(value);
+          setEditing(false);
+        }
+      }}
+      className="border p-1 w-full rounded text-sm"
+      autoFocus
+    />
+  ) : (
+    <span
+      onDoubleClick={() => setEditing(true)}
+      className={cn(
+        "cursor-pointer hover:underline",
+        !value?.trim() && "italic text-muted-foreground"
+      )}
+    >
+      {value?.trim() || "✏️ Ajouter..."}
+    </span>
+  );
+};
 
 const DataListPanel: React.FC<DataListPanelProps> = ({
   title,
@@ -32,6 +82,8 @@ const DataListPanel: React.FC<DataListPanelProps> = ({
   onArchive,
   archived,
   onToggleArchived,
+  editable = false,
+  onUpdate,
 }) => {
   return (
     <div className="p-4">
@@ -88,7 +140,18 @@ const DataListPanel: React.FC<DataListPanelProps> = ({
                   className={item.is_archived ? "opacity-50 italic" : ""}
                 >
                   {columns.map((col) => (
-                    <TableCell key={col.key}>{item[col.key]}</TableCell>
+                    <TableCell key={col.key}>
+                      {editable && isEditableColumn(col.label) && onUpdate ? (
+                        <InlineEditableCell
+                          value={item[col.key] ?? ""}
+                          onSave={(val) =>
+                            onUpdate(item.id, { [col.key]: val })
+                          }
+                        />
+                      ) : (
+                        item[col.key]
+                      )}
+                    </TableCell>
                   ))}
                   <TableCell className="text-center">
                     {archived ? (
