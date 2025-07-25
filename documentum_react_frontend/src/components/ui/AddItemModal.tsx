@@ -1,8 +1,9 @@
 import React, { useState } from "react";
+import { SelectInModal } from "@/components/ui/SelectInModal";
+import { ArchivableItem } from "@/types/archivable";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
@@ -23,6 +24,8 @@ interface AddItemModalProps {
     | "tags"
     | "profils_publication"
     | "interface_ui";
+  gammes?: { id: number; nom: string }[];
+  produits?: ArchivableItem[];
 }
 
 function AddItemModal({
@@ -30,6 +33,8 @@ function AddItemModal({
   onClose,
   onSubmit,
   itemType,
+  gammes,
+  produits,
 }: Readonly<AddItemModalProps>) {
   const [formData, setFormData] = useState<any>({});
 
@@ -39,7 +44,7 @@ function AddItemModal({
 
   const handleSave = () => {
     if (!formData.nom) return;
-    onSubmit({ ...formData, id: Date.now(), is_archived: false });
+    onSubmit({ ...formData, is_archived: false });
     onClose();
     setFormData({});
   };
@@ -72,10 +77,17 @@ function AddItemModal({
               onChange={(e) => handleChange("nom", e.target.value)}
               className="mb-4"
             />
-            <Input
-              placeholder="Gamme associée"
+            <Textarea
+              placeholder="Description"
+              value={formData.description || ""}
+              onChange={(e) => handleChange("description", e.target.value)}
+              className="mb-4"
+            />
+            <SelectInModal
               value={formData.gamme || ""}
-              onChange={(e) => handleChange("gamme", e.target.value)}
+              onChange={(val) => handleChange("gamme", val)}
+              options={gammes?.map((g) => ({ id: g.id, label: g.nom })) || []}
+              placeholder="Gamme associée"
             />
           </>
         );
@@ -96,10 +108,11 @@ function AddItemModal({
               }
               className="mb-4"
             />
-            <Input
-              placeholder="Produit associé"
+            <SelectInModal
               value={formData.produit || ""}
-              onChange={(e) => handleChange("produit", e.target.value)}
+              onChange={(val) => handleChange("produit", val)}
+              options={produits?.map((p) => ({ id: p.id, label: p.nom })) || []}
+              placeholder="Produit associé"
             />
           </>
         );
@@ -155,19 +168,20 @@ function AddItemModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        aria-labelledby="add-item-title"
-        aria-describedby="add-item-desc"
+        aria-labelledby="modal-title"
+        aria-describedby="modal-desc"
       >
-        <DialogHeader>
-          <DialogTitle id="add-item-title">
-            Ajouter {itemType.replace("_", " ")}
-          </DialogTitle>
-        </DialogHeader>
-        <DialogDescription>
+        <DialogTitle id="modal-title">
+          Ajouter {itemType.replace("_", " ")}
+        </DialogTitle>
+
+        <DialogDescription id="modal-desc">
           Cette boîte de dialogue permet d’ajouter un nouvel élément dans la
           catégorie {itemType.replace("_", " ")}.
         </DialogDescription>
+
         <div className="space-y-4 mt-2">{renderFields()}</div>
+
         <DialogFooter>
           <Button variant="outline" className="h-8 px-4" onClick={onClose}>
             Annuler

@@ -2,7 +2,6 @@ from django.http import JsonResponse
 from django.utils.timezone import now
 from django.core.exceptions import ValidationError
 from .models import Rubrique, VersionProjet
-from .exporters import export_map_to_dita
 
 def get_versions(projet, is_active=None, is_archived=None):
     ...
@@ -43,15 +42,33 @@ def generate_dita_template(type_dita='concept', auteur='?', titre='Nouvelle rubr
   </body>
 </{type_dita}>'''
 
-# Vue Django API pour appeler la publication
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def publier_map(request, map_id):
-    format_output = request.data.get('format', 'pdf')
-    result = export_map_to_dita(map_id, output_format=format_output)
-    if result.get("status") == "error":
-        result["formats_supportes"] = ['pdf', 'html5', 'xhtml', 'scorm', 'markdown', 'eclipsehelp']
-    return JsonResponse(result)
+# -- Fonction pour exporter une Map en DITA --
+def export_map_to_dita(map_id, output_format='pdf'):
+    """
+    Fonction simulant l'export d'une Map en format DITA.
+    À terme, cette fonction devra :
+    - récupérer la Map et ses rubriques
+    - générer un document DITA valide
+    - lancer l'export via DITA-OT
+    """
+    try:
+        map_obj = Map.objects.get(pk=map_id)
+        rubriques = map_obj.rubriques.all()
+
+        # Simulation d'une logique de traitement
+        print(f"Export de la map '{map_obj.nom}' avec {rubriques.count()} rubriques au format {output_format.upper()}")
+
+        return {
+            "status": "success",
+            "message": f"Export DITA effectué avec succès au format {output_format.upper()}",
+            "map": map_obj.nom,
+            "rubriques_count": rubriques.count(),
+            "format": output_format
+        }
+
+    except Map.DoesNotExist:
+        return {
+            "status": "error",
+            "message": f"Aucune map trouvée avec l'ID {map_id}"
+        }

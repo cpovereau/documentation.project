@@ -75,11 +75,13 @@ DATABASES = {
 # Configuration Django REST Framework pour l'authentification
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',  # Authentification par session
         'rest_framework.authentication.TokenAuthentication',  # Utilisation des jetons
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',  # Limite l'accès aux utilisateurs authentifiés
     ],
+    "EXCEPTION_HANDLER": "documentation.exceptions.custom_exception_handler"
 }
 
 # Clé primaire automatique et URL statique
@@ -99,6 +101,14 @@ CORS_ALLOWED_ORIGINS = [
 # Autoriser les cookies pour les requêtes CORS
 CORS_ALLOW_CREDENTIALS = True
 
+# Configuration CSRF pour les requêtes CORS
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "https://*.ngrok-free.app",
+]
+
 # Mode debug
 DEBUG =True
 
@@ -107,3 +117,9 @@ LANGUAGE_CODE = 'fr-fr'
 TIME_ZONE = 'Europe/Paris'
 USE_I18N = True
 USE_TZ = True
+
+# Pour autoriser les cookies cross-origin dans le cas localhost:5173 → 8000
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = False  # True si HTTPS
+SESSION_COOKIE_SECURE = False  # True si HTTPS

@@ -1,42 +1,14 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { ImportModal } from "components/ui/import-modal";
+import { api } from "@/lib/apiClient";
+import { toast } from "sonner";
+import { getArchivableHooks, resourceLabels } from "@/hooks/useArchivableList";
+import { toggleArchivableResource } from "@/lib/resources";
 import AddItemModal from "components/ui/AddItemModal";
 import DataListPanel from "components/ui/DataListPanel";
 import { Button } from "components/ui/button";
 import { Plus } from "lucide-react";
 import { cn } from "lib/utils";
-
-const initialGammes = [
-  {
-    id: 1,
-    nom: "Planning",
-    description: "Module de planification",
-    is_archived: false,
-  },
-  {
-    id: 2,
-    nom: "Usager",
-    description: "Gestion des utilisateurs",
-    is_archived: true,
-  },
-];
-
-const initialProduits = [
-  {
-    id: 1,
-    nom: "PLA",
-    description: "Produit Planning",
-    gamme: "Planning",
-    is_archived: false,
-  },
-  {
-    id: 2,
-    nom: "USA",
-    description: "Produit Usager",
-    gamme: "Usager",
-    is_archived: false,
-  },
-];
 
 const initialFonctionnalites = [
   {
@@ -107,17 +79,14 @@ const DataTab = () => {
     | "profils_publication"
     | "interface_ui"
   >("gammes");
+
   const [showArchived, setShowArchived] = useState(false);
 
-  const [gammes, setGammes] = useState(initialGammes);
-  const [produits, setProduits] = useState(initialProduits);
-  const [fonctionnalites, setFonctionnalites] = useState(
-    initialFonctionnalites
-  );
-  const [audiences, setAudiences] = useState(initialAudiences);
-  const [tags, setTags] = useState(initialTags);
-  const [profils, setProfils] = useState(initialProfils);
-  const [interfaceItems, setInterfaceItems] = useState(initialInterface);
+  const hooks = getArchivableHooks(selectedItem, showArchived);
+  const currentHook = hooks[selectedItem];
+  const items = currentHook?.items ?? [];
+  const toggleArchive = currentHook?.toggleArchive;
+  const refetch = currentHook?.refetch;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -125,34 +94,26 @@ const DataTab = () => {
     setIsModalOpen(true);
   };
 
-  const handleArchive = (id: number) => {
-    const updateItem = (items: any[]) =>
-      items.map((item) =>
-        item.id === id ? { ...item, is_archived: !item.is_archived } : item
-      );
+  const handleCreate = async (item: any) => {
+    if (!currentHook) return;
+    try {
+      await api.post(`/${selectedItem}/`, item, { withCredentials: true });
+      await currentHook.refetch();
+      toast.success(`${resourceLabels[selectedItem]} ajouté avec succès.`);
+    } catch (err: any) {
+      console.error("Erreur lors de l'ajout :", err);
+      toast.error("Erreur lors de la création.");
+    }
+  };
 
-    switch (selectedItem) {
-      case "gammes":
-        setGammes((prev) => updateItem(prev));
-        break;
-      case "produits":
-        setProduits((prev) => updateItem(prev));
-        break;
-      case "fonctionnalites":
-        setFonctionnalites((prev) => updateItem(prev));
-        break;
-      case "audiences":
-        setAudiences((prev) => updateItem(prev));
-        break;
-      case "tags":
-        setTags((prev) => updateItem(prev));
-        break;
-      case "profils_publication":
-        setProfils((prev) => updateItem(prev));
-        break;
-      case "interface_ui":
-        setInterfaceItems((prev) => updateItem(prev));
-        break;
+  const handleArchive = async (id: number, isArchived: boolean) => {
+    if (!currentHook) return;
+
+    try {
+      await currentHook.toggleArchive(id, isArchived);
+    } catch (err: any) {
+      console.error("Erreur archivage:", err);
+      toast.error(err.message || "Erreur lors de l'archivage/restauration.");
     }
   };
 
@@ -160,45 +121,11 @@ const DataTab = () => {
     items.filter((i) => i.is_archived === showArchived);
 
   const getTitle = () => {
-    switch (selectedItem) {
-      case "gammes":
-        return "Gammes";
-      case "produits":
-        return "Produits";
-      case "fonctionnalites":
-        return "Fonctionnalités";
-      case "audiences":
-        return "Audiences";
-      case "tags":
-        return "Tags";
-      case "profils_publication":
-        return "Profils de publication";
-      case "interface_ui":
-        return "Interface utilisateur";
-      default:
-        return "";
-    }
+    return resourceLabels[selectedItem] ?? "";
   };
 
   const getItems = () => {
-    switch (selectedItem) {
-      case "gammes":
-        return filterItems(gammes);
-      case "produits":
-        return filterItems(produits);
-      case "fonctionnalites":
-        return filterItems(fonctionnalites);
-      case "audiences":
-        return filterItems(audiences);
-      case "tags":
-        return filterItems(tags);
-      case "profils_publication":
-        return filterItems(profils);
-      case "interface_ui":
-        return filterItems(interfaceItems);
-      default:
-        return [];
-    }
+    return currentHook?.items ?? [];
   };
 
   const getColumns = () => {
@@ -212,7 +139,7 @@ const DataTab = () => {
         return [
           { key: "nom", label: "Nom" },
           { key: "description", label: "Description" },
-          { key: "gamme", label: "Gamme associée" },
+          { key: "gamme_nom", label: "Gamme associée" },
         ];
       case "fonctionnalites":
         return [
@@ -235,8 +162,7 @@ const DataTab = () => {
       case "interface_ui":
         return [
           { key: "nom", label: "Nom" },
-          { key: "type", label: "Type" },
-          { key: "description", label: "Description" },
+          { key: "code", label: "Code" },
         ];
       default:
         return [];
@@ -244,6 +170,17 @@ const DataTab = () => {
   };
 
   const [isImportOpen, setIsImportOpen] = useState(false);
+
+  useEffect(() => {
+    api
+      .get("/gammes/", { params: { archived: false } })
+      .then((res) => {
+        console.log("✅ [init] Gammes préchargées :", res.data);
+      })
+      .catch((err) => {
+        console.error("❌ [init] Erreur API /gammes/ :", err);
+      });
+  }, []);
 
   return (
     <>
@@ -380,31 +317,9 @@ const DataTab = () => {
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         itemType={selectedItem}
-        onSubmit={(item) => {
-          switch (selectedItem) {
-            case "gammes":
-              setGammes((prev) => [...prev, item]);
-              break;
-            case "produits":
-              setProduits((prev) => [...prev, item]);
-              break;
-            case "fonctionnalites":
-              setFonctionnalites((prev) => [...prev, item]);
-              break;
-            case "audiences":
-              setAudiences((prev) => [...prev, item]);
-              break;
-            case "tags":
-              setTags((prev) => [...prev, item]);
-              break;
-            case "profils_publication":
-              setProfils((prev) => [...prev, item]);
-              break;
-            case "interface_ui":
-              setInterfaceItems((prev) => [...prev, item]);
-              break;
-          }
-        }}
+        onSubmit={handleCreate}
+        gammes={hooks["gammes"]?.items ?? []}
+        produits={hooks["produits"]?.items ?? []}
       />
       {selectedItem === "fonctionnalites" && (
         <ImportModal

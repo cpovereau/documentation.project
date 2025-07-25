@@ -2,6 +2,13 @@ import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 
+function getCSRFToken(): string | undefined {
+  return document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("csrftoken="))
+    ?.split("=")[1];
+}
+
 export default function LoginScreen() {
   const { login } = useAuth();
   const [username, setUsername] = useState("");
@@ -10,13 +17,26 @@ export default function LoginScreen() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const csrfToken = getCSRFToken();
+
     try {
-      const response = await axios.post("http://localhost:8000/login/", {
-        username,
-        password,
-      });
-      login(response.data.token, response.data.user);
+      const response = await axios.post(
+        "http://localhost:8000/login/",
+        {
+          username,
+          password,
+        },
+        {
+          withCredentials: true, // 🔥 pour que le cookie sessionid soit stocké
+          headers: {
+            "X-CSRFToken": csrfToken || "",
+          },
+        }
+      );
+
+      login(response.data.token, response.data.user); // AuthContext
     } catch (err) {
+      console.error("[Login] Échec de la connexion :", err);
       setError("Identifiants invalides");
     }
   };

@@ -3,19 +3,24 @@ from django.conf.urls import handler404, handler500
 # from documentation import views
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import GammeViewSet, ProjetViewSet, RubriqueViewSet, VersionProjetViewSet, FonctionnaliteViewSet, AudienceViewSet, login_view, logout_view, CreateProjectAPIView, get_project_details, CreateMapView #check_orthographe, 
+from .views import GammeViewSet, ProduitViewSet, ProjetViewSet, RubriqueViewSet, VersionProjetViewSet, FonctionnaliteViewSet, AudienceViewSet, TagViewSet, ProfilPublicationViewSet, InterfaceUtilisateurViewSet, get_csrf_token, login_view, logout_view, CreateProjectAPIView, get_project_details, CreateMapView #check_orthographe, 
 from .utils import publier_map, get_formats_publication
 
 router = DefaultRouter()
 router.register(r'gammes', GammeViewSet)
+router.register(r'produits', ProduitViewSet)
 router.register(r'projets', ProjetViewSet)
 router.register(r'rubriques', RubriqueViewSet)
 router.register(r'versions', VersionProjetViewSet)
 router.register(r'fonctionnalites', FonctionnaliteViewSet)
 router.register(r'audiences', AudienceViewSet)
+router.register(r'tags', TagViewSet)
+router.register(r'profils-publication', ProfilPublicationViewSet)
+router.register(r'interfaces', InterfaceUtilisateurViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('csrf/', get_csrf_token, name='csrf'),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path('projet/create/', CreateProjectAPIView.as_view(), name='create_project_api'),

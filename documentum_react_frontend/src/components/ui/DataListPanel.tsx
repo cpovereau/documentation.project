@@ -17,7 +17,7 @@ interface DataListPanelProps {
   items: any[];
   columns: { key: string; label: string }[];
   onAdd: () => void;
-  onArchive: (id: number) => void;
+  onArchive: (id: number, isArchived: boolean) => void;
   archived: boolean;
   onToggleArchived: (value: boolean) => void;
 }
@@ -72,37 +72,48 @@ const DataListPanel: React.FC<DataListPanelProps> = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => (
-              <TableRow
-                key={item.id}
-                className={item.is_archived ? "opacity-50 italic" : ""}
-              >
-                {columns.map((col) => (
-                  <TableCell key={col.key}>{item[col.key]}</TableCell>
-                ))}
-                <TableCell className="text-center">
-                  {archived ? (
-                    <Button
-                      variant="ghost"
-                      onClick={() => onArchive(item.id)}
-                      title={`Restaurer ${title.toLowerCase().slice(0, -1)}`}
-                    >
-                      <Undo2 className="w-4 h-4" />
-                    </Button>
-                  ) : (
-                    !item.is_archived && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => onArchive(item.id)}
-                        title={`Archiver ${title.toLowerCase().slice(0, -1)}`}
-                      >
-                        <Archive className="w-4 h-4" />
-                      </Button>
-                    )
-                  )}
+            {!items || items.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length + 1}
+                  className="text-center text-muted-foreground italic"
+                >
+                  Aucun élément à afficher.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              items.map((item) => (
+                <TableRow
+                  key={item.id}
+                  className={item.is_archived ? "opacity-50 italic" : ""}
+                >
+                  {columns.map((col) => (
+                    <TableCell key={col.key}>{item[col.key]}</TableCell>
+                  ))}
+                  <TableCell className="text-center">
+                    {archived ? (
+                      <Button
+                        variant="ghost"
+                        onClick={() => onArchive(item.id, item.is_archived)}
+                        title={`Restaurer ${title.toLowerCase().slice(0, -1)}`}
+                      >
+                        <Undo2 className="w-4 h-4" />
+                      </Button>
+                    ) : (
+                      !item.is_archived && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => onArchive(item.id, item.is_archived)}
+                          title={`Archiver ${title.toLowerCase().slice(0, -1)}`}
+                        >
+                          <Archive className="w-4 h-4" />
+                        </Button>
+                      )
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

@@ -20,10 +20,6 @@ export const DialogContent = React.forwardRef<
       )}
       {...props}
     >
-      {props["aria-labelledby"] && (
-        <RadixDialog.Title id={props["aria-labelledby"]} className="sr-only" />
-      )}
-
       {children}
 
       <RadixDialog.Close className="absolute right-4 top-4">
@@ -33,10 +29,6 @@ export const DialogContent = React.forwardRef<
   </RadixDialog.Portal>
 ));
 DialogContent.displayName = "DialogContent";
-
-export const DialogHeader = ({ children }: { children: React.ReactNode }) => (
-  <div className="mb-4">{children}</div>
-);
 
 export const DialogTitle = React.forwardRef<
   React.ComponentRef<typeof RadixDialog.Title>,
@@ -56,7 +48,7 @@ export const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <RadixDialog.Description
     ref={ref}
-    className={cn("sr-only", className)}
+    className={cn("text-sm text-gray-500", className)}
     {...props}
   />
 ));
@@ -64,4 +56,8 @@ DialogDescription.displayName = "DialogDescription";
 
 export const DialogFooter = ({ children }: { children: React.ReactNode }) => (
   <div className="mt-6 flex justify-end gap-2">{children}</div>
+);
+
+export const DialogHeader = ({ children }: { children: React.ReactNode }) => (
+  <div className="mb-4">{children}</div>
 );

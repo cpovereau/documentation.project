@@ -8,31 +8,55 @@ from django.utils.timezone import now
 class Gamme(models.Model):
     nom = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
+    is_archived = models.BooleanField(default=False)
 
     def __str__(self):
         return self.nom
 
+# --- Produits ---
 class Produit(models.Model):
     nom = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     gamme = models.ForeignKey(Gamme, on_delete=models.CASCADE, related_name="produits")
+    is_archived = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.gamme} - {self.nom}"
 
+# --- Fonctionnalités ---
 class Fonctionnalite(models.Model):
     produit = models.ForeignKey('Produit', on_delete=models.CASCADE, related_name="fonctionnalites")
     nom = models.CharField(max_length=100)
     id_fonctionnalite = models.CharField(max_length=20, unique=True)
     description = models.TextField(blank=True, null=True)
+    is_archived = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.nom} - {self.produit.nom} (ID: {self.id_fonctionnalite})"
 
+# --- Tags ---
+class Tag(models.Model):
+    nom = models.CharField(max_length=100, unique=True)
+    is_archived = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.nom
+
+# --- Interfaces utilisateur ---
+class InterfaceUtilisateur(models.Model):
+    nom = models.CharField(max_length=100)
+    code = models.CharField(max_length=10, unique=True)
+    is_archived = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.nom} ({self.code})"
+
+# --- Audiences ---
 class Audience(models.Model):
     nom = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
     fonctionnalites = models.ManyToManyField('Fonctionnalite', related_name="audiences")
+    is_archived = models.BooleanField(default=False)
 
     def __str__(self):
         return self.nom

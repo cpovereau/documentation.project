@@ -21,7 +21,7 @@ import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import Color from "@tiptap/extension-color";
 import { TextStyle } from "@tiptap/extension-text-style";
-import { Task, Concept, Reference, GrammarHighlight, Note } from "@/extensions";
+import { getAllExtensions } from "@/extensions/allExtensions";
 import { FindReplaceDialog } from "components/ui//FindReplaceDialog";
 import { EditorHistoryPanel } from "components/ui/EditorHistoryPanel";
 import { VerticalDragHandle } from "components/ui/VerticalDragHandle";
@@ -111,24 +111,12 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
 
   // Initialisation de l'éditeur TipTap avec extensions personnalisées
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({}),
-      GrammarHighlight.configure({ errors: [] }),
-      Underline,
-      TextStyle,
-      Color,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Task,
-      Concept,
-      Reference,
-      Note,
-    ],
+    extensions: getAllExtensions(),
     content: "<p>Commence à écrire…</p>",
     onUpdate({ editor }) {
       checkGrammar(editor.getText());
     },
   });
-
   // Fonctions pour copier, coller, couper
   function handleCut(editor: Editor | null) {
     if (!editor) return;

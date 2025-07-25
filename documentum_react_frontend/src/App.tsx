@@ -1,4 +1,8 @@
+import { useEffect } from "react";
+import axios from "axios";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import SessionExpiredModal from "@/components/ui/SessionExpiredModal";
+import { useSessionStore } from "@/store/useSessionStore";
 import { Desktop } from "./screens/Desktop/Desktop";
 import SettingsScreen from "@/screens/Settings/SettingsScreen";
 import { ProductDocSync } from "./screens/ProductDocSync/ProductDocSync";
@@ -9,6 +13,20 @@ import { useAuth } from "./contexts/AuthContext";
 
 function App() {
   const { token } = useAuth();
+  const { expired, setExpired } = useSessionStore();
+
+  useEffect(() => {
+    axios
+      .get("http://localhost:8000/csrf/", {
+        withCredentials: true, // 🔥 Nécessaire pour que le cookie soit posé
+      })
+      .then(() => {
+        console.log("[CSRF] Token CSRF récupéré avec succès");
+      })
+      .catch((error) => {
+        console.error("[CSRF] Échec récupération token CSRF :", error);
+      });
+  }, []);
 
   return (
     <BrowserRouter>
@@ -29,6 +47,7 @@ function App() {
             </>
           )}
         </Routes>
+        <SessionExpiredModal open={expired} onClose={() => setExpired(false)} />
         <Toaster position="top-right" richColors closeButton />
       </ErrorBoundary>
     </BrowserRouter>

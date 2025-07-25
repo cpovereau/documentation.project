@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Projet, Gamme, Rubrique, Map, VersionProjet, Fonctionnalite, Audience
+from .models import Projet, Gamme, Produit, Rubrique, Map, VersionProjet, Fonctionnalite, Tag, ProfilPublication, InterfaceUtilisateur, Audience
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -10,7 +10,15 @@ class UserSerializer(serializers.ModelSerializer):
 class GammeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Gamme
-        fields = ['id', 'nom', 'description']
+        fields = ['id', 'nom', 'description', 'is_archived']
+
+class ProduitSerializer(serializers.ModelSerializer):
+    gamme_nom = serializers.CharField(source='gamme.nom', read_only=True)
+
+    class Meta:
+        model = Produit
+        fields = ['id', 'nom', 'description', 'gamme', 'gamme_nom', 'is_archived']
+
 
 class MapSerializer(serializers.ModelSerializer):
     class Meta:
@@ -52,7 +60,27 @@ class ProjetSerializer(serializers.ModelSerializer):
 class FonctionnaliteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Fonctionnalite
-        fields = ['id', 'produit', 'nom', 'id_fonctionnalite', 'description']
+        fields = ['id', 'produit', 'nom', 'id_fonctionnalite', 'description', 'is_archived']
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['id', 'nom', 'is_archived']
+
+class ProfilPublicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProfilPublication
+        fields = ['id', 'nom', 'type_sortie', 'is_archived']
+
+class InterfaceUtilisateurSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InterfaceUtilisateur
+        fields = ['id', 'nom', 'code', 'is_archived']
+
+class AudienceCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Audience
+        fields = ['id', 'nom', 'description', 'is_archived']
 
 class AudienceSerializer(serializers.ModelSerializer):
     fonctionnalites = FonctionnaliteSerializer(many=True, read_only=True)
@@ -62,7 +90,8 @@ class AudienceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Audience
-        fields = ['id', 'nom', 'description', 'fonctionnalites', 'fonctionnalite_ids']
+        fields = ['id', 'nom', 'description', 'fonctionnalites', 'fonctionnalite_ids', 'is_archived']
+
 
 class RubriqueSerializer(serializers.ModelSerializer):
     fonctionnalite = FonctionnaliteSerializer(read_only=True)
