@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 function getCSRFToken(): string | undefined {
   return document.cookie
@@ -15,6 +16,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  const navigate = useNavigate();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const csrfToken = getCSRFToken();
@@ -22,19 +25,16 @@ export default function LoginScreen() {
     try {
       const response = await axios.post(
         "http://localhost:8000/login/",
+        { username, password },
         {
-          username,
-          password,
-        },
-        {
-          withCredentials: true, // 🔥 pour que le cookie sessionid soit stocké
-          headers: {
-            "X-CSRFToken": csrfToken || "",
-          },
+          withCredentials: true,
+          headers: { "X-CSRFToken": csrfToken || "" },
         }
       );
 
+      console.log("[Login] Connexion réussie :", response.data);
       login(response.data.token, response.data.user); // AuthContext
+      navigate("/desktop"); // ✅ Redirection après login
     } catch (err) {
       console.error("[Login] Échec de la connexion :", err);
       setError("Identifiants invalides");
