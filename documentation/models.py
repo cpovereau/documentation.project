@@ -28,13 +28,16 @@ class Produit(models.Model):
 class Fonctionnalite(models.Model):
     produit = models.ForeignKey('Produit', on_delete=models.CASCADE, related_name="fonctionnalites")
     nom = models.CharField(max_length=100)
-    id_fonctionnalite = models.CharField(max_length=20, unique=True)
-    description = models.TextField(blank=True, null=True)
+    id_fonctionnalite = models.CharField(max_length=10, unique=True, default=0000)  # Identifiant unique pour la fonctionnalité
+    code = models.CharField(max_length=10)  # Exemple : 'ECIV', 'COMP', etc.
     is_archived = models.BooleanField(default=False)
 
-    def __str__(self):
-        return f"{self.nom} - {self.produit.nom} (ID: {self.id_fonctionnalite})"
+    class Meta:
+        unique_together = ("produit", "code")
 
+    def __str__(self):
+        return f"{self.nom} ({self.code}) – {self.produit.nom}"
+    
 # --- Tags ---
 class Tag(models.Model):
     nom = models.CharField(max_length=100, unique=True)

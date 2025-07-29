@@ -1,42 +1,103 @@
-import React from "react";
-import { X as XIcon, Upload } from "lucide-react";
+// src/components/ui/import-modal.tsx
 
-export interface ImportModalProps {
+import React, { useState, useRef, useEffect } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import Papa from "papaparse";
+
+/**
+ * Modale d'importation de fichier CSV avec mappage des colonnes.
+ * Utilisable pour d'autres imports (images, xml...) en adaptant l'étape 2.
+ */
+interface ImportModalProps {
   open: boolean;
   title: string;
-  accept?: string; // ex : "image/*", ".xlsx", etc.
   onClose: () => void;
-  onNext: (file: File | null) => void;
+  onConfirm: (params: {
+    file: File;
+    mapping: Record<string, number>;
+    produitId: number;
+    skipHeader: boolean;
+  }) => void;
+  produits: { id: number; nom: string }[];
 }
 
-export const ImportModal: React.FC<ImportModalProps> = ({
+export const ImportModal = ({
   open,
   title,
-  accept = "*",
   onClose,
-  onNext,
-}) => {
-  const [file, setFile] = React.useState<File | null>(null);
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const [position, setPosition] = React.useState({
-    x: window.innerWidth / 2 - 240,
-    y: window.innerHeight / 2 - 200,
-  }); // centré par défaut
-  const dragging = React.useRef(false);
-  const offset = React.useRef({ x: 0, y: 0 });
+  onConfirm,
+  produits,
+}: ImportModalProps) => {
+  // Position dynamique (centrée au chargement)
+  const [position, setPosition] = useState(() => ({
+    x: window.innerWidth / 2 - 400,
+    y: window.innerHeight / 2 - 250,
+  }));
+  const offset = useRef({ x: 0, y: 0 });
+  const dragging = useRef(false);
 
-  React.useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!dragging.current) return;
-      setPosition({
-        x: e.clientX - offset.current.x,
-        y: e.clientY - offset.current.y,
-      });
+  // Étapes internes : sélection du fichier → configuration d'import
+  const [step, setStep] = useState<"file" | "mapping">("file");
+  const [file, setFile] = useState<File | null>(null);
+  const [rawData, setRawData] = useState<string[][]>([]);
+  const [colMap, setColMap] = useState<Record<string, number>>({
+    nom: 0,
+    id_fonctionnalite: 1,
+    code: 2,
+  });
+  const [produitId, setProduitId] = useState<number | null>(null);
+  const [ignoreHeader, setIgnoreHeader] = useState(true);
+
+  // Parser CSV via PapaParse
+  const parseCSV = (f: File) => {
+    Papa.parse(f, {
+      complete: (res) => setRawData(res.data as string[][]),
+      skipEmptyLines: true,
+    });
+  };
+
+  // Drag & drop fichier
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile && droppedFile.name.endsWith(".csv")) {
+      setFile(droppedFile);
+      parseCSV(droppedFile);
+      setStep("mapping");
+    }
+  };
+
+  // Confirmation finale : envoi au parent
+  const handleConfirm = () => {
+    if (file && produitId !== null) {
+      onConfirm({ file, mapping: colMap, produitId, skipHeader: ignoreHeader });
+    }
+  };
+
+  // Déplacement de la modale (click + drag sur l'entête)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    dragging.current = true;
+    offset.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
     };
-    const handleMouseUp = () => {
-      dragging.current = false;
-      document.body.style.userSelect = "";
-    };
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!dragging.current) return;
+    setPosition({
+      x: e.clientX - offset.current.x,
+      y: e.clientY - offset.current.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    dragging.current = false;
+  };
+
+  useEffect(() => {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
@@ -45,119 +106,127 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     };
   }, []);
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/20 flex items-center justify-center"
-      style={{ pointerEvents: open ? "auto" : "none" }}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative"
-        style={{
-          position: "fixed",
-          left: position.x,
-          top: position.y,
-          margin: 0,
-          zIndex: 10001,
-          cursor: dragging.current ? "move" : "default",
-        }}
-      >
-        {/* Close (croix en haut à droite) */}
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-          onClick={onClose}
-          aria-label="Fermer"
-        >
-          <XIcon className="w-6 h-6" />
-        </button>
-        {/* Titre */}
-        <h2
-          className="text-2xl font-bold text-gray-800 mb-4 cursor-move select-none"
-          onMouseDown={(e) => {
-            dragging.current = true;
-            offset.current = {
-              x: e.clientX - position.x,
-              y: e.clientY - position.y,
-            };
-            document.body.style.userSelect = "none";
-          }}
-          onMouseUp={() => {
-            dragging.current = false;
-            document.body.style.userSelect = "";
-          }}
-        >
-          {title}
-        </h2>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent position={position}>
+        {/* Description cachée requise par Radix pour l'accessibilité */}
+        <p className="sr-only" id="import-dialog-description">
+          Fenêtre d'importation de fichier CSV avec options de mappage.
+        </p>
 
-        {/* Zone Drag & Drop */}
-        <div
-          className="flex flex-col items-center justify-center border-2 border-dashed border-[#65558f] rounded-xl bg-gray-50 py-8 px-4 cursor-pointer hover:bg-[#f7a90022] transition"
-          role="button"
-          tabIndex={0}
-          onClick={() => inputRef.current?.click()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              inputRef.current?.click();
-            }
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            if (e.dataTransfer.files.length > 0)
-              setFile(e.dataTransfer.files[0]);
-          }}
-          onDragOver={(e) => e.preventDefault()}
-        >
-          <Upload className="w-12 h-12 text-[#65558f] mb-2" />
-          <span className="font-medium text-gray-700 mb-1">
-            Glissez-déposez votre fichier ici
-          </span>
-          <span className="text-sm text-gray-500 mb-3">ou</span>
-          <button
-            className="bg-[#65558f] hover:bg-[#f7a900] text-white px-4 py-2 rounded-full font-semibold transition"
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              inputRef.current?.click();
-            }}
+        <div onMouseDown={handleMouseDown} className="cursor-move mb-4">
+          <DialogTitle>{title}</DialogTitle>
+        </div>
+
+        {step === "file" && (
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
+            className="border border-dashed p-6 rounded text-center bg-gray-50"
           >
-            Parcourir…
-          </button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept={accept}
-            className="hidden"
-            onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
-          />
-          {file && (
-            <div className="mt-4 text-green-700 font-medium">
-              Fichier sélectionné : {file.name}
+            <p className="mb-2 text-gray-700">Glissez un fichier .csv ici</p>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  setFile(f);
+                  parseCSV(f);
+                  setStep("mapping");
+                }
+              }}
+            />
+          </div>
+        )}
+
+        {step === "mapping" && rawData.length > 0 && (
+          <>
+            <div className="mb-4">
+              <Checkbox
+                checked={ignoreHeader}
+                onChange={(e) => setIgnoreHeader(e.target.checked)}
+              />
+              <span className="ml-2 text-sm text-gray-700">
+                Ignorer la première ligne (en-tête)
+              </span>
             </div>
-          )}
-        </div>
-        {/* Boutons en bas */}
-        <div className="flex justify-end gap-4 mt-8">
-          <button
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium"
-            onClick={onClose}
-            type="button"
-          >
-            Annuler
-          </button>
-          <button
-            className={`bg-[#65558f] hover:bg-[#f7a900] text-white px-6 py-2 rounded-lg font-semibold transition ${
-              !file ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-            disabled={!file}
-            onClick={() => onNext(file)}
-            type="button"
-          >
-            Suivant
-          </button>
-        </div>
-      </div>
-    </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {Object.entries({
+                nom: "Nom",
+                id_fonctionnalite: "ID Fonctionnalité",
+                code: "Code",
+              }).map(([key, label]) => (
+                <div key={key}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {label}
+                  </label>
+                  <select
+                    className="w-full border rounded px-2 py-1 text-sm"
+                    value={colMap[key]?.toString() || ""}
+                    onChange={(e) =>
+                      setColMap({ ...colMap, [key]: parseInt(e.target.value) })
+                    }
+                  >
+                    {rawData[0].map((_, idx) => (
+                      <option key={idx} value={idx.toString()}>
+                        Colonne {idx + 1} ({rawData[0][idx]?.slice(0, 15)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Produit concerné
+              </label>
+              <select
+                className="w-full border rounded px-2 py-1 text-sm"
+                value={produitId?.toString() || ""}
+                onChange={(e) => setProduitId(parseInt(e.target.value))}
+              >
+                <option value="">Sélectionner un produit</option>
+                {produits.map((p) => (
+                  <option key={p.id} value={p.id.toString()}>
+                    {p.nom}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-gray-600 mb-2">
+                Aperçu du fichier :
+              </h4>
+              <div className="border rounded max-h-40 overflow-auto text-sm font-mono bg-white">
+                <table className="table-auto w-full">
+                  <tbody>
+                    {rawData.slice(0, 5).map((row, i) => (
+                      <tr key={i}>
+                        {row.map((cell, j) => (
+                          <td key={j} className="px-3 py-1 border-r">
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-4 mt-4">
+              <Button variant="outline" onClick={onClose}>
+                Annuler
+              </Button>
+              <Button onClick={handleConfirm}>Valider l’import</Button>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };

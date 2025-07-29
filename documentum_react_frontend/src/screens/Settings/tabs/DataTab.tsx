@@ -1,5 +1,12 @@
+// =====================================================
+// 📂 Fichier : DataTab.tsx
+// 🔎 Description :
+// 🗣️ Tous les commentaires doivent être écrits en français.
+// =====================================================
+
 import { useState, useEffect } from "react";
-import { ImportModal } from "components/ui/import-modal";
+import { useAllDictionnaireData } from "@/hooks/useAllDictionnaireData";
+import { useImportFonctionnalites } from "@/hooks/useImportFonctionnalites";
 import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { getArchivableHooks, resourceLabels } from "@/hooks/useArchivableList";
@@ -8,7 +15,9 @@ import DataListPanel from "components/ui/DataListPanel";
 import { Button } from "components/ui/button";
 import { Plus } from "lucide-react";
 import { cn } from "lib/utils";
+import { DebugCSRF } from "@/components/DebugCSRF";
 
+// Composant principal pour l'onglet "Données"
 const DataTab = () => {
   const [selectedItem, setSelectedItem] = useState<
     | "gammes"
@@ -32,6 +41,7 @@ const DataTab = () => {
     setIsModalOpen(true);
   };
 
+  // Fonction pour rafraîchir la liste des éléments
   const handleCreate = async (item: any) => {
     if (!currentHook) return;
     try {
@@ -44,6 +54,7 @@ const DataTab = () => {
     }
   };
 
+  // Fonction pour gérer l'archivage ou la restauration d'un élément
   const handleArchive = async (id: number, isArchived: boolean) => {
     if (!currentHook) return;
 
@@ -55,14 +66,17 @@ const DataTab = () => {
     }
   };
 
+  // Fonction pour obtenir le titre de l'onglet en fonction de l'élément sélectionné
   const getTitle = () => {
     return resourceLabels[selectedItem] ?? "";
   };
 
+  // Fonction pour obtenir les éléments de la liste en fonction de l'élément sélectionné
   const getItems = () => {
     return currentHook?.items ?? [];
   };
 
+  // Fonction pour obtenir les colonnes du tableau en fonction de l'élément sélectionné
   const getColumns = () => {
     switch (selectedItem) {
       case "gammes":
@@ -79,8 +93,9 @@ const DataTab = () => {
       case "fonctionnalites":
         return [
           { key: "nom", label: "Nom" },
-          { key: "id_fonctionnalite", label: "ID" },
-          { key: "produit", label: "Produit" },
+          { key: "id_fonctionnalite", label: "Id Associée" },
+          { key: "produit_nom", label: "Produit" },
+          { key: "code", label: "Code" },
         ];
       case "audiences":
         return [
@@ -104,8 +119,10 @@ const DataTab = () => {
     }
   };
 
+  // Vérifie si des actions doivent être affichées (bouton Modifier, Importer, etc.)
   const shouldShowActions = selectedItem !== "profils_publication";
 
+  // Bouton Modifier pour les éléments qui peuvent être modifiés
   const editButton = shouldShowActions && (
     <Button
       className={cn(
@@ -118,19 +135,7 @@ const DataTab = () => {
     </Button>
   );
 
-  const importButton = selectedItem === "fonctionnalites" && (
-    <div className="flex justify-end mt-3">
-      <Button
-        className={cn(
-          "px-3 text-sm font-medium bg-orange-500 text-white hover:bg-orange-600"
-        )}
-        onClick={() => setIsImportOpen(true)}
-      >
-        Importer
-      </Button>
-    </div>
-  );
-
+  // Bouton Ajouter pour ajouter un nouvel élément
   const addButton = shouldShowActions && (
     <Button
       variant="ghost"
@@ -141,8 +146,31 @@ const DataTab = () => {
     </Button>
   );
 
-  const [isImportOpen, setIsImportOpen] = useState(false);
+  // Récupère les données des produits pour l'importation
+  const { data: allData, refetch: refetchAllData } = useAllDictionnaireData();
+  const produits = allData.produits || [];
 
+  // Hook pour gérer l'importation des fonctionnalités
+  const { ImportFonctionnalitesUI, startImport: startImportFonctionnalites } =
+    useImportFonctionnalites(produits, async () => {
+      await currentHook.refetch(); // ou autre callback de mise à jour
+    });
+
+  // Bouton Importer pour les fonctionnalités
+  const importButton = selectedItem === "fonctionnalites" && (
+    <div className="flex justify-end mt-3">
+      <Button
+        className={cn(
+          "px-3 text-sm font-medium bg-orange-500 text-white hover:bg-orange-600"
+        )}
+        onClick={startImportFonctionnalites}
+      >
+        Importer
+      </Button>
+    </div>
+  );
+
+  // Force le chargement initial des gammes
   useEffect(() => {
     api
       .get("/gammes/", { params: { archived: false } })
@@ -154,8 +182,9 @@ const DataTab = () => {
       });
   }, []);
 
+  // Réinitialise le mode édition quand on change d'onglet
   useEffect(() => {
-    setEditMode(false); // sort automatiquement du mode édition quand on change d'onglet
+    setEditMode(false);
   }, [selectedItem]);
 
   return (
@@ -294,17 +323,7 @@ const DataTab = () => {
         gammes={hooks["gammes"]?.items ?? []}
         produits={hooks["produits"]?.items ?? []}
       />
-      {selectedItem === "fonctionnalites" && (
-        <ImportModal
-          open={isImportOpen}
-          title="Importer des fonctionnalités"
-          onClose={() => setIsImportOpen(false)}
-          onNext={(file) => {
-            console.log("Fichier à importer :", file);
-            setIsImportOpen(false);
-          }}
-        />
-      )}
+      {selectedItem === "fonctionnalites" && <ImportFonctionnalitesUI />}
     </>
   );
 };

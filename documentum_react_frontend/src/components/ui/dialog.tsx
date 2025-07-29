@@ -8,27 +8,39 @@ export const DialogTrigger = RadixDialog.Trigger;
 
 export const DialogContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentPropsWithoutRef<typeof RadixDialog.Content>
->(({ className, children, ...props }, ref) => (
-  <RadixDialog.Portal>
-    <RadixDialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
-    <RadixDialog.Content
-      ref={ref}
-      className={cn(
-        "fixed left-1/2 top-1/2 z-[999] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white px-6 pb-6 shadow-lg",
-        className
-      )}
-      {...props}
-    >
-      {children}
+  React.ComponentPropsWithoutRef<typeof RadixDialog.Content> & {
+    position?: { x: number; y: number };
+  }
+>(({ className, children, position, ...props }, ref) => {
+  const dynamicStyle = position
+    ? {
+        top: position.y,
+        left: position.x,
+        transform: "none", // ⛔️ désactive le translate du centrage
+      }
+    : undefined;
 
-      <RadixDialog.Close className="absolute right-4 top-4">
-        <X className="h-5 w-5 text-gray-600 hover:text-black" />
-      </RadixDialog.Close>
-    </RadixDialog.Content>
-  </RadixDialog.Portal>
-));
-DialogContent.displayName = "DialogContent";
+  return (
+    <RadixDialog.Portal>
+      <RadixDialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
+      <RadixDialog.Content
+        ref={ref}
+        style={dynamicStyle}
+        className={cn(
+          "fixed z-[999] w-full max-w-2xl rounded-xl bg-white px-6 pb-6 shadow-lg",
+          !position && "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2", // ✅ centrage si pas de position
+          className
+        )}
+        {...props}
+      >
+        {children}
+        <RadixDialog.Close className="absolute right-4 top-4">
+          <X className="h-5 w-5 text-gray-600 hover:text-black" />
+        </RadixDialog.Close>
+      </RadixDialog.Content>
+    </RadixDialog.Portal>
+  );
+});
 
 export const DialogTitle = React.forwardRef<
   React.ComponentRef<typeof RadixDialog.Title>,

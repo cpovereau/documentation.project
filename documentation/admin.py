@@ -31,8 +31,10 @@ class MapAdmin(admin.ModelAdmin):
 
 @admin.register(Fonctionnalite)
 class FonctionnaliteAdmin(admin.ModelAdmin):
-    list_display = ("nom", "produit", "id_fonctionnalite")
-    search_fields = ("nom", "id_fonctionnalite")
+    list_display = ("nom", "produit", "code", "is_archived")
+    search_fields = ("nom", "code")
+    list_filter = ("produit", "is_archived")
+    ordering = ("produit", "code")
 
 @admin.register(Audience)
 class AudienceAdmin(admin.ModelAdmin):

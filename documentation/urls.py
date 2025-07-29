@@ -3,9 +3,10 @@ from django.conf.urls import handler404, handler500
 # from documentation import views
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import GammeViewSet, ProduitViewSet, ProjetViewSet, RubriqueViewSet, VersionProjetViewSet, FonctionnaliteViewSet, AudienceViewSet, TagViewSet, ProfilPublicationViewSet, InterfaceUtilisateurViewSet, get_csrf_token, login_view, logout_view, CreateProjectAPIView, get_project_details, CreateMapView, get_type_sortie_choices #check_orthographe, 
+from .views import GammeViewSet, ProduitViewSet, ProjetViewSet, RubriqueViewSet, VersionProjetViewSet, FonctionnaliteViewSet, AudienceViewSet, TagViewSet, ProfilPublicationViewSet, InterfaceUtilisateurViewSet, get_csrf_token, login_view, logout_view, CreateProjectAPIView, get_project_details, CreateMapView, get_type_sortie_choices, import_fonctionnalites  #check_orthographe, 
 from .utils import publier_map, get_formats_publication
 
+# Create a router and register the viewsets
 router = DefaultRouter()
 router.register(r'gammes', GammeViewSet)
 router.register(r'produits', ProduitViewSet)
@@ -29,8 +30,10 @@ urlpatterns = [
     path('api/publier-map/<int:map_id>/', publier_map, name='publier_map'),
     path('api/formats-publication/', get_formats_publication, name='formats_publication'),
     path("type-sortie/", get_type_sortie_choices, name="type_sortie_choices"),
+    path('import/fonctionnalites/', import_fonctionnalites, name='import_fonctionnalites'),
     # path('api/orthographe/', check_orthographe, name='check_orthographe'),
 ]
 
+# Custom error handlers
 handler404 = 'documentation.views.custom_404'
 handler500 = 'documentation.views.custom_500'

@@ -1,56 +1,88 @@
 import axios from "axios";
-import { toast } from "sonner";
 
-export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+// Création d'une instance Axios
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
   withCredentials: true,
 });
 
-
-// Fonction utilitaire pour obtenir un cookie par son nom
+  // Fonction utilitaire pour lire les cookies
 function getCookie(name: string): string | undefined {
-  const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
-  return match ? match[2] : undefined;
+  if (typeof document === "undefined") return undefined;
+  const cookies = document.cookie.split(";").map(c => c.trim());
+  const target = cookies.find((c) => c.startsWith(`${name}=`));
+  return target?.split("=")[1];
 }
 
-// Interceptor pour ajouter le token CSRF aux requêtes POST, PUT, PATCH, DELETE
+// 🔐 Ajouter le token d'auth s'il est présent
 api.interceptors.request.use((config) => {
   const method = config.method?.toUpperCase();
-  if (["POST", "PUT", "PATCH", "DELETE"].includes(method || "")) {
-    const csrfToken = getCookie("csrftoken");
-    if (csrfToken) {
-      config.headers["X-CSRFToken"] = csrfToken;
+  const isModifying = ["POST", "PUT", "PATCH", "DELETE"].includes(method || "");
+
+  // --- 🔐 Authentification : ajoute le token si présent dans le localStorage
+  const token = localStorage.getItem("token");
+  if (token) {
+    // Axios v1+ : headers peut être une instance complexe -> .set() est préférable
+    if (config.headers && typeof config.headers.set === "function") {
+      config.headers.set("Authorization", `Token ${token}`);
+    } else {
+      // fallback pour TypeScript strict
+      (config.headers as any)["Authorization"] = `Token ${token}`;
     }
   }
+
+  // --- 🛡️ CSRF : ajoute le token CSRF uniquement pour les méthodes sensibles
+  const csrfToken = getCookie("csrftoken");
+  if (isModifying && csrfToken) {
+    if (config.headers && typeof config.headers.set === "function") {
+      config.headers.set("X-CSRFToken", csrfToken);
+    } else {
+      (config.headers as any)["X-CSRFToken"] = csrfToken;
+    }
+    console.log("✅ X-CSRFToken injecté :", csrfToken);
+  }
+
+  // --- ⚠️ multipart : supprime Content-Type si FormData (Axios le recrée automatiquement)
+  if (
+    config.data instanceof FormData &&
+    config.headers &&
+    typeof config.headers.delete === "function"
+  ) {
+    config.headers.delete("Content-Type"); // ⚠️ sinon le boundary casse le POST
+  }
+
   return config;
 });
 
-// Interceptor pour gérer les erreurs globalement
+// 🚨 Uniformiser les erreurs
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  (error) => {
     const status = error.response?.status;
-    const message =
-  error.response?.data?.error ||
-  error.response?.statusText ||
-  `Erreur ${error.response?.status}` ||
-  "Erreur inconnue";
-    const fields = error.response?.data?.fields || null;
+    const data = error.response?.data;
 
-    if (status === 401) {
-  const { useSessionStore } = await import("@/store/useSessionStore");
-  useSessionStore.getState().setExpired(true);
+    let message = "Erreur inconnue.";
+    let fields = {};
 
-  const sessionToastId = "session-expired"; // ✅ Définir l'ID ici
-  toast.error("Votre session a expiré. Veuillez vous reconnecter.", {
-    id: sessionToastId,
-  });
-}
+    if (data) {
+      if (typeof data === "string") {
+        message = data;
+      } else if (data.error) {
+        message = data.error;
+      } else if (data.detail) {
+        message = data.detail;
+      }
+
+      if (data.fields) {
+        fields = data.fields;
+      } else if (typeof data === "object") {
+        // Cas DRF: { champ: ["erreur"] }
+        fields = data;
+      }
+    }
 
     return Promise.reject({ message, fields, status });
   }
 );
 
+export { api };

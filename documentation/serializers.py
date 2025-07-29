@@ -19,7 +19,6 @@ class ProduitSerializer(serializers.ModelSerializer):
         model = Produit
         fields = ['id', 'nom', 'description', 'gamme', 'gamme_nom', 'is_archived']
 
-
 class MapSerializer(serializers.ModelSerializer):
     class Meta:
         model = Map
@@ -58,9 +57,10 @@ class ProjetSerializer(serializers.ModelSerializer):
         return projet
 
 class FonctionnaliteSerializer(serializers.ModelSerializer):
+    produit_nom = serializers.CharField(source='produit.nom', read_only=True)
     class Meta:
         model = Fonctionnalite
-        fields = ['id', 'produit', 'nom', 'id_fonctionnalite', 'description', 'is_archived']
+        fields = ['id', 'produit', 'produit_nom', 'nom', 'id_fonctionnalite', 'code', 'is_archived']
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
