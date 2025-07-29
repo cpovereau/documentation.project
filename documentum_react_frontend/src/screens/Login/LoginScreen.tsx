@@ -1,8 +1,16 @@
+// =====================================================
+// 📂 Fichier : LoginScreen.tsx
+// 🔎 Description : Ecran de connexion à l'application
+// 🗣️ Tous les commentaires doivent être écrits en français.
+// =====================================================
+
 import { useState } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
+// Fonction utilitaire pour récupérer le token CSRF depuis les cookies
 function getCSRFToken(): string | undefined {
   return document.cookie
     .split("; ")
@@ -10,6 +18,7 @@ function getCSRFToken(): string | undefined {
     ?.split("=")[1];
 }
 
+// Composant principal de l'écran de connexion
 export default function LoginScreen() {
   const { login } = useAuth();
   const [username, setUsername] = useState("");
@@ -32,12 +41,13 @@ export default function LoginScreen() {
         }
       );
 
-      console.log("[Login] Connexion réussie :", response.data);
-      login(response.data.token, response.data.user); // AuthContext
-      navigate("/desktop"); // ✅ Redirection après login
+      login(response.data.token, response.data.user);
+      toast.success("Connexion réussie !");
+      navigate("/desktop");
     } catch (err) {
       console.error("[Login] Échec de la connexion :", err);
       setError("Identifiants invalides");
+      toast.error("Échec de la connexion. Veuillez vérifier vos identifiants.");
     }
   };
 

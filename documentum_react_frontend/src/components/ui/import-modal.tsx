@@ -1,16 +1,16 @@
-// src/components/ui/import-modal.tsx
+// =====================================================
+// 📂 Fichier : import-modal.tsx
+// 🔎 Description : Modale d'import commune à tous les imports de l'application
+//                  Utilisable pour d'autres imports (images, xml...) en adaptant l'étape 2.
+// 🗣️ Tous les commentaires doivent être écrits en français.
+// =====================================================
 
 import React, { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { useImportColumnMapping } from "@/hooks/useImportColumMapping";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import Papa from "papaparse";
 
-/**
- * Modale d'importation de fichier CSV avec mappage des colonnes.
- * Utilisable pour d'autres imports (images, xml...) en adaptant l'étape 2.
- */
 interface ImportModalProps {
   open: boolean;
   title: string;

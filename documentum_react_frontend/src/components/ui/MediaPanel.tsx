@@ -1,3 +1,9 @@
+// =====================================================
+// 📂 Fichier : MediaPanel.tsx
+// 🔎 Description : Composant de sélection des images et vidéos commun à l'application
+// 🗣️ Tous les commentaires doivent être écrits en français.
+// =====================================================
+
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -58,6 +64,7 @@ interface MediaPanelProps {
   isFloating?: boolean;
 }
 
+// Composant principal du panneau média
 export const MediaPanel: React.FC<MediaPanelProps> = ({
   mediaItems,
   isImageMode,
@@ -289,7 +296,7 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
       <div
         className="media-container-style"
         style={{
-          marginBottom: isFloating ? 0 : "1rem", // ou "0.75rem" selon le style visuel voulu
+          marginBottom: isFloating ? 0 : "1rem",
         }}
       >
         <div className={getGridClass()}>
