@@ -14,14 +14,26 @@ import { Toaster } from "sonner";
 import LoginScreen from "./screens/Login/LoginScreen";
 
 export const GlobalImportModal = () => {
-  const { open, context, produits, onConfirm, onClose, closeImportModal } =
-    useImportModal();
+  const {
+    open,
+    context,
+    produits,
+    fonctionnalites,
+    interfaces,
+    title,
+    onConfirm,
+    onClose,
+    closeImportModal,
+  } = useImportModal();
 
   return (
     <ImportModal
       open={open}
       context={context}
       produits={produits}
+      fonctionnalites={fonctionnalites}
+      interfaces={interfaces}
+      title={title}
       onClose={() => {
         closeImportModal();
         onClose?.();
@@ -30,7 +42,6 @@ export const GlobalImportModal = () => {
         onConfirm(params);
         closeImportModal();
       }}
-      title="Importer des données"
     />
   );
 };

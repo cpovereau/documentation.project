@@ -1,20 +1,24 @@
 import { create } from "zustand";
 
-// Typage minimal pour le contexte d'import
+// Contexte d'import disponible
 export type ImportContext = "fonctionnalites" | "media" | "xml";
 
-interface ImportModalState {
-  open: boolean;
+// Structure des paramètres d'ouverture
+export interface ImportModalParams {
   context: ImportContext;
   produits: { id: number; nom: string }[];
+  fonctionnalites?: any[];
+  interfaces?: any[];
+  title?: string;
   onConfirm: (params: any) => void;
   onClose?: () => void;
-  openImportModal: (
-    ctx: ImportContext,
-    produits: { id: number; nom: string }[],
-    onConfirm: (params: any) => void,
-    onClose?: () => void
-  ) => void;
+}
+
+// Structure du store Zustand
+interface ImportModalState extends ImportModalParams {
+  open: boolean;
+  title?: string;
+  openImportModal: (params: ImportModalParams) => void;
   closeImportModal: () => void;
 }
 
@@ -24,7 +28,6 @@ export const useImportModal = create<ImportModalState>((set) => ({
   produits: [],
   onConfirm: () => {},
   onClose: undefined,
-  openImportModal: (context, produits, onConfirm, onClose) =>
-    set({ open: true, context, produits, onConfirm, onClose }),
+  openImportModal: (params) => set({ open: true, ...params }),
   closeImportModal: () => set({ open: false }),
 }));

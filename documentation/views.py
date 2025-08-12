@@ -351,6 +351,44 @@ class CreateMapView(APIView):
 def get_type_sortie_choices(request):
     return Response([{"value": val, "label": label} for val, label in TYPE_SORTIE_CHOICES])
 
+# Vue pour vérifier les noms de médias existants
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def check_media_names(request):
+    """
+    Vérifie les noms de médias déjà existants pour un triplet :
+    - produit.abreviation
+    - fonctionnalite.code
+    - interface.code
+    Renvoie la liste des noms existants.
+    Ex. : PLA-MEN-EDT-001.jpg
+    """
+    from .models import Media, Produit, Fonctionnalite, InterfaceUtilisateur
+
+    produit_id = request.GET.get("produit")
+    fonctionnalite_id = request.GET.get("fonctionnalite")
+    interface_id = request.GET.get("interface")
+
+    if not all([produit_id, fonctionnalite_id, interface_id]):
+        return Response({"error": "Paramètres requis : produit, fonctionnalite, interface"}, status=400)
+
+    try:
+        produit = Produit.objects.get(id=produit_id)
+        fonctionnalite = Fonctionnalite.objects.get(id=fonctionnalite_id)
+        interface = InterfaceUtilisateur.objects.get(id=interface_id)
+    except (Produit.DoesNotExist, Fonctionnalite.DoesNotExist, InterfaceUtilisateur.DoesNotExist):
+        return Response({"error": "Entité introuvable."}, status=404)
+
+    prefix = f"{produit.abreviation}-{fonctionnalite.code}-{interface.code}"
+
+    medias = Media.objects.filter(nom_fichier__startswith=prefix)
+    noms_existants = sorted([m.nom_fichier for m in medias])
+
+    return Response({
+        "prefix": prefix,
+        "existing_names": noms_existants
+    })
+
 # Vue pour la connexion
 @csrf_exempt
 @api_view(['POST'])

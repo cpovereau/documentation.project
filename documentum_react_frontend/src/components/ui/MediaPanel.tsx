@@ -28,6 +28,8 @@ import {
   Text,
   Filter,
 } from "lucide-react";
+import { useAllDictionnaireData } from "@/hooks/useAllDictionnaireData";
+import { useImportModal } from "@/hooks/useImportModal";
 import { matchesMediaFilter } from "@/lib/mediaUtils";
 
 const produitOptions = [
@@ -60,7 +62,6 @@ interface MediaPanelProps {
   onToggleType: (type: "image" | "video") => void;
   onToggleSort: () => void;
   onToggleDisplayMode: () => void;
-  onImportClick: () => void;
   isFloating?: boolean;
 }
 
@@ -77,7 +78,6 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
   onToggleType,
   onToggleSort,
   onToggleDisplayMode,
-  onImportClick,
   isFloating = false,
 }) => {
   type MediaFilterType = "produit" | "fonctionnalite" | "item";
@@ -114,6 +114,22 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
     return "grid-cols-1";
   };
 
+  const { data, isLoading } = useAllDictionnaireData();
+  const { openImportModal } = useImportModal();
+
+  const handleImportClick = () => {
+    openImportModal({
+      context: "media",
+      title: isImageMode ? "Importer une image" : "Importer une vidéo",
+      produits: data.produits,
+      fonctionnalites: data.fonctionnalites,
+      interfaces: data.interfaces,
+      onConfirm: (params) => {
+        console.log("📤 Média importé :", params);
+      },
+    });
+  };
+
   return (
     <>
       <div className="relative w-full h-12">
@@ -130,7 +146,7 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
         <Button
           variant="ghost"
           className="p-2"
-          onClick={onImportClick}
+          onClick={handleImportClick}
           title={isImageMode ? "Importer photo" : "Importer vidéo"}
         >
           <Upload className="w-6 h-6" />

@@ -2,14 +2,26 @@ import { useImportModal } from "@/hooks/useImportModal";
 import { ImportModal } from "@/components/ui/import-modal";
 
 export default function GlobalImportModal() {
-  const { open, context, produits, onConfirm, onClose, closeImportModal } =
-    useImportModal();
+  const {
+    open,
+    context,
+    produits,
+    fonctionnalites,
+    interfaces,
+    onConfirm,
+    onClose,
+    closeImportModal,
+    title,
+  } = useImportModal();
 
   return (
     <ImportModal
       open={open}
       context={context}
       produits={produits}
+      fonctionnalites={fonctionnalites}
+      interfaces={interfaces}
+      title={title}
       onClose={() => {
         closeImportModal();
         onClose?.();
@@ -18,7 +30,6 @@ export default function GlobalImportModal() {
         onConfirm(params);
         closeImportModal();
       }}
-      title="Importer des données"
     />
   );
 }

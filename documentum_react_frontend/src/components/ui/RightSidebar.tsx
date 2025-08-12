@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "components/ui/button";
-import { ImportModal } from "components/ui/import-modal";
 import { MediaPanel, MediaItem } from "components/ui/MediaPanel";
 import { ArrowRightCircle, Move, ArrowLeftFromLine } from "lucide-react";
 
@@ -20,8 +19,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   onExpand,
   className,
 }) => {
-  const [importModalOpen, setImportModalOpen] = useState(false);
-  const [importType, setImportType] = useState<"image" | "video">("image");
   const [isImageMode, setIsImageMode] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -98,11 +95,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 
   const handleLabelClick = () =>
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-
-  const handleImportClick = () => {
-    setImportType(isImageMode ? "image" : "video");
-    setImportModalOpen(true);
-  };
 
   const toggleExpanded = useCallback(() => {
     if (typeof onExpand === "function") {
@@ -190,7 +182,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           prev === "grid" ? "small" : prev === "small" ? "list" : "grid"
         );
       }}
-      onImportClick={handleImportClick}
     />
   );
 
@@ -292,18 +283,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         </Button>
       )}
       {isFloating && createPortal(floatingWindow, document.body)}
-      <ImportModal
-        open={importModalOpen}
-        title={
-          importType === "image" ? "Importer une image" : "Importer une vidéo"
-        }
-        accept={importType === "image" ? "image/*" : "video/*"}
-        onClose={() => setImportModalOpen(false)}
-        onNext={(file) => {
-          console.log("Fichier importé :", file);
-          setImportModalOpen(false);
-        }}
-      />
     </>
   );
 };

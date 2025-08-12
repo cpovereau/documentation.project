@@ -12,7 +12,7 @@
   - [Architecture frontend](#architecture-frontend)
     - [Écrans principaux](#écrans-principaux)
     - [Composants partagés](#composants-partagés)
-    - [Hooks personnalisés](#hooks-personnalisés)
+    - [Hooks personnalisés### Hooks personnalisés](#hooks-personnalisés-hooks-personnalisés)
   - [Formats de publication supportés](#formats-de-publication-supportés)
   - [Spécificités métier](#spécificités-métier)
   - [Fonctionnalités avancées](#fonctionnalités-avancées)
@@ -79,9 +79,16 @@
 * `TopBar` : barre de navigation commune aux écrans Desktop et ProductDocSync.
 * `VerticalDragHandle` : redimensionnement dynamique vertical.
 * `components/ui/` : bibliothèque UI (boutons, inputs, select…)
-* `Settings/SettingsScreen` : fenêtre regroupant les paramètres de l'application
-* 
-### Hooks personnalisés
+* `Settings/SettingsScreen` : fenêtre regroupant les paramètres de l'application.
+* `Import-Modal` : composant de modale contextuelle unique pour l’import de données. La logique est centralisée via useImportModal + GlobalImportModal.
+* `GlobalImportModal` : Composant monté globalement dans App.tsx.
+Permet à n’importe quel écran de déclencher un import via openImportModal(...), sans avoir à déclarer manuellement la modale dans chaque écran.
+
+### Hooks personnalisés### Hooks personnalisés
+* `useGammes`, `useProduits`, `useFonctionnalites`, `useInterfaces`, `useTags`, `useAudiences` :
+  hooks typés dédiés à la récupération des entités dictionnaires depuis l’API REST.
+* `useAllDictionnaireData` : centralise les appels aux hooks ci-dessus et retourne les données typées (`DictionnaireData`) avec support `isLoading` et `refetch()`.
+
 
 * `useSpeechCommands` : dictée vocale + commandes d’édition
 * `useGrammarChecker` : vérification orthographique (LanguageTool via Docker)
@@ -107,7 +114,7 @@
 
 * **Gestion multi-audiences**
 * **Lien rubrique ↔ fonctionnalité** avec statut documentaire
-* **Import CSV** (fonctionnalités, audiences, etc.)
+* **Import CSV** (fonctionnalités)
 * **Médias** : gestion des images, vidéos, timecodes
 * **Journalisation** : logs d’édition, publication, connexion
 
@@ -168,6 +175,7 @@ frontend/
 
 ## Historique des évolutions
 
+* **2025-08** : Centralisation des hooks dictionnaires (useGammes, useProduits...) et typage global avec DictionnaireData
 * **2025-07** : Intégration dictée vocale + correcteur orthographique
 * **2025-06** : Mise en place versioning projet et clonage
 * **2025-05** : Migration frontend en TypeScript

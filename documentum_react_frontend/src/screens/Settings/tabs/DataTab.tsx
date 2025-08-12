@@ -6,7 +6,6 @@
 
 import { useState, useEffect } from "react";
 import { useAllDictionnaireData } from "@/hooks/useAllDictionnaireData";
-import { useImportFonctionnalites } from "@/hooks/useImportFonctionnalites";
 import { api } from "@/lib/apiClient";
 import { useImportModal } from "@/hooks/useImportModal";
 import { toast } from "sonner";
@@ -161,10 +160,11 @@ const DataTab = () => {
           "px-3 text-sm font-medium bg-orange-500 text-white hover:bg-orange-600"
         )}
         onClick={() =>
-          openImportModal(
-            "fonctionnalites",
+          openImportModal({
+            context: "fonctionnalites",
             produits,
-            async ({ file, mapping, produitId, skipHeader }) => {
+            title: "Importer des fonctionnalités",
+            onConfirm: async ({ file, mapping, produitId, skipHeader }) => {
               const form = new FormData();
               form.append("file", file);
               form.append("mapping", JSON.stringify(mapping));
@@ -174,8 +174,8 @@ const DataTab = () => {
               await api.post("/import/fonctionnalites/", form);
               toast.success("Import terminé !");
               await currentHook.refetch();
-            }
-          )
+            },
+          })
         }
       >
         Importer

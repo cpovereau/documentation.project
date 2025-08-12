@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
+import { Tag } from "@/types/dictionnaires";
 
 export function useTags() {
-  return useQuery({
+  return useQuery<Tag[]>({
     queryKey: ["tags"],
     queryFn: async () => {
-      const response = await api.get("/tags/");
+      const response = await api.get("/tags/?archived=false");
       return response.data;
     },
   });
