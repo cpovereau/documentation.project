@@ -32,6 +32,7 @@
     "@tiptap/extension-underline": "^3.0.7",
     "@tiptap/react": "^3.0.7",
     "@tiptap/starter-kit": "^3.0.7",
+    "@xmldom/xmldom": "^0.9.8",
     "axios": "^1.10.0",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",
@@ -46,7 +47,6 @@
     "reactflow": "^11.11.4",
     "sonner": "^2.0.5",
     "tailwind-merge": "^3.3.0",
-    "xmldom": "^0.6.0",
     "zustand": "^5.0.6"
   },
   "devDependencies": {

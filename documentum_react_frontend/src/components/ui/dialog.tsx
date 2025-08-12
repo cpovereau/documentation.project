@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 
 export const Dialog = RadixDialog.Root;
 export const DialogTrigger = RadixDialog.Trigger;
+export const DialogOverlay = RadixDialog.Overlay;
 
 export const DialogContent = React.forwardRef<
   HTMLDivElement,
@@ -27,7 +28,7 @@ export const DialogContent = React.forwardRef<
         ref={ref}
         style={dynamicStyle}
         className={cn(
-          "fixed z-[999] w-full max-w-2xl rounded-xl bg-white px-6 pb-6 shadow-lg",
+          "fixed z-[999] pointer-events-auto w-full max-w-2xl rounded-xl bg-white px-6 pb-6 shadow-lg",
           !position && "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2", // ✅ centrage si pas de position
           className
         )}

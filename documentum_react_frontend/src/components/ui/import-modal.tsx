@@ -1,37 +1,55 @@
 // =====================================================
 // 📂 Fichier : import-modal.tsx
 // 🔎 Description : Modale d'import commune à tous les imports de l'application
-//                  Utilisable pour d'autres imports (images, xml...) en adaptant l'étape 2.
+//                  Utilisable pour d'autres imports (images, xml...)
 // 🗣️ Tous les commentaires doivent être écrits en français.
 // =====================================================
 
 import React, { useState, useRef, useEffect } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogOverlay,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Portal } from "@radix-ui/react-portal";
 import Papa from "papaparse";
+import { toast } from "sonner";
+
+type ImportContext = "fonctionnalites" | "media" | "xml";
 
 interface ImportModalProps {
   open: boolean;
   title: string;
+  context: ImportContext;
   onClose: () => void;
-  onConfirm: (params: {
-    file: File;
-    mapping: Record<string, number>;
-    produitId: number;
-    skipHeader: boolean;
-  }) => void;
+  onConfirm: (params: any) => void;
   produits: { id: number; nom: string }[];
 }
 
 export const ImportModal = ({
   open,
   title,
+  context = "fonctionnalites",
   onClose,
   onConfirm,
-  produits,
+  produits = [],
 }: ImportModalProps) => {
-  // Position dynamique (centrée au chargement)
+  // Réinitialisation à l'ouverture
+  useEffect(() => {
+    if (open) {
+      setStep("file");
+      setFile(null);
+      setRawData([]);
+      setProduitId(null);
+      setIgnoreHeader(true);
+    }
+  }, [open]);
+
+  // Position et drag
   const [position, setPosition] = useState(() => ({
     x: window.innerWidth / 2 - 400,
     y: window.innerHeight / 2 - 250,
@@ -39,7 +57,6 @@ export const ImportModal = ({
   const offset = useRef({ x: 0, y: 0 });
   const dragging = useRef(false);
 
-  // Étapes internes : sélection du fichier → configuration d'import
   const [step, setStep] = useState<"file" | "mapping">("file");
   const [file, setFile] = useState<File | null>(null);
   const [rawData, setRawData] = useState<string[][]>([]);
@@ -48,13 +65,19 @@ export const ImportModal = ({
     id_fonctionnalite: 1,
     code: 2,
   });
+
+  // Produit sélectionné et option pour ignorer l'en-tête
   const [produitId, setProduitId] = useState<number | null>(null);
+
+  // Option pour ignorer la première ligne (en-tête)
   const [ignoreHeader, setIgnoreHeader] = useState(true);
 
-  // Parser CSV via PapaParse
+  // Parsing CSV
   const parseCSV = (f: File) => {
     Papa.parse(f, {
+      delimiter: ";",
       complete: (res) => setRawData(res.data as string[][]),
+      error: (err) => console.error("❌ Erreur PapaParse :", err),
       skipEmptyLines: true,
     });
   };
@@ -70,14 +93,27 @@ export const ImportModal = ({
     }
   };
 
-  // Confirmation finale : envoi au parent
+  // Validation de l'import
   const handleConfirm = () => {
-    if (file && produitId !== null) {
-      onConfirm({ file, mapping: colMap, produitId, skipHeader: ignoreHeader });
+    if (!file || rawData.length === 0) {
+      toast.error("Aucun fichier sélectionné ou fichier vide.");
+      return;
     }
+
+    if (!produitId) {
+      toast.error("Veuillez sélectionner un produit avant de valider.");
+      return;
+    }
+
+    onConfirm({
+      file,
+      mapping: colMap,
+      produitId,
+      skipHeader: ignoreHeader,
+    });
   };
 
-  // Déplacement de la modale (click + drag sur l'entête)
+  // Drag de la fenêtre
   const handleMouseDown = (e: React.MouseEvent) => {
     dragging.current = true;
     offset.current = {
@@ -85,7 +121,6 @@ export const ImportModal = ({
       y: e.clientY - position.y,
     };
   };
-
   const handleMouseMove = (e: MouseEvent) => {
     if (!dragging.current) return;
     setPosition({
@@ -93,7 +128,6 @@ export const ImportModal = ({
       y: e.clientY - offset.current.y,
     });
   };
-
   const handleMouseUp = () => {
     dragging.current = false;
   };
@@ -108,126 +142,139 @@ export const ImportModal = ({
   }, []);
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent position={position}>
-        {/* Description cachée requise par Radix pour l'accessibilité */}
-        <p className="sr-only" id="import-dialog-description">
-          Fenêtre d'importation de fichier CSV avec options de mappage.
-        </p>
+    <Dialog open={open} onOpenChange={onClose} modal={false}>
+      <Portal>
+        {/* Overlay visuel mais qui ne bloque pas la modale */}
+        <DialogOverlay className="fixed inset-0 bg-black/50 backdrop-blur-sm pointer-events-none" />
 
-        <div onMouseDown={handleMouseDown} className="cursor-move mb-4">
-          <DialogTitle>{title}</DialogTitle>
-        </div>
+        <DialogContent
+          position={position} // ✅ coupe le centrage Radix
+          className="z-[1000] pointer-events-auto"
+          aria-describedby="import-dialog-description"
+        >
+          <DialogDescription className="sr-only">
+            Fenêtre d'importation de fichier CSV avec options de mappage.
+          </DialogDescription>
 
-        {step === "file" && (
-          <div
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDrop}
-            className="border border-dashed p-6 rounded text-center bg-gray-50"
-          >
-            <p className="mb-2 text-gray-700">Glissez un fichier .csv ici</p>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) {
-                  setFile(f);
-                  parseCSV(f);
-                  setStep("mapping");
-                }
-              }}
-            />
+          <div onMouseDown={handleMouseDown} className="cursor-move mb-4">
+            <DialogTitle>{title}</DialogTitle>
           </div>
-        )}
 
-        {step === "mapping" && rawData.length > 0 && (
-          <>
-            <div className="mb-4">
-              <Checkbox
-                checked={ignoreHeader}
-                onChange={(e) => setIgnoreHeader(e.target.checked)}
+          {/* Étape 1 : choix du fichier */}
+          {step === "file" && (
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
+              className="border border-dashed p-6 rounded text-center bg-gray-50"
+            >
+              <p className="mb-2 text-gray-700">Glissez un fichier .csv ici</p>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    setFile(f);
+                    parseCSV(f);
+                    setStep("mapping");
+                  }
+                }}
               />
-              <span className="ml-2 text-sm text-gray-700">
-                Ignorer la première ligne (en-tête)
-              </span>
             </div>
+          )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              {Object.entries({
-                nom: "Nom",
-                id_fonctionnalite: "ID Fonctionnalité",
-                code: "Code",
-              }).map(([key, label]) => (
-                <div key={key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {label}
-                  </label>
-                  <select
-                    className="w-full border rounded px-2 py-1 text-sm"
-                    value={colMap[key]?.toString() || ""}
-                    onChange={(e) =>
-                      setColMap({ ...colMap, [key]: parseInt(e.target.value) })
-                    }
-                  >
-                    {rawData[0].map((_, idx) => (
-                      <option key={idx} value={idx.toString()}>
-                        Colonne {idx + 1} ({rawData[0][idx]?.slice(0, 15)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Produit concerné
-              </label>
-              <select
-                className="w-full border rounded px-2 py-1 text-sm"
-                value={produitId?.toString() || ""}
-                onChange={(e) => setProduitId(parseInt(e.target.value))}
-              >
-                <option value="">Sélectionner un produit</option>
-                {produits.map((p) => (
-                  <option key={p.id} value={p.id.toString()}>
-                    {p.nom}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-600 mb-2">
-                Aperçu du fichier :
-              </h4>
-              <div className="border rounded max-h-40 overflow-auto text-sm font-mono bg-white">
-                <table className="table-auto w-full">
-                  <tbody>
-                    {rawData.slice(0, 5).map((row, i) => (
-                      <tr key={i}>
-                        {row.map((cell, j) => (
-                          <td key={j} className="px-3 py-1 border-r">
-                            {cell}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {/* Étape 2 : mapping */}
+          {step === "mapping" && rawData.length > 0 && (
+            <>
+              <div className="mb-4 flex items-center gap-2">
+                <Checkbox
+                  checked={ignoreHeader}
+                  onChange={(e) => setIgnoreHeader(e.target.checked)}
+                />
+                <span className="text-sm text-gray-700">
+                  Ignorer la première ligne (en-tête)
+                </span>
               </div>
-            </div>
 
-            <div className="flex justify-end gap-4 mt-4">
-              <Button variant="outline" onClick={onClose}>
-                Annuler
-              </Button>
-              <Button onClick={handleConfirm}>Valider l’import</Button>
-            </div>
-          </>
-        )}
-      </DialogContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {Object.entries({
+                  nom: "Nom",
+                  id_fonctionnalite: "ID Fonctionnalité",
+                  code: "Code",
+                }).map(([key, label]) => (
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {label}
+                    </label>
+                    <select
+                      className="w-full border rounded px-2 py-1 text-sm"
+                      value={colMap[key]?.toString() || ""}
+                      onChange={(e) =>
+                        setColMap({
+                          ...colMap,
+                          [key]: parseInt(e.target.value),
+                        })
+                      }
+                    >
+                      {rawData[0].map((_, idx) => (
+                        <option key={idx} value={idx.toString()}>
+                          Colonne {idx + 1} ({rawData[0][idx]?.slice(0, 15)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Produit concerné
+                </label>
+                <select
+                  className="w-full border rounded px-2 py-1 text-sm"
+                  value={produitId?.toString() || ""}
+                  onChange={(e) => setProduitId(parseInt(e.target.value))}
+                >
+                  <option value="">Sélectionner un produit</option>
+                  {produits.map((p) => (
+                    <option key={p.id} value={p.id.toString()}>
+                      {p.nom}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-600 mb-2">
+                  Aperçu du fichier :
+                </h4>
+                <div className="border rounded max-h-40 overflow-auto text-sm font-mono bg-white">
+                  <table className="table-auto w-full">
+                    <tbody>
+                      {rawData.slice(0, 5).map((row, i) => (
+                        <tr key={i}>
+                          {row.map((cell, j) => (
+                            <td key={j} className="px-3 py-1 border-r">
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-4 mt-4">
+                <Button variant="outline" onClick={onClose}>
+                  Annuler
+                </Button>
+                <Button onClick={handleConfirm}>Valider l’import</Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Portal>
     </Dialog>
   );
 };

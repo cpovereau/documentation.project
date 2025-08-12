@@ -17,7 +17,7 @@ class ProduitSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Produit
-        fields = ['id', 'nom', 'description', 'gamme', 'gamme_nom', 'is_archived']
+        fields = ['id', 'nom', 'description', 'abreviation', 'gamme', 'gamme_nom', 'is_archived']
 
 class MapSerializer(serializers.ModelSerializer):
     class Meta:

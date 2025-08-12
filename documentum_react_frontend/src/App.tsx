@@ -7,9 +7,33 @@ import { useSessionStore } from "@/store/useSessionStore";
 import { Desktop } from "./screens/Desktop/Desktop";
 import SettingsScreen from "@/screens/Settings/SettingsScreen";
 import { ProductDocSync } from "./screens/ProductDocSync/ProductDocSync";
+import { useImportModal } from "@/hooks/useImportModal";
+import { ImportModal } from "@/components/ui/import-modal";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "sonner";
 import LoginScreen from "./screens/Login/LoginScreen";
+
+export const GlobalImportModal = () => {
+  const { open, context, produits, onConfirm, onClose, closeImportModal } =
+    useImportModal();
+
+  return (
+    <ImportModal
+      open={open}
+      context={context}
+      produits={produits}
+      onClose={() => {
+        closeImportModal();
+        onClose?.();
+      }}
+      onConfirm={(params) => {
+        onConfirm(params);
+        closeImportModal();
+      }}
+      title="Importer des données"
+    />
+  );
+};
 
 function App() {
   const { expired, setExpired } = useSessionStore();
@@ -77,6 +101,8 @@ function App() {
           }
         />
       </Routes>
+
+      <GlobalImportModal />
 
       <SessionExpiredModal open={expired} onClose={() => setExpired(false)} />
       <Toaster position="top-right" richColors closeButton />

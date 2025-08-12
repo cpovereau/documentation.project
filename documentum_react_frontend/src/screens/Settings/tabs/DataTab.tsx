@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { useAllDictionnaireData } from "@/hooks/useAllDictionnaireData";
 import { useImportFonctionnalites } from "@/hooks/useImportFonctionnalites";
 import { api } from "@/lib/apiClient";
+import { useImportModal } from "@/hooks/useImportModal";
 import { toast } from "sonner";
 import { getArchivableHooks, resourceLabels } from "@/hooks/useArchivableList";
 import AddItemModal from "components/ui/AddItemModal";
@@ -15,7 +16,6 @@ import DataListPanel from "components/ui/DataListPanel";
 import { Button } from "components/ui/button";
 import { Plus } from "lucide-react";
 import { cn } from "lib/utils";
-import { DebugCSRF } from "@/components/DebugCSRF";
 
 // Composant principal pour l'onglet "Données"
 const DataTab = () => {
@@ -34,6 +34,8 @@ const DataTab = () => {
 
   const hooks = getArchivableHooks(selectedItem, showArchived);
   const currentHook = hooks[selectedItem];
+
+  const { openImportModal } = useImportModal();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -87,6 +89,7 @@ const DataTab = () => {
       case "produits":
         return [
           { key: "nom", label: "Nom" },
+          { key: "abreviation", label: "Abrév." },
           { key: "description", label: "Description" },
           { key: "gamme_nom", label: "Gamme associée" },
         ];
@@ -128,7 +131,7 @@ const DataTab = () => {
       className={cn(
         "mt-3 px-3 text-sm font-medium bg-blue-500 text-white hover:bg-blue-600"
       )}
-      title="Modifier les libellés Nom, Description et Code uniquement"
+      title="Modifier les libellés Nom, Description, Code ou Abréviation uniquement"
       onClick={() => setEditMode(!editMode)}
     >
       {editMode ? "Annuler" : "Modifier"}
@@ -150,12 +153,6 @@ const DataTab = () => {
   const { data: allData, refetch: refetchAllData } = useAllDictionnaireData();
   const produits = allData.produits || [];
 
-  // Hook pour gérer l'importation des fonctionnalités
-  const { ImportFonctionnalitesUI, startImport: startImportFonctionnalites } =
-    useImportFonctionnalites(produits, async () => {
-      await currentHook.refetch(); // ou autre callback de mise à jour
-    });
-
   // Bouton Importer pour les fonctionnalités
   const importButton = selectedItem === "fonctionnalites" && (
     <div className="flex justify-end mt-3">
@@ -163,7 +160,23 @@ const DataTab = () => {
         className={cn(
           "px-3 text-sm font-medium bg-orange-500 text-white hover:bg-orange-600"
         )}
-        onClick={startImportFonctionnalites}
+        onClick={() =>
+          openImportModal(
+            "fonctionnalites",
+            produits,
+            async ({ file, mapping, produitId, skipHeader }) => {
+              const form = new FormData();
+              form.append("file", file);
+              form.append("mapping", JSON.stringify(mapping));
+              form.append("produit", produitId.toString());
+              form.append("skip_header", skipHeader ? "true" : "false");
+
+              await api.post("/import/fonctionnalites/", form);
+              toast.success("Import terminé !");
+              await currentHook.refetch();
+            }
+          )
+        }
       >
         Importer
       </Button>
@@ -323,7 +336,6 @@ const DataTab = () => {
         gammes={hooks["gammes"]?.items ?? []}
         produits={hooks["produits"]?.items ?? []}
       />
-      {selectedItem === "fonctionnalites" && <ImportFonctionnalitesUI />}
     </>
   );
 };

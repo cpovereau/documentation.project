@@ -27,7 +27,7 @@ interface DataListPanelProps {
 const ACTION_KEY = "action";
 
 const isEditableColumn = (label: string) =>
-  ["NOM", "DESCRIPTION", "CODE"].includes(label.toUpperCase());
+  ["NOM", "DESCRIPTION", "CODE", "ABRÉV."].includes(label.toUpperCase());
 
 const InlineEditableCell = ({
   value,

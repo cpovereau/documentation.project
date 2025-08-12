@@ -4,7 +4,7 @@ import { Card } from "components/ui/card";
 import { ToolbarCorrection } from "./ToolbarCorrection";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
+import { getAllExtensions } from "@/extensions/allExtensions";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import TextAlign from "@tiptap/extension-text-align";
@@ -59,7 +59,6 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
         bold: false,
         italic: false,
       }),
-      Underline,
       TextStyle,
       Color,
       TextAlign.configure({ types: ["heading", "paragraph"] }),

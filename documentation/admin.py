@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Projet, VersionProjet, Gamme, Rubrique, Map, Fonctionnalite, Audience, Media
+from .models import Projet, VersionProjet, Gamme, Produit, Rubrique, Map, Fonctionnalite, Audience, Media
 
 @admin.register(Projet)
 class ProjetAdmin(admin.ModelAdmin):
@@ -17,6 +17,13 @@ class VersionProjetAdmin(admin.ModelAdmin):
 class GammeAdmin(admin.ModelAdmin):
     list_display = ("nom", "description")
     search_fields = ("nom",)
+
+@admin.register(Produit)
+class ProduitAdmin(admin.ModelAdmin):
+    list_display = ("nom", "gamme", "abreviation", "is_archived")
+    search_fields = ("nom", "abreviation")
+    list_filter = ("gamme", "is_archived")
+    ordering = ("gamme", "nom")
 
 @admin.register(Rubrique)
 class RubriqueAdmin(admin.ModelAdmin):

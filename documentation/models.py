@@ -18,6 +18,7 @@ class Gamme(models.Model):
 class Produit(models.Model):
     nom = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
+    abreviation = models.CharField(max_length=4)
     gamme = models.ForeignKey(Gamme, on_delete=models.CASCADE, related_name="produits")
     is_archived = models.BooleanField(default=False)
 
@@ -28,8 +29,8 @@ class Produit(models.Model):
 class Fonctionnalite(models.Model):
     produit = models.ForeignKey('Produit', on_delete=models.CASCADE, related_name="fonctionnalites")
     nom = models.CharField(max_length=100)
-    id_fonctionnalite = models.CharField(max_length=10, unique=True, default=0000)  # Identifiant unique pour la fonctionnalité
-    code = models.CharField(max_length=10)  # Exemple : 'ECIV', 'COMP', etc.
+    id_fonctionnalite = models.CharField(max_length=8, unique=True, default="0000")  # Identifiant unique pour la fonctionnalité
+    code = models.CharField(max_length=5)  # Exemple : 'ECIV', 'COMP', etc.
     is_archived = models.BooleanField(default=False)
 
     class Meta:

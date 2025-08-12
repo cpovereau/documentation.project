@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from django.utils.timezone import now
 from django.core.exceptions import ValidationError
-from .models import Rubrique, VersionProjet
+from .models import Map, Rubrique, VersionProjet
 
 def get_versions(projet, is_active=None, is_archived=None):
     ...

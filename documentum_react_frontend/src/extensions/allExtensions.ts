@@ -1,5 +1,4 @@
 import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import Color from "@tiptap/extension-color";
 import { TextStyle } from "@tiptap/extension-text-style";
@@ -20,11 +19,6 @@ import {
   Image,
   Figure,
   Video,
-
-  // 📑 Listes
-  BulletList,
-  OrderedList,
-  ListItem,
 
   // 📘 Glossaire
   Glossentry,
@@ -75,7 +69,6 @@ import {
 
 export const getAllExtensions = () => [
   StarterKit.configure({}),
-  Underline,
   TextStyle,
   Color,
   TextAlign.configure({ types: ["heading", "paragraph"] }),
@@ -95,11 +88,6 @@ export const getAllExtensions = () => [
   Image,
   Figure,
   Video,
-
-  // Listes
-  BulletList,
-  OrderedList,
-  ListItem,
 
   // Glossaire
   Glossentry,

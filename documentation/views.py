@@ -2,6 +2,7 @@ import pprint
 import csv
 import io
 import json
+import logging
 from rest_framework.generics import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes, action, parser_classes
@@ -10,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser
-from .models import Projet, VersionProjet, Gamme, Produit, Map, Fonctionnalite, Audience, Tag, ProfilPublication, InterfaceUtilisateur, Rubrique
+from .models import Projet, VersionProjet, Gamme, Produit, Map, Fonctionnalite, Audience, Tag, ProfilPublication, InterfaceUtilisateur, Rubrique, VersionProjet
 from .utils import get_active_version, clone_version
 from documentation.constants.publication import TYPE_SORTIE_CHOICES
 #import uuid  # Utilisé pour générer un token unique
@@ -34,11 +35,6 @@ def get_csrf_token(request):
 
 # Initialisation du logger
 logger = logging.getLogger(__name__)
-
-# Middleware CSRF pour les vues API
-@ensure_csrf_cookie
-def get_csrf_token(request):
-    return JsonResponse({'message': 'Token CSRF envoyé'})
 
 # Pages d'erreur personnalisées
 def custom_404(request):
@@ -175,10 +171,6 @@ class ProjetViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated] 
  
     def list(self, request, *args, **kwargs):
-        print(f"Headers reçus : {request.headers}")
-        print(f"Query Params : {request.query_params}")
-        print(f"Utilisateur authentifié : {request.user}")
-        print(f"Permissions utilisateur : {request.user.get_all_permissions()}")
         return super().list(request, *args, **kwargs)
 
 # ViewSet pour les Versions de projet
@@ -187,52 +179,47 @@ class VersionProjetViewSet(viewsets.ModelViewSet):
     serializer_class = VersionProjetSerializer
     permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        try:
-            projet = serializer.validated_data['projet']
-            serializer.save(projet=projet, is_active=True)
-            logger.info(f"[Création] Nouvelle version active créée pour le projet '{projet.nom}'")
-        except Exception as e:
-            logger.exception("Erreur lors de la création d'une version")
-            raise ValidationError(f"Erreur lors de la création de la version : {str(e)}")
-
-    def perform_update(self, serializer):
-        try:
-            instance = serializer.instance
-            if serializer.validated_data.get('is_active'):
-                # Désactiver les autres versions actives
-                count = VersionProjet.objects.filter(
-                    projet=instance.projet, is_active=True
-                ).exclude(pk=instance.pk).update(is_active=False)
-                logger.info(f"{count} version(s) désactivée(s) pour le projet '{instance.projet.nom}'")
-
-            serializer.save()
-            logger.info(f"[Mise à jour] Version '{instance.version_numero}' mise à jour pour le projet '{instance.projet.nom}'")
-        except Exception as e:
-            logger.exception("Erreur lors de la mise à jour d'une version")
-            raise ValidationError(f"Erreur lors de la mise à jour de la version : {str(e)}")
-
+    @action(detail=True, methods=["post"], url_path="clone")
     @transaction.atomic
     def clone(self, request, pk=None):
+        """
+        Clone une version de projet existante, y compris ses données associées.
+        Retourne la nouvelle version.
+        """
+        # 1️⃣ Récupération de la version source
+        version_source = get_object_or_404(VersionProjet, pk=pk)
+
         try:
-            version_projet = get_object_or_404(VersionProjet, pk=pk)
-            new_version = clone_version(version_projet)
-            logger.info(f"[Clonage] Version {version_projet.version_numero} clonée avec succès pour le projet '{version_projet.projet.nom}'")
+            # 2️⃣ Appel à la logique métier centralisée
+            new_version = clone_version(version_source)
+
+            # 3️⃣ Log et retour structuré
+            logger.info(
+                f"[Clonage] Version '{version_source.version_numero}' "
+                f"du projet '{version_source.projet.nom}' clonée par {request.user.username}"
+            )
+
             return Response({
                 "message": "Version clonée avec succès",
+                "source_version": VersionProjetSerializer(version_source).data,
                 "new_version": VersionProjetSerializer(new_version).data
             }, status=status.HTTP_201_CREATED)
+
+        except ValidationError as e:
+            logger.warning(f"[Clonage] Erreur de validation : {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
-            logger.exception(f"Erreur lors du clonage de la version {pk}")
+            logger.exception(f"[Clonage] Erreur inattendue pour la version ID={pk}")
             return Response({
-                "error": "Échec du clonage",
+                "error": "Erreur interne lors du clonage",
                 "detail": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
    
 # ViewSet pour les rubriques
 class RubriqueViewSet(viewsets.ModelViewSet):
     queryset = Rubrique.objects.select_related('projet', 'version_projet', 'type_rubrique')\
-                               .prefetch_related('fonctionnalite').all()
+                               .select_related('fonctionnalite').all()
     serializer_class = RubriqueSerializer
     permission_classes = [IsAuthenticated]
 
