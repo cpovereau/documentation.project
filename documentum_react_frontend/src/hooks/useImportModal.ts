@@ -29,5 +29,14 @@ export const useImportModal = create<ImportModalState>((set) => ({
   onConfirm: () => {},
   onClose: undefined,
   openImportModal: (params) => set({ open: true, ...params }),
-  closeImportModal: () => set({ open: false }),
+  closeImportModal: () =>
+  set({
+    open: false,
+    produits: [],
+    fonctionnalites: [],
+    interfaces: [],
+    onConfirm: () => {},
+    onClose: undefined,
+    title: undefined,
+  }),
 }));

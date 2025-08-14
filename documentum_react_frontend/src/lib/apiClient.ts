@@ -1,4 +1,5 @@
 import axios from "axios";
+export const API_BASE = "/api";
 
 // Création d'une instance Axios
 const api = axios.create({

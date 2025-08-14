@@ -46,29 +46,32 @@ export function matchesMediaFilter(
  * @param extension Extension souhaitée (ex : "jpg", "png", "gif")
  * @returns Nouveau nom de fichier (ex : "PLA-MEN-EDT-005.jpg")
  */
-export function generateNextMediaName(existingNames: string[], extension: string): string {
-  if (!existingNames || existingNames.length === 0) {
-    return `-001.${extension}`;
+export function generateNextMediaName(
+  prefix: string,
+  existingNames: string[],
+  extension: string
+): string {
+  let max = 0;
+  const pattern = new RegExp(`^${prefix}-(\\d{3})\\.(jpg|jpeg|png|gif)$`, "i");
+
+  for (const name of existingNames) {
+    const match = name.match(pattern);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > max) max = num;
+    }
   }
 
-  // Extraire tous les suffixes numériques de type NNN
-  const regex = /-(\d{3})\.[a-zA-Z0-9]+$/;
-
-  const maxNum = existingNames.reduce((max, name) => {
-    const match = name.match(regex);
-    if (match && match[1]) {
-      const num = parseInt(match[1], 10);
-      return Math.max(max, num);
-    }
-    return max;
-  }, 0);
-
-  const nextNum = (maxNum + 1).toString().padStart(3, "0");
-
-  // Récupération du préfixe depuis un des noms existants
-  const first = existingNames[0];
-  const prefixMatch = first.match(/^(.+)-\d{3}\./);
-  const prefix = prefixMatch ? prefixMatch[1] : "MEDIA";
-
+  const nextNum = (max + 1).toString().padStart(3, "0");
   return `${prefix}-${nextNum}.${extension}`;
 }
+
+/**
+ * Gestion du chemin adapté pour l'affichage des médias dans l'application en mode local
+ *
+ */
+export function getMediaUrl(fileName: string) {
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  return `${API_BASE_URL}/medias/${fileName}`;
+}
+

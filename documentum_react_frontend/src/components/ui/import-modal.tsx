@@ -6,6 +6,7 @@
 // =====================================================
 
 import React, { useState, useRef, useEffect } from "react";
+import { api } from "@/lib/apiClient";
 import {
   Dialog,
   DialogContent,
@@ -13,10 +14,11 @@ import {
   DialogDescription,
   DialogOverlay,
 } from "@/components/ui/dialog";
-import { generateNextMediaName } from "@/lib/mediaUtils";
+import { generateNextMediaName, getMediaUrl } from "@/lib/mediaUtils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Portal } from "@radix-ui/react-portal";
+import { cn } from "@/lib/utils";
 import Papa from "papaparse";
 import { toast } from "sonner";
 
@@ -56,6 +58,11 @@ export const ImportModal = ({
       setRawData([]);
       setProduitId(null);
       setIgnoreHeader(true);
+      setFonctionnaliteId(null);
+      setInterfaceId(null);
+      setPreviewUrl(null);
+      setExistingImages([]);
+      setSelectedImageToReplace(null);
     }
   }, [open]);
 
@@ -98,37 +105,47 @@ export const ImportModal = ({
   const [interfaceId, setInterfaceId] = useState<number | null>(null);
   const [nomMedia, setNomMedia] = useState<string>(""); // nom proposé (PLA-MEN-EDT-005.jpg)
   const [fileExtension, setFileExtension] = useState<string>("jpg"); // ou png, gif...
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [doublon, setDoublon] = useState<boolean>(false);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [selectedImageToReplace, setSelectedImageToReplace] = useState<
+    string | null
+  >(null);
 
-  // Nommage des Médias
+  // Nommage des Médias et remplacement
   useEffect(() => {
     const fetchMediaNames = async () => {
-      // Vérifie qu'on a bien tout
       if (!produitId || !fonctionnaliteId || !interfaceId) {
         setNomMedia("");
+        setExistingImages([]);
         return;
       }
 
       try {
-        const res = await fetch(
-          `/medias/check-nom/?produit=${produitId}&fonctionnalite=${fonctionnaliteId}&interface=${interfaceId}`,
-          { credentials: "include" }
-        );
+        const res = await api.get("/medias-check-nom/", {
+          params: {
+            produit: produitId,
+            fonctionnalite: fonctionnaliteId,
+            interface: interfaceId,
+          },
+        });
 
-        if (!res.ok) throw new Error("Erreur API check-nom");
+        const { prefix, existing = [] } = res.data;
+        const extension = fileExtension || "jpg";
+        const nextNom = generateNextMediaName(prefix, existing, extension);
+        setNomMedia(nextNom);
 
-        const data = await res.json();
-        const { prefix, existing_names } = data;
-
-        const generated = generateNextMediaName(existing_names, fileExtension);
-        setNomMedia(generated);
-        setDoublon(existing_names.includes(generated));
+        setNomMedia(nextNom);
+        setDoublon(existing.includes(nextNom));
+        setExistingImages(existing);
+        setSelectedImageToReplace(null);
       } catch (err) {
         console.error(
           "❌ Erreur lors de la vérification du nom du média :",
           err
         );
         setNomMedia("ERREUR_GENERATION_NOM");
+        setExistingImages([]);
       }
     };
 
@@ -139,14 +156,48 @@ export const ImportModal = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const droppedFile = e.dataTransfer.files?.[0];
-    if (droppedFile && droppedFile.name.endsWith(".csv")) {
-      setFile(droppedFile);
-      parseCSV(droppedFile);
-      setStep("mapping");
+    if (!droppedFile) return;
+
+    if (context === "fonctionnalites") {
+      if (droppedFile.name.endsWith(".csv")) {
+        setFile(droppedFile);
+        parseCSV(droppedFile);
+        setStep("mapping");
+      } else {
+        toast.error("Veuillez importer un fichier CSV.");
+      }
+    }
+
+    if (context === "media") {
+      if (droppedFile.type.startsWith("image/")) {
+        setFile(droppedFile);
+        setPreviewUrl(URL.createObjectURL(droppedFile));
+      } else {
+        toast.error("Veuillez importer un fichier image.");
+      }
     }
   };
 
-  const handleConfirm = () => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setPreviewUrl(URL.createObjectURL(selectedFile));
+    }
+  };
+
+  const handleConfirmClick = () => {
+    if (selectedImageToReplace) {
+      const confirmed = window.confirm(
+        `⚠️ Vous allez remplacer l’image "${selectedImageToReplace}".\n\nToutes les documentations qui utilisent cette image seront actualisées.\nAucune mise en arrière n’est possible.\n\nSouhaitez-vous confirmer ?`
+      );
+      if (!confirmed) return;
+    }
+
+    handleConfirm();
+  };
+
+  const handleConfirm = async () => {
     // --- Cas : import de fonctionnalités (CSV)
     if (context === "fonctionnalites" || context === "xml") {
       if (!file || rawData.length === 0) {
@@ -181,6 +232,31 @@ export const ImportModal = ({
         return;
       }
 
+      const formData = new FormData();
+      formData.append("file", file as Blob);
+      formData.append("produit", produitId?.toString() || "");
+      formData.append("fonctionnalite", fonctionnaliteId?.toString() || "");
+      formData.append("interface", interfaceId?.toString() || "");
+      formData.append("nom_fichier", selectedImageToReplace || nomMedia);
+      formData.append("remplacer", selectedImageToReplace ? "true" : "false");
+
+      if (selectedImageToReplace) {
+        formData.append("remplacer_nom_fichier", selectedImageToReplace);
+      }
+
+      try {
+        const res = await api.post("/import/media/", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        toast.success(res.data.message || "Média importé avec succès.");
+      } catch (error: any) {
+        console.error("Erreur import média :", error);
+        toast.error(error?.response?.data?.error || "Erreur lors de l'import.");
+      }
+
       onConfirm({
         file,
         produitId,
@@ -188,6 +264,7 @@ export const ImportModal = ({
         interfaceId,
         nomAuto: nomMedia,
         remplacer: doublon,
+        remplacerNomFichier: selectedImageToReplace,
       });
       return;
     }
@@ -223,6 +300,8 @@ export const ImportModal = ({
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, []);
+
+  if (!open) return null;
 
   return (
     <Dialog open={open} onOpenChange={onClose} modal={false}>
@@ -368,6 +447,51 @@ export const ImportModal = ({
           {/* 📁 CONTEXT : Import Médias (Images) */}
           {context === "media" && (
             <>
+              {/* Zone de glisser-déposer OU sélection fichier */}
+              <div
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDrop}
+                className="mb-4 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50"
+              >
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.gif"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] || null;
+                    setFile(f);
+                    if (f) {
+                      const ext =
+                        f.name.split(".").pop()?.toLowerCase() || "jpg";
+                      setFileExtension(ext);
+                      setPreviewUrl(URL.createObjectURL(f));
+                    }
+                  }}
+                  className="hidden"
+                  id="media-file-input"
+                />
+                <label
+                  htmlFor="media-file-input"
+                  className="text-sm text-gray-600 cursor-pointer"
+                >
+                  {file ? (
+                    <span>{file.name}</span>
+                  ) : (
+                    <span>Glissez un fichier ici ou cliquez pour choisir</span>
+                  )}
+                </label>
+              </div>
+
+              {/* Aperçu image */}
+              {previewUrl && (
+                <div className="flex justify-center mb-4">
+                  <img
+                    src={previewUrl}
+                    alt="Aperçu"
+                    className="max-h-40 rounded shadow border"
+                  />
+                </div>
+              )}
+
               {/* Sélection produit */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -429,26 +553,6 @@ export const ImportModal = ({
                 </select>
               </div>
 
-              {/* Upload image */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fichier image
-                </label>
-                <input
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.gif"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] || null;
-                    setFile(f);
-                    if (f) {
-                      const ext =
-                        f.name.split(".").pop()?.toLowerCase() || "jpg";
-                      setFileExtension(ext);
-                    }
-                  }}
-                />
-              </div>
-
               {/* Aperçu du nom calculé */}
               {nomMedia && (
                 <p className="text-sm text-gray-600 mb-2">
@@ -463,11 +567,51 @@ export const ImportModal = ({
                 </p>
               )}
 
+              {/* Affichage de l'extension de composant si image existante */}
+              {nomMedia?.match(
+                new RegExp(`-\\d{3}\\.${fileExtension}$`, "i")
+              ) &&
+                parseInt(nomMedia.split("-").pop()?.split(".")[0] || "0") > 1 &&
+                existingImages.length > 0 && (
+                  <div className="mt-6 border-l pl-4 max-h-64 overflow-y-auto">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                      Images existantes
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {existingImages.map((imgName) => (
+                        <div
+                          key={imgName}
+                          onClick={() => setSelectedImageToReplace(imgName)}
+                          className={cn(
+                            "cursor-pointer border rounded p-1 transition hover:shadow-md",
+                            selectedImageToReplace === imgName
+                              ? "border-blue-500 ring-2 ring-blue-300"
+                              : "border-gray-300"
+                          )}
+                        >
+                          <img
+                            src={getMediaUrl(`${imgName}`)}
+                            alt={imgName}
+                            className="w-full h-auto object-contain rounded"
+                          />
+                          <p className="text-xs text-center mt-1">{imgName}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Boutons */}
               <div className="flex justify-end gap-4 mt-4">
                 <Button variant="outline" onClick={onClose}>
                   Annuler
                 </Button>
-                <Button onClick={handleConfirm}>Valider l’import</Button>
+                <Button
+                  onClick={handleConfirmClick}
+                  variant={selectedImageToReplace ? "danger" : "default"}
+                >
+                  {selectedImageToReplace ? "Remplacer" : "Valider l’import"}
+                </Button>
               </div>
             </>
           )}

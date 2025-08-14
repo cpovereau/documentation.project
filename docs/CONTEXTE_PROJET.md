@@ -16,8 +16,9 @@
   - [Formats de publication supportés](#formats-de-publication-supportés)
   - [Spécificités métier](#spécificités-métier)
   - [Fonctionnalités avancées](#fonctionnalités-avancées)
-  - [Principaux endpoints API](#principaux-endpoints-api)
-  - [Structure du code](#structure-du-code)
+  - [🔌 API REST – Documentation interactive](#-api-rest--documentation-interactive)
+    - [Accès à la documentation :](#accès-à-la-documentation-)
+    - [Export manuel du schéma YAML :](#export-manuel-du-schéma-yaml-)
   - [Historique des évolutions](#historique-des-évolutions)
 
 ---
@@ -130,19 +131,22 @@ Permet à n’importe quel écran de déclencher un import via openImportModal(.
 
 ---
 
-## Principaux endpoints API
+## 🔌 API REST – Documentation interactive
 
-*(liste non exhaustive)*
+L'application expose automatiquement la documentation de son API REST via la librairie `drf-spectacular`.
 
-* `GET /gammes/` – Liste des gammes
-* `POST /gammes/` – Ajout gamme
-* `PATCH /gammes/{id}/restore/` – Restauration gamme
-* `GET /projets/` – Liste des projets
-* `POST /projets/` – Création projet
-* `POST /versions/{id}/clone/` – Clonage version
-* `POST /maps/{id}/publish/` – Publication map
+### Accès à la documentation :
 
----
+- **Interface Swagger** : [`http://localhost:8000/docs/`](http://localhost:8000/docs/)
+- **Schéma OpenAPI brut (JSON)** : [`http://localhost:8000/schema/`](http://localhost:8000/schema/)
+
+### Export manuel du schéma YAML :
+
+Pour exporter la spécification OpenAPI dans un fichier local (`schema.yaml`) :
+
+```bash
+python manage.py spectacular --file schema.yaml
+
 
 ## Structure du code
 
