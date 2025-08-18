@@ -1,4 +1,9 @@
-// src/api/produits.ts
+// =====================================================
+// 📂 Fichier : src/api/produits.ts
+// 🔎 API pour les produits
+// =====================================================
+
+
 import { api } from "@/lib/apiClient";
 
 export interface Produit {

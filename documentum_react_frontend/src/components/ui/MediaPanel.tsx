@@ -16,11 +16,9 @@ import { Button } from "components/ui/button";
 import { Separator } from "components/ui/separator";
 import { MediaCard } from "components/ui/MediaCard";
 import {
-  Check,
   Camera,
   Video,
   Upload,
-  X as XIcon,
   Search,
   ArrowUpDown,
   LayoutGrid,
@@ -30,28 +28,9 @@ import {
 } from "lucide-react";
 import { useAllDictionnaireData } from "@/hooks/useAllDictionnaireData";
 import { useImportModal } from "@/hooks/useImportModal";
-import { matchesMediaFilter } from "@/lib/mediaUtils";
-
-const produitOptions = [
-  { value: "PLA", label: "PLA - Planning" },
-  { value: "USA", label: "USA - Usager" },
-];
-
-const fonctionnaliteOptions = [
-  { value: "BUT", label: "BUT - Bouton" },
-  { value: "MEN", label: "MEN - Menu" },
-  { value: "TRA", label: "TRA - Transverse" },
-];
-
-export interface MediaItem {
-  id: number;
-  title: string;
-  updatedText: string;
-  imageUrl: string;
-}
+import { useMedias } from "@/hooks/useMedias";
 
 interface MediaPanelProps {
-  mediaItems: MediaItem[];
   isImageMode: boolean;
   searchText: string;
   sortOrder: "asc" | "desc";
@@ -65,9 +44,7 @@ interface MediaPanelProps {
   isFloating?: boolean;
 }
 
-// Composant principal du panneau média
 export const MediaPanel: React.FC<MediaPanelProps> = ({
-  mediaItems,
   isImageMode,
   searchText,
   sortOrder,
@@ -81,30 +58,52 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
   isFloating = false,
 }) => {
   type MediaFilterType = "produit" | "fonctionnalite" | "item";
-
   const [activeFilter, setActiveFilter] = useState<MediaFilterType | null>(
     null
   );
   const [filterKeyword, setFilterKeyword] = useState<string>("");
-  const filteredMedia = mediaItems
-    .filter((item) => {
-      const matchSearchText = item.title
-        .toLowerCase()
-        .includes(searchText.toLowerCase());
 
-      const matchStructuredFilter = matchesMediaFilter(
-        item.title,
-        activeFilter,
-        filterKeyword
-      );
+  const { data, isLoading } = useAllDictionnaireData();
 
-      return matchSearchText && matchStructuredFilter;
-    })
-    .sort((a, b) =>
-      sortOrder === "asc"
-        ? a.title.localeCompare(b.title)
-        : b.title.localeCompare(a.title)
-    );
+  // chargement des produits
+  const produitId =
+    activeFilter === "produit"
+      ? data.produits.find((p) => p.abreviation === filterKeyword)?.id
+      : undefined;
+
+  // chargement des fonctionnalités
+  const fonctionnaliteCode =
+    activeFilter === "fonctionnalite"
+      ? data.fonctionnalites.find((f) => f.code === filterKeyword)?.code
+      : undefined;
+
+  // chargement des éléments d'interface
+  const interfaceCode =
+    activeFilter === "item"
+      ? data.interfaces.find((i) => i.code === filterKeyword)?.code
+      : undefined;
+
+  // initialisation de la recherche
+  const isFreeTextSearch = activeFilter === null;
+  const searchTerm = isFreeTextSearch ? searchText : "";
+
+  //  Actualisation suite import d'image
+  const [mediaRefreshKey, setMediaRefreshKey] = useState(0);
+
+  const { medias } = useMedias({
+    produitId,
+    fonctionnaliteCode,
+    interfaceCode,
+    searchTerm,
+    mediaRefreshKey,
+  });
+
+  // tri
+  const filteredMedia = medias.sort((a, b) =>
+    sortOrder === "asc"
+      ? a.nom_fichier.localeCompare(b.nom_fichier)
+      : b.nom_fichier.localeCompare(a.nom_fichier)
+  );
 
   const getGridClass = () => {
     if (displayMode === "grid") return "grid gap-2 grid-cols-1";
@@ -114,9 +113,9 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
     return "grid-cols-1";
   };
 
-  const { data, isLoading } = useAllDictionnaireData();
   const { openImportModal } = useImportModal();
 
+  // Appel de la fonction d'import
   const handleImportClick = () => {
     openImportModal({
       context: "media",
@@ -126,6 +125,7 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
       interfaces: data.interfaces,
       onConfirm: (params) => {
         console.log("📤 Média importé :", params);
+        setMediaRefreshKey((k) => k + 1);
       },
     });
   };
@@ -178,7 +178,6 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
 
       {/* Recherche */}
       <div className="relative w-full group">
-        {/* Icônes à gauche */}
         <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center space-x-1">
           <Search className="text-gray-400 w-5 h-5 pointer-events-none" />
 
@@ -204,23 +203,14 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
               className="z-50 w-40 bg-white shadow-md"
             >
               <DropdownMenuItem onClick={() => setActiveFilter("produit")}>
-                {activeFilter === "produit" && (
-                  <Check className="mr-2 h-4 w-4 text-primary" />
-                )}
                 Produit
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setActiveFilter("fonctionnalite")}
               >
-                {activeFilter === "fonctionnalite" && (
-                  <Check className="mr-2 h-4 w-4 text-primary" />
-                )}
                 Fonctionnalité
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setActiveFilter("item")}>
-                {activeFilter === "item" && (
-                  <Check className="mr-2 h-4 w-4 text-primary" />
-                )}
                 Item
               </DropdownMenuItem>
               {activeFilter && (
@@ -228,6 +218,7 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
                   onClick={() => {
                     setActiveFilter(null);
                     setFilterKeyword("");
+                    onClearSearch();
                   }}
                   className="text-red-500"
                 >
@@ -246,25 +237,46 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
             onChange={(e) => setFilterKeyword(e.target.value)}
           >
             <option value="">-- Choisir un produit --</option>
-            <option value="PLA">PLA - Planning</option>
-            <option value="USA">USA - Usager</option>
+            {data.produits.map((p) => (
+              <option key={p.id} value={p.abreviation}>
+                {p.abreviation} - {p.nom}
+              </option>
+            ))}
           </select>
         )}
 
         {activeFilter === "fonctionnalite" && (
+          <select
+            key="fonctionnalite-select"
+            className="w-full pl-14 pr-10 py-2 rounded-lg border border-[#65558f] bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#65558f]"
+            value={filterKeyword}
+            onChange={(e) => setFilterKeyword(e.target.value)}
+          >
+            <option value="">-- Choisir une fonctionnalité --</option>
+            {data.fonctionnalites.map((f) => (
+              <option key={f.id} value={f.code}>
+                {f.code} - {f.nom}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {activeFilter === "item" && (
           <select
             className="w-full pl-14 pr-10 py-2 rounded-lg border border-[#65558f] bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#65558f]"
             value={filterKeyword}
             onChange={(e) => setFilterKeyword(e.target.value)}
           >
             <option value="">-- Choisir une fonctionnalité --</option>
-            <option value="BUT">BUT - Bouton</option>
-            <option value="MEN">MEN - Menu</option>
-            <option value="TRA">TRA - Transverse</option>
+            {data.interfaces.map((f) => (
+              <option key={f.id} value={f.code}>
+                {f.code} - {f.nom}
+              </option>
+            ))}
           </select>
         )}
 
-        {(!activeFilter || activeFilter === "item") && (
+        {activeFilter === null && (
           <input
             type="text"
             placeholder="Recherche"
@@ -272,18 +284,6 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-14 pr-10 py-2 rounded-lg border border-[#65558f] bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#65558f]"
           />
-        )}
-
-        {/* Bouton X visible uniquement si texte libre saisi */}
-        {(!activeFilter || activeFilter === "item") && searchText && (
-          <button
-            type="button"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            onClick={onClearSearch}
-            aria-label="Effacer la recherche"
-          >
-            <XIcon className="w-5 h-5" />
-          </button>
         )}
       </div>
 
@@ -308,19 +308,17 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
         </Button>
       </div>
 
-      {/* Conteneur avec scrollbar adaptative */}
       <div
         className="media-container-style"
-        style={{
-          marginBottom: isFloating ? 0 : "1rem",
-        }}
+        style={{ marginBottom: isFloating ? 0 : "1rem" }}
       >
         <div className={getGridClass()}>
-          {filteredMedia.map((card) => (
+          {filteredMedia.map((item) => (
             <MediaCard
-              key={card.id}
-              {...card}
-              className="w-full"
+              key={item.id}
+              title={item.nom_fichier}
+              updatedText={item.description ?? ""}
+              imageUrl={item.chemin_acces}
               isListMode={displayMode === "list"}
             />
           ))}

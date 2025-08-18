@@ -1,4 +1,6 @@
-import { Card, CardContent } from "components/ui/card";
+import { Card, CardContent } from "./card";
+import { getMediaUrl } from "@/lib/mediaUtils";
+import { ImagePreview } from "./ImagePreview";
 
 interface MediaCardProps {
   title: string;
@@ -8,17 +10,24 @@ interface MediaCardProps {
   isListMode?: boolean;
 }
 
-export const MediaCard: React.FC<
-  MediaCardProps & { className?: string; isListMode?: boolean }
-> = ({ title, updatedText, imageUrl, className = "", isListMode = false }) => {
+export const MediaCard: React.FC<MediaCardProps> = ({
+  title,
+  updatedText,
+  imageUrl,
+  className = "",
+  isListMode = false,
+}) => {
   return (
     <Card className={`h-full border-none shadow-none p-0 ${className}`}>
-      <CardContent className="p-0 flex flex-col justify-start gap-1 h-full overflow-hidden">
-        {!isListMode && (
-          <div
-            className="w-full h-[60px] rounded-2xl bg-cover bg-center cursor-pointer transition-all duration-300 hover:shadow-lg mb-1"
-            style={{ backgroundImage: `url(${imageUrl})` }}
-          />
+      <CardContent className="p-0 flex flex-col justify-start gap-1 h-full overflow-visible">
+        {!isListMode && imageUrl && (
+          <ImagePreview imageUrl={getMediaUrl(imageUrl)}>
+            <img
+              src={getMediaUrl(imageUrl)}
+              alt={title}
+              className="w-full h-[60px] object-cover rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg mb-1"
+            />
+          </ImagePreview>
         )}
         <div className="flex flex-col text-xs leading-tight">
           <div className="font-bold text-m3syslighton-surface overflow-hidden text-ellipsis whitespace-nowrap">
