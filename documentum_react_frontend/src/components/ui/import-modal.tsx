@@ -6,7 +6,7 @@
 // =====================================================
 
 import React, { useState, useRef, useEffect } from "react";
-import { api } from "@/lib/apiClient";
+import api from "@/lib/apiClient";
 import {
   Dialog,
   DialogContent,
@@ -434,10 +434,16 @@ export const ImportModal = ({
                   </div>
 
                   <div className="flex justify-end gap-4 mt-4">
-                    <Button variant="outline" onClick={onClose}>
+                    <Button
+                      className={"h-11 w-36"}
+                      variant="ghost"
+                      onClick={onClose}
+                    >
                       Annuler
                     </Button>
-                    <Button onClick={handleConfirm}>Valider l’import</Button>
+                    <Button className={"h-11 w-36"} onClick={handleConfirm}>
+                      Valider l’import
+                    </Button>
                   </div>
                 </>
               )}
@@ -603,10 +609,15 @@ export const ImportModal = ({
 
               {/* Boutons */}
               <div className="flex justify-end gap-4 mt-4">
-                <Button variant="outline" onClick={onClose}>
+                <Button
+                  className={"h-11 w-36"}
+                  variant="ghost"
+                  onClick={onClose}
+                >
                   Annuler
                 </Button>
                 <Button
+                  className={"h-11 w-36"}
                   onClick={handleConfirmClick}
                   variant={selectedImageToReplace ? "danger" : "default"}
                 >

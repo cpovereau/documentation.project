@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { useAllDictionnaireData } from "@/hooks/useAllDictionnaireData";
-import { api } from "@/lib/apiClient";
+import api from "@/lib/apiClient";
 import { useImportModal } from "@/hooks/useImportModal";
 import { toast } from "sonner";
 import { getArchivableHooks, resourceLabels } from "@/hooks/useArchivableList";

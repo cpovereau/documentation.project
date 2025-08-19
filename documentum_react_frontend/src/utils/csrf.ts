@@ -1,4 +1,4 @@
-import { api } from "@/lib/apiClient";
+import api from "@/lib/apiClient";
 
 export async function ensureCSRFReady(timeout = 1000): Promise<void> {
   await api.get("/csrf/");

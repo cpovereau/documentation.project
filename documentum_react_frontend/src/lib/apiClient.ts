@@ -1,4 +1,11 @@
 import axios from "axios";
+import {
+  ProjectReadSchema,
+  CreateProjectResponseSchema,
+  type ProjectReadZ,
+  type CreateProjectResponseZ,
+  parseOrThrow,
+} from "@/types/api.zod";
 export const API_BASE = "/api";
 
 // Création d'une instance Axios
@@ -7,7 +14,7 @@ const api = axios.create({
   withCredentials: true,
 });
 
-  // Fonction utilitaire pour lire les cookies
+// Fonction utilitaire pour lire les cookies
 function getCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
   const cookies = document.cookie.split(";").map(c => c.trim());
@@ -86,4 +93,18 @@ api.interceptors.response.use(
   }
 );
 
-export { api };
+// --- Création de projet avec sa version initiale et map racine ---
+export async function createProjectValidated(payload: {
+  nom: string; description: string; gamme_id: number;
+}): Promise<CreateProjectResponseZ> {
+  const res = await api.post("/projet/create/", payload);
+  return parseOrThrow(CreateProjectResponseSchema, res.data, "CreateProject: payload serveur inattendu");
+}
+
+// --- Récupération des détails d’un projet (projet + gamme + versions + maps) ---
+export async function getProjectDetailsValidated(id: number): Promise<ProjectReadZ> {
+  const res = await api.get(`/projets/${id}/details/`);
+  return parseOrThrow(ProjectReadSchema, res.data, "ProjectDetails: payload serveur inattendu");
+}
+
+export default api;

@@ -1,6 +1,6 @@
 // 📁 src/hooks/useDictionnaireHooks.ts
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/apiClient";
+import api from "@/lib/apiClient";
 import {
   Gamme,
   Produit,

@@ -3,7 +3,7 @@
 // 🔎 API pour les interfaces utilisateur
 // =====================================================
 
-import { api } from "@/lib/apiClient";
+import api from "@/lib/apiClient";
 
 export interface InterfaceUtilisateur {
   id: number;

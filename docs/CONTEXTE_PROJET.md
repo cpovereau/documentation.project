@@ -16,14 +16,10 @@
     - [Hooks personnalisés](#hooks-personnalisés)
     - [Extensions TipTap](#extensions-tiptap)
     - [AuthContext](#authcontext)
-  - [Types globaux (frontend)](#types-globaux-frontend)
-  - [Types locaux (frontend)](#types-locaux-frontend)
-  - [Formats de publication supportés](#formats-de-publication-supportés)
-  - [Spécificités métier](#spécificités-métier)
-  - [Fonctionnalités avancées](#fonctionnalités-avancées)
-  - [🔌 API REST – Documentation interactive](#-api-rest--documentation-interactive)
-    - [Accès à la documentation :](#accès-à-la-documentation-)
-    - [Export manuel du schéma YAML :](#export-manuel-du-schéma-yaml-)
+    - [🧩 Validation des réponses API avec Zod](#-validation-des-réponses-api-avec-zod)
+      - [Objectifs](#objectifs)
+      - [Implémentation](#implémentation)
+      - [Exemple](#exemple)
   - [Structure du code](#structure-du-code)
   - [Historique des évolutions](#historique-des-évolutions)
 
@@ -126,6 +122,45 @@ Contexte React centralisant la **session utilisateur** :
 - Ajoute l’entête `Authorization: Bearer <token>` via un **intercepteur Axios**.  
 - **Déconnexion automatique** en cas de 401 (nettoyage token + redirection vers Login).  
 - **Protection de routes** : accès aux écrans réservé aux utilisateurs authentifiés.
+
+---
+
+### 🧩 Validation des réponses API avec Zod
+
+Afin de fiabiliser les échanges entre le frontend (React/TypeScript) et le backend (Django REST), une couche de validation a été ajoutée via **Zod**.  
+Les schémas sont centralisés dans `src/types/api.zod.ts`.
+
+#### Objectifs
+- Garantir que les données reçues du backend respectent les structures attendues.  
+- Détecter rapidement les divergences de contrat (champ manquant, type incorrect).  
+- Générer automatiquement les types TypeScript (`z.infer`) à partir des schémas.  
+- Uniformiser la gestion des erreurs de parsing et les messages renvoyés au frontend.
+
+#### Implémentation
+- Définition des schémas Zod pour chaque payload critique (ex. `ProjectReadSchema`, `CreateProjectResponseSchema`).  
+- Les fonctions d’API validées (`createProjectValidated`, `getProjectDetailsValidated`) passent toujours par `parseOrThrow`.  
+- En cas de divergence, une exception est levée et interceptée par l’intercepteur Axios → affichage cohérent côté UI.
+
+#### Exemple
+```ts
+export const ProjectReadSchema = z.object({
+  id: z.number(),
+  nom: z.string(),
+  gamme: z.object({
+    id: z.number(),
+    nom: z.string(),
+  }),
+  versions: z.array(z.object({
+    id: z.number(),
+    numero: z.string(),
+  })),
+  maps: z.array(z.any()),
+});
+export type ProjectReadZ = z.infer<typeof ProjectReadSchema>;
+
+// Usage dans l’API client :
+const res = await api.get(`/projets/${id}/details/`);
+return parseOrThrow(ProjectReadSchema, res.data, "ProjectDetails: payload serveur inattendu");
 
 ---
 

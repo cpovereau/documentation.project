@@ -4,6 +4,7 @@ export * from "./produits";
 export * from "./fonctionnalites";
 export * from "./interfaces"
 export * from "./medias"; 
+export * from "./gammes";
 // export * from "./documents";   // à venir
 // export * from "./rubriques";   // si besoin plus tard
 

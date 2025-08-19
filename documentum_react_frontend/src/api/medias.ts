@@ -3,7 +3,7 @@
 // 🔎 API d'accès aux médias (images / vidéos)
 // =====================================================
 
-import { api } from "@/lib/apiClient";
+import api from "@/lib/apiClient";
 
 export interface MediaItem {
   id: number;

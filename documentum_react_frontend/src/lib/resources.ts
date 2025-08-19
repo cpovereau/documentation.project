@@ -1,5 +1,5 @@
 // lib/resources.ts
-import { api } from "@/lib/apiClient";
+import api from "@/lib/apiClient";
 
 /**
  * Toggle l'archivage ou la restauration d'une ressource de type ArchivableModelViewSet

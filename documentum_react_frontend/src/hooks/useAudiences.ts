@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/apiClient";
+import api from "@/lib/apiClient";
 import { Audience } from "@/types/dictionnaires";
 
 export function useAudiences() {

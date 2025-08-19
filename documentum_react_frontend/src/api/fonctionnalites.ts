@@ -3,7 +3,7 @@
 // 🔎 API pour les fonctionnalités
 // =====================================================
 
-import { api } from "@/lib/apiClient";
+import api from "@/lib/apiClient";
 
 export interface Fonctionnalite {
   id: number;

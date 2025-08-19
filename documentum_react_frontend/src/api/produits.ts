@@ -2,9 +2,7 @@
 // 📂 Fichier : src/api/produits.ts
 // 🔎 API pour les produits
 // =====================================================
-
-
-import { api } from "@/lib/apiClient";
+import api from "@/lib/apiClient";
 
 export interface Produit {
   id: number;

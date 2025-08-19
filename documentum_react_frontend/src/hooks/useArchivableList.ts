@@ -1,6 +1,6 @@
 // hooks/useArchivableList.ts
 import { useEffect, useState } from "react";
-import { api } from "@/lib/apiClient";
+import api from "@/lib/apiClient";
 import { toast } from "sonner";
 import { toggleArchivableResource } from "@/lib/resources";
 
