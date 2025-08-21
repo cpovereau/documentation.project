@@ -1,3 +1,4 @@
+# documentation/views.py
 import pprint
 import csv
 import io
@@ -37,7 +38,7 @@ from .models import (
     VersionProjet,
     Media,
 )
-from .utils import get_active_version, clone_version
+from .utils import get_active_version, clone_version, generate_dita_template
 from documentation.constants.publication import TYPE_SORTIE_CHOICES
 
 # import uuid  # Utilisé pour générer un token unique
@@ -763,3 +764,46 @@ def upload_media(request):
     except Exception as e:
         logger.exception("[Media] Erreur lors de l'import")
         return Response({"error": "Erreur serveur", "detail": str(e)}, status=500)
+
+
+# Vue pour générer un template DITA
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from .utils import generate_dita_template, get_active_version
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def generate_dita(request):
+    """
+    Body JSON attendu (tous facultatifs sauf titre) :
+    { "titre": "...", "audience": "...", "produit": "...", "fonctionnalites": ["AUTH", "MEN"], "type_dita": "topic" }
+    La version est déduite de la version active du projet si 'projet_id' est fourni.
+    """
+    data = request.data or {}
+    titre = data.get("titre", "Nouvelle rubrique")
+    type_dita = data.get("type_dita", "topic")
+    audience = data.get("audience")
+    produit = data.get("produit")
+    fonctionnalites = data.get("fonctionnalites") or []
+    projet_id = data.get("projet_id")
+
+    version_num = None
+    if projet_id:
+        from .models import Projet
+
+        projet = Projet.objects.filter(id=projet_id).first()
+        if projet:
+            v = get_active_version(projet)
+            version_num = v.version_numero if v else None
+
+    xml = generate_dita_template(
+        type_dita=type_dita,
+        auteur=request.user.get_full_name() or request.user.username or "?",
+        titre=titre,
+        audience=audience,
+        version=version_num,
+        produit=produit,
+        fonctionnalites=fonctionnalites,
+    )
+    return Response({"xml": xml})
