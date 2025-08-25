@@ -4,6 +4,12 @@ import { ProjectModule } from "@/components/ui/ProjectModule";
 import { MapModule } from "@/components/ui/MapModule";
 import type { MapItem } from "@/types/MapItem";
 import type { ProjectItem } from "@/types/ProjectItem";
+import { prepareNewRubriqueXml, RubriqueInitPayload } from "@/api/rubriques";
+import useSelectedProduct from "@/hooks/useSelectedProduct";
+import useSelectedVersion from "@/hooks/useSelectedVersion";
+import useProjectStore from "@/store/projectStore";
+import useXmlBufferStore from "@/store/xmlBufferStore";
+import { toast } from "sonner";
 import { CreateProjectDialog } from "@/components/ui/CreateProjectDialog";
 import { LoadProjectDialog } from "@/components/ui/LoadProjectDialog";
 import { LoadMapDialog } from "components/ui/LoadMapDialog";
@@ -113,18 +119,35 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   // État pour gérer l'ouverture du dialogue d'importation de map Word
   const [importWordOpen, setImportWordOpen] = useState(false);
 
-  // Ajoute l’état des projets et de la map sélectionnée
+  // 🧠 Stores / sélection globale (produit, version, projet)
+  const { selectedProjectId } = useSelectedVersion();
+  const { selectedProduct } = useSelectedProduct();
+  const setSelectedProjectId = useProjectStore((s) => s.setSelectedProjectId);
+  const { setXml } = useXmlBufferStore();
+
+  // 📦 Projets chargés depuis l’API
   const [projects, setProjects] = useState<ProjectItem[]>(initialProjects);
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
-    projects[0]?.id ?? null
+
+  // 📌 État de la Map courante liée au projet sélectionné
+  const [mapItems, setMapItems] = useState<MapItem[]>(
+    projects.find((p) => p.id === selectedProjectId)?.mapItems ?? []
   );
   const [selectedMapItemId, setSelectedMapItemId] = useState<number | null>(
     projects.find((p) => p.id === selectedProjectId)?.mapItems[0]?.id ?? null
   );
 
-  const [mapItems, setMapItems] = useState<MapItem[]>(
-    projects.find((p) => p.id === selectedProjectId)?.mapItems ?? []
-  );
+  const payload: RubriqueInitPayload = {
+    titre: "Nouvelle rubrique",
+    projet_id: selectedProjectId ?? undefined,
+    produitLabelOrAbbrev: selectedProduct?.abreviation ?? null,
+    type: "topic",
+    audience: null,
+    fonctionnalites: null,
+  };
+  const fetchXml = async () => {
+    const xml = await prepareNewRubriqueXml(payload);
+    return xml;
+  };
 
   // État pour gérer l'affichage de la carte d'exportation
   // Utilisé pour afficher une carte d'exportation après la publication d'un projet
@@ -220,23 +243,51 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     setEditingItemId(null);
   };
 
-  // Ajoute un nouvel item de map
-  const handleAddMapItem = () => {
+  // --- Ajout d'une nouvelle rubrique ---
+  const handleAddMapItem = async () => {
     const newId = mapItems.length
       ? Math.max(...mapItems.map((i) => i.id)) + 1
       : 1;
-    setMapItems([
-      ...mapItems,
-      {
-        id: newId,
-        title: `Nouvelle rubrique ${newId}`,
-        level: 1,
-        isMaster: false,
-        expanded: false,
-        versionOrigine: "",
-      },
-    ]);
+
+    const newTitle = `Nouvelle rubrique ${newId}`;
+
+    const newItem: MapItem = {
+      id: newId,
+      title: newTitle,
+      level: 1,
+      isMaster: false,
+      expanded: false,
+      versionOrigine: "",
+    };
+
+    setMapItems((prev) => [...prev, newItem]);
     setSelectedMapItemId(newId);
+
+    if (!selectedProjectId) {
+      toast.error("Aucun projet sélectionné.");
+      return;
+    }
+
+    const payload: RubriqueInitPayload = {
+      titre: newTitle,
+      projet_id: selectedProjectId, // ✅ nom corrigé
+      produitLabelOrAbbrev: selectedProduct?.abreviation ?? null,
+      audience: null,
+      fonctionnalites: null,
+    };
+
+    const fetchXml = async () => {
+      return await prepareNewRubriqueXml(payload);
+    };
+
+    try {
+      const xml = await fetchXml();
+      setXml(newId, xml);
+      toast.success("Rubrique initialisée avec succès.");
+    } catch (err) {
+      console.error("Erreur XML:", err);
+      toast.error("Échec de la génération de la rubrique DITA.");
+    }
   };
 
   // Clone pour les items de la map

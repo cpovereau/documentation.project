@@ -21,6 +21,10 @@
       - [Implémentation](#implémentation)
       - [Exemple](#exemple)
   - [Structure du code](#structure-du-code)
+  - [📝 Backlog / TODO](#-backlog--todo)
+    - [Améliorations techniques - AGENT\_IA](#améliorations-techniques---agent_ia)
+    - [UI / UX](#ui--ux)
+    - [Fonctionnalités futures](#fonctionnalités-futures)
   - [Historique des évolutions](#historique-des-évolutions)
 
 ---
@@ -245,16 +249,41 @@ frontend/
     api/
     contexts/
     extensions/
+    hooks/
     screens/
       Desktop/
       Login/
       ProductDocSync/
       Settings/
+    store/
+    types/
     components/ui/
     lib/utils.ts
+    utils/csrf.ts
 docs/
   CONTEXTE_PROJET.md
+  DEPENDENCIES.md
 ```
+
+---
+
+## 📝 Backlog / TODO
+
+### Améliorations techniques - AGENT_IA
+- [ ] Ajouter des exemples d’entrée/sortie pour les endpoints API (payload attendu, réponse).
+- [ ] Compléter les tests rapides (`curl`, `fetch`, ou scripts) pour valider les endpoints sensibles.
+- [ ] Formaliser un journal de progression simplifié en fin de session (mini changelog).
+- [ ] Prioriser explicitement les tâches dans chaque demande (urgent vs amélioration future).
+
+### UI / UX
+- [ ] Améliorations visuelles du **MediaPanel** (post-import).
+- [ ] Ajout de la **liste des commandes vocales** dans la modale d’aide du CentralEditor.
+- [ ] Amélioration ergonomique du **popup suggestion** (fermeture automatique, réanalyse après correction).
+
+### Fonctionnalités futures
+- Pas pour le moment
+
+
 
 ---
 
