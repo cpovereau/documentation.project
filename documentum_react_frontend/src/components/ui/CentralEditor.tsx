@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from "react";
 import { toast } from "sonner";
 import { useSpeechToText } from "hooks/useSpeechToText";
 import { Button } from "components/ui/button";
@@ -16,6 +22,7 @@ import {
   NavigationMenuTrigger,
 } from "components/ui/navigation-menu";
 import { useEditor, EditorContent } from "@tiptap/react";
+import useXmlBufferStore from "@/store/xmlBufferStore";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import Color from "@tiptap/extension-color";
@@ -29,6 +36,7 @@ import { ExerciceEditor } from "./ExerciceEditor";
 import { useLanguageTool } from "@/hooks/useLanguageTool";
 import { useFindReplaceTipTap } from "@/hooks/useFindReplaceTipTap";
 import { useRubriqueChangeTracker } from "@/hooks/useRubriqueChangeTracker";
+import { useDitaLoader } from "@/hooks/useDitaLoader";
 import { useSpeechCommands } from "@/hooks/useSpeechCommands";
 import { useEditorShortcuts } from "@/hooks/useEditorShortcuts";
 import { useGrammarChecker } from "@/hooks/useGrammarChecker";
@@ -50,6 +58,7 @@ interface CentralEditorProps {
   onToggleExerciceEditor: () => void;
   dockEditorHeight: number;
   onResizeDockEditorHeight: (newHeight: number) => void;
+  selectedMapItemId: number | null;
 }
 
 // Début du composant CentralEditor
@@ -65,17 +74,20 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   onToggleExerciceEditor,
   dockEditorHeight,
   onResizeDockEditorHeight,
+  selectedMapItemId,
 }) => {
+  console.log("🧩 CentralEditor monté");
+
   // États pour la gestion de l'éditeur
-  const [initialContent, setInitialContent] = useState<string>("");
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [initialContent, setInitialContent] = useState<string>("");
+  const inputSourceRef = useRef<string | null>(null);
   const [isXmlView, setIsXmlView] = useState(false);
   const [lastXmlValidation, setLastXmlValidation] = useState<null | {
     ok: boolean;
     msg: string;
   }>(null);
   const [wordCount, setWordCount] = useState(0);
-  const inputSourceRef = useRef<string | null>(null);
 
   // Référence pour l'éditeur central
   const MIN_QUESTION_EDITOR_HEIGHT = 200;
@@ -108,14 +120,41 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     setIsDragging(true);
   };
 
-  // Initialisation de l'éditeur TipTap avec extensions personnalisées
-  const editor = useEditor({
-    extensions: getAllExtensions(),
-    content: "<p>Commence à écrire…</p>",
-    onUpdate({ editor }) {
-      checkGrammar(editor.getText());
+  // Debug selectedMapItemId
+  useEffect(() => {
+    console.log("🧭 selectedMapItemId dans CentralEditor :", selectedMapItemId);
+  }, [selectedMapItemId]);
+
+  // 🔁 On récupère le XML initial depuis le buffer pour la rubrique sélectionnée
+  const getXml = useXmlBufferStore((state) => state.getXml);
+  const xml = selectedMapItemId ? getXml(selectedMapItemId) : null;
+
+  // ⚠️ On ne crée l’éditeur que si on a un contenu XML à injecter
+  const editor = useEditor(
+    {
+      extensions: getAllExtensions(),
+      content: xml || "<p></p>",
+      onUpdate({ editor }) {
+        checkGrammar(editor.getText());
+      },
     },
-  });
+    [xml]
+  );
+
+  // Référence pour le suivi de la source d'entrée (clavier, voix, etc.)
+  const { hasChanges, resetInitialContent } = useRubriqueChangeTracker(editor);
+
+  // Chargement initial du XML dans l’éditeur
+  useEffect(() => {
+    if (editor && xml) {
+      console.log("✅ Injection initiale dans l’éditeur :", xml);
+      resetInitialContent();
+    }
+  }, [editor, xml, resetInitialContent]);
+
+  // ✅ Injection automatique du contenu XML depuis le buffer au changement de rubrique
+  const { isLoading } = useDitaLoader({ editor, selectedMapItemId });
+
   // Fonctions pour copier, coller, couper
   function handleCut(editor: Editor | null) {
     if (!editor) return;
@@ -162,9 +201,6 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     logAction,
     clearHistory,
   } = useEditorHistoryTracker();
-
-  // Référence pour le suivi de la source d'entrée (clavier, voix, etc.)
-  const { hasChanges, resetInitialContent } = useRubriqueChangeTracker(editor);
 
   // Gestion des commandes vocales
   const { handleVoiceCommand } = useSpeechCommands(editor);
@@ -334,17 +370,30 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     </NavigationMenuList>
   );
 
-  function validateXML() {
-    const xmlString = `<racine>${editor?.getHTML()}</racine>`;
+  // Fonction pour valider le XML
+  function validateBufferXml() {
+    if (!selectedMapItemId) return;
+
+    const xmlString = getXml(selectedMapItemId);
+    if (
+      !xmlString ||
+      typeof xmlString !== "string" ||
+      xmlString.trim() === ""
+    ) {
+      toast.error("Aucun contenu XML à valider.");
+      return;
+    }
+
     let valid = false;
     let msg = "";
     try {
       const parser = new window.DOMParser();
       const xmlDoc = parser.parseFromString(xmlString, "application/xml");
-      const parserError = xmlDoc.getElementsByTagName("parsererror");
-      if (parserError.length > 0) {
+
+      const parserErrors = xmlDoc.getElementsByTagName("parsererror");
+      if (parserErrors && parserErrors.length > 0) {
         valid = false;
-        msg = "❌ XML non valide : " + parserError[0].textContent;
+        msg = "❌ XML non valide : " + parserErrors[0].textContent;
       } else {
         valid = true;
         msg = "✅ XML bien formé !";
@@ -353,6 +402,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       valid = false;
       msg = "❌ Erreur lors de la validation XML : " + (e as Error).message;
     }
+
     setIsXmlView(true);
     setLastXmlValidation({ ok: valid, msg });
     setTimeout(() => alert(msg), 100);
@@ -370,19 +420,24 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
 
     const handleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
+
       if (target.classList.contains("grammar-error")) {
         const message = target.getAttribute("data-message") || "";
         const suggestions = (
           target.getAttribute("data-suggestions") || ""
         ).split(",");
 
+        const from = editor.view.posAtDOM(target, 0);
+        const textContent = target.textContent ?? "";
+        const to = from + textContent.length;
+
         setPopup({
           x: event.clientX,
           y: event.clientY,
           suggestions,
           message,
-          from: editor.view.posAtDOM(target, 0),
-          to: editor.view.posAtDOM(target, 0) + target.textContent!.length,
+          from,
+          to,
           onReplace: (text, from, to) => {
             editor.commands.insertContentAt({ from, to }, text);
             setPopup(null);
@@ -418,7 +473,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           ) : (
             <button
               className="h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 bg-[#22c55e] hover:bg-[#16a34a] text-white font-semibold"
-              onClick={validateXML}
+              onClick={validateBufferXml}
             >
               Valider XML
             </button>
@@ -707,6 +762,13 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       </div>
       <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
         <div className="h-full overflow-auto p-4 bg-white relative">
+          {isLoading && (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10">
+              <span className="text-sm text-gray-600 animate-pulse">
+                Chargement de la rubrique...
+              </span>
+            </div>
+          )}
           {isXmlView ? (
             <pre className="bg-gray-100 rounded p-4 font-mono text-xs whitespace-pre-wrap">
               {editor?.getHTML()}

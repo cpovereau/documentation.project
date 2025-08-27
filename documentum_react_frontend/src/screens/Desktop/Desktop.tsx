@@ -58,6 +58,9 @@ export const Desktop: React.FC = () => {
   const [previousRightSidebarState, setPreviousRightSidebarState] =
     useState(true);
   const [mapItems, setMapItems] = useState<MapItem[]>(initialMapItems);
+  const [selectedMapItemId, setSelectedMapItemId] = useState<number | null>(
+    null
+  );
 
   const [visibleDockEditor, setVisibleDockEditor] = useState<
     "question" | "exercice" | null
@@ -109,6 +112,8 @@ export const Desktop: React.FC = () => {
       <TopBar currentScreen="desktop" />
       <div className="flex flex-row flex-1 min-h-0 relative overflow-hidden">
         <LeftSidebar
+          selectedMapItemId={selectedMapItemId}
+          setSelectedMapItemId={setSelectedMapItemId}
           isExpanded={isLeftSidebarExpanded}
           onToggle={() =>
             !isPreviewMode && setIsLeftSidebarExpanded(!isLeftSidebarExpanded)
@@ -138,6 +143,7 @@ export const Desktop: React.FC = () => {
             onToggleExerciceEditor={toggleExerciceEditor}
             dockEditorHeight={dockEditorHeight}
             onResizeDockEditorHeight={handleResizeDockEditorHeight}
+            selectedMapItemId={selectedMapItemId}
           />
         </div>
         <RightSidebar

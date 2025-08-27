@@ -4,7 +4,7 @@ import { create } from 'zustand';
 interface XmlBufferState {
   buffer: Record<number, string>; // mapItemId -> contenu XML
   setXml: (id: number, xml: string) => void;
-  getXml: (id: number) => string | null;
+  getXml: (id: number) => string | undefined;
   clear: () => void;
 }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import apiClient from '@/lib/apiClient';
 
 export function useLanguageTool() {
   const [loading, setLoading] = useState(false);
@@ -7,7 +7,7 @@ export function useLanguageTool() {
   async function checkText(text: string) {
     setLoading(true);
     try {
-      const response = await axios.post('/api/orthographe/', {
+      const response = await apiClient.post('/api/orthographe/', {
         text: text,
         language: 'fr'
       });

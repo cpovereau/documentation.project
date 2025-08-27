@@ -25,6 +25,7 @@ from .views import (
     check_media_names,
     upload_media,
     generate_dita,
+    check_orthographe_view,
 )
 from .utils import publier_map, get_formats_publication
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -64,7 +65,7 @@ urlpatterns = [
     path("import/media/", upload_media, name="upload_media"),
     path("", include(router.urls)),
     path("api/dita-template/", generate_dita, name="generate_dita_template"),
-    # path('api/orthographe/', check_orthographe, name='check_orthographe'),
+    path("api/orthographe/", check_orthographe_view, name="check_orthographe"),
 ]
 
 # Custom error handlers

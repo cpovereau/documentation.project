@@ -42,6 +42,7 @@ from .utils import get_active_version, clone_version, generate_dita_template
 from documentation.constants.publication import TYPE_SORTIE_CHOICES
 
 # import uuid  # Utilisé pour générer un token unique
+import requests
 import logging
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
@@ -81,6 +82,9 @@ def get_csrf_token(request):
 
 # Initialisation du logger
 logger = logging.getLogger(__name__)
+
+# Configuration de l'URL de l'API LanguageTool
+LANGUAGETOOL_API_URL = "http://localhost:8010/v2/check"
 
 
 # Pages d'erreur personnalisées
@@ -475,6 +479,35 @@ class MediaViewSet(viewsets.ModelViewSet):
     queryset = Media.objects.all()
     serializer_class = MediaSerializer
     permission_classes = [IsAuthenticated]
+
+
+# Vue pour vérifier l'orthographe via LanguageTool
+@api_view(["POST"])
+def check_orthographe_view(request):
+    texte = request.data.get("text", "")
+    if not texte:
+        return Response(
+            {"error": "Texte manquant."}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        response = requests.post(
+            LANGUAGETOOL_API_URL,
+            data={
+                "text": texte,
+                "language": "fr",
+            },
+            timeout=5,
+        )
+        response.raise_for_status()
+        result = response.json()
+        return Response(result)
+    except requests.RequestException as e:
+        logger.exception("Erreur lors de l'appel à LanguageTool")
+        return Response(
+            {"error": "Erreur de connexion à LanguageTool."},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
 
 
 # Vue pour la connexion

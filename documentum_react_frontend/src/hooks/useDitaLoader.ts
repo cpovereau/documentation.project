@@ -1,191 +1,85 @@
-// src/api/rubriques.ts
-import api from "@/lib/apiClient"; // <-- ton axios préconfiguré
-
-/** ---- Types ---- */
-
-export type DitaType = "topic" | "concept" | "task" | "reference";
-
-export interface DitaTemplateRequest {
-  titre: string;
-  type_dita?: DitaType;             // défaut: "topic"
-  audience?: string | null;
-  produit?: string | null;          // nom/abréviation produit
-  fonctionnalites?: string[] | null;
-  projet_id?: number;               // pour déduire la version active côté backend
-}
-
-export interface DitaTemplateResponse {
-  xml: string;
-}
-
-export interface Rubrique {
-  id: number;
-  titre: string;
-  contenu_xml: string;
-  projet: number;
-  type_rubrique: number;
-  fonctionnalite?: {
-    id: number;
-    code: string;
-    nom: string;
-  } | null;
-  version_projet?: number;
-  is_active: boolean;
-  is_archived: boolean;
-  date_creation: string;
-  date_mise_a_jour: string;
-  audience: string;
-  revision_numero: number;
-  version: number;
-  version_precedente?: number | null;
-}
-
-export interface RubriqueCreatePayload {
-  titre: string;
-  contenu_xml: string;
-  projet: number;
-  type_rubrique: number;            // ⚠ requis par le modèle
-  fonctionnalite_id?: number | null;
-  audience?: string;                // ex. "générique"
-  revision_numero: number;          // ex. 1
-  version: number;                  // ex. 1
-  // version_projet est injecté côté serveur si projet a une version active
-}
-
-export interface RubriqueUpdatePayload extends Partial<RubriqueCreatePayload> {}
-
-/** ---- Helpers ---- */
-
 /**
- * Fallback local au cas où l'endpoint /api/dita-template/ n'existe pas ou renvoie 404.
- * NB: volontairement minimaliste; le backend reste la source de vérité.
+ * useDitaLoader
+ * --------------
+ * Hook qui synchronise le contenu XML d'une rubrique sélectionnée
+ * dans la carte (`mapItems`) avec le contenu affiché dans l'éditeur TipTap.
+ *
+ * 📥 Entrée : `selectedMapItemId` (identifiant numérique de la rubrique sélectionnée)
+ * 📤 Action :
+ *   - Récupère le contenu XML depuis le buffer store local (Zustand)
+ *   - Parse le XML en JSON TipTap via `parseXmlToTiptap(...)`
+ *   - Injecte le contenu dans l'éditeur avec `editor.commands.setContent(...)`
+ *   - Si aucun XML trouvé, affiche un texte d’attente
+ *
+ * ⚠️ Ce hook suppose que :
+ *   - Les clés du buffer sont bien des `number` (type du `mapItem.id`)
+ *   - L’appel à `setXml(mapItemId, xml)` a été effectué AVANT la sélection
+ *   - Le buffer Zustand est accessible et synchrone (pas de délai async)
+ *
+ * Utilisation :
+ *   - Appelé dans `CentralEditor` à chaque changement de `selectedMapItemId`
  */
-function generateFallbackDitaTemplate(req: DitaTemplateRequest): string {
-  const today = new Date().toISOString().slice(0, 10);
-  const type = (req.type_dita ?? "topic");
-  const audienceXml = req.audience ? `\n      <audience>${req.audience}</audience>` : "";
-  // Pas de version côté fallback (on ne connaît pas la version active)
-  const produitXml = req.produit ? `\n      <doc-tag type="produit">${req.produit}</doc-tag>` : "";
-  const fcts = (req.fonctionnalites ?? []) as string[];
-  const fctXml = fcts.map(c => `\n      <doc-tag type="fonctionnalite">${c}</doc-tag>`).join("");
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<${type} id="topic-${today.replace(/-/g, "")}">
-  <title>${req.titre || "Nouvelle rubrique"}</title>
-  <prolog>
-    <author>?</author>
-    <critdates>
-      <created date="${today}" />
-    </critdates>
-    <metadata>${audienceXml}${produitXml}${fctXml}
-    </metadata>
-  </prolog>
-  <body>
-    <section>
-      <title>Concept</title>
-      <p>Présentez le contexte…</p>
-    </section>
-    <task>
-      <title>Procédure</title>
-      <steps>
-        <step><cmd>Étape 1</cmd></step>
-        <step><cmd>Étape 2</cmd></step>
-      </steps>
-    </task>
-    <section>
-      <title>Référence</title>
-      <p>Détails complémentaires…</p>
-    </section>
-  </body>
-</${type}>`;
-}
 
-/** ---- API Calls ---- */
+import { useEffect, useState } from "react";
+import { Editor } from "@tiptap/react";
+import useXmlBufferStore from "@/store/xmlBufferStore";
+import { parseXmlToTiptap } from "@/utils/xmlToTiptap";
 
-/**
- * Génère un squelette DITA côté serveur (auteur, date, version active, etc.)
- * Tombe en fallback local si l’endpoint n’est pas disponible.
- */
-export async function generateDitaTemplate(req: DitaTemplateRequest): Promise<string> {
-  try {
-    const { data } = await api.post<DitaTemplateResponse>("/api/dita-template/", {
-      titre: req.titre,
-      type_dita: req.type_dita ?? "topic",
-      audience: req.audience ?? null,
-      produit: req.produit ?? null,
-      fonctionnalites: req.fonctionnalites ?? [],
-      projet_id: req.projet_id ?? null,
-    });
-    // data.xml attendu
-    if (!data?.xml || typeof data.xml !== "string") {
-      throw new Error("Réponse inattendue du serveur (xml manquant).");
-    }
-    return data.xml;
-  } catch (e: any) {
-    // Si 404/405/Not implemented, on passe en fallback local
-    if (e?.status === 404 || e?.response?.status === 404) {
-      return generateFallbackDitaTemplate(req);
-    }
-    // L’intercepteur Axios devrait déjà normaliser { message, fields, status }
-    const msg = e?.message || "Erreur lors de la génération du gabarit DITA.";
-    throw new Error(msg);
-  }
+interface UseDitaLoaderProps {
+  editor: Editor | null;
+  selectedMapItemId: number | null;
 }
 
 /**
- * Récupère une rubrique par ID.
+ * 🔄 Hook qui synchronise le contenu XML du buffer avec l’éditeur TipTap
  */
-export async function getRubrique(id: number): Promise<Rubrique> {
-  const { data } = await api.get<Rubrique>(`/rubriques/${id}/`);
-  return data;
-}
+export function useDitaLoader({ editor, selectedMapItemId }: UseDitaLoaderProps) {
+  const getXml = useXmlBufferStore((state) => state.getXml);
+  const [isLoading, setIsLoading] = useState(false);
 
-/**
- * Liste paginée/filtrée des rubriques (facultatif).
- * Passer les query params nécessaires (archived, search, etc.).
- */
-export async function listRubriques(params?: Record<string, any>): Promise<Rubrique[]> {
-  const { data } = await api.get<Rubrique[]>("/rubriques/", { params });
-  return data;
-}
-
-/**
- * Crée une rubrique (DB) — nécessite un type_rubrique (FK) + version/revision.
- * L’API backend se charge d’associer version_projet = version active du projet.
- */
-export async function createRubrique(payload: RubriqueCreatePayload): Promise<Rubrique> {
-  const { data } = await api.post<Rubrique>("/rubriques/", payload);
-  return data;
-}
-
-/**
- * Met à jour une rubrique existante (DB).
- */
-export async function updateRubrique(id: number, payload: RubriqueUpdatePayload): Promise<Rubrique> {
-  const { data } = await api.patch<Rubrique>(`/rubriques/${id}/`, payload);
-  return data;
-}
-
-/**
- * Utilitaire “haute-niveau” pour le flux UX :
- * - Génère un XML DITA (serveur si possible, sinon fallback)
- * - Ne crée PAS en DB (laisser le composant décider quand persister)
- */
-export async function prepareNewRubriqueXml(args: {
-  titre: string;
-  projetId: number;
-  produitLabelOrAbbrev: string | null;     // ex. "USA - Usager" ou "USA"
-  type?: DitaType;                          // défaut "topic"
-  audience?: string | null;                 // null ok
-  fonctionnalites?: string[] | null;        // null/[] ok
-}): Promise<string> {
-  return generateDitaTemplate({
-    titre: args.titre,
-    type_dita: args.type ?? "topic",
-    audience: args.audience ?? null,
-    produit: args.produitLabelOrAbbrev ?? null,
-    fonctionnalites: args.fonctionnalites ?? [],
-    projet_id: args.projetId,
+  console.log("🚀 useDitaLoader déclenché", {
+    selectedMapItemId,
+    editor,
+    getXml: typeof getXml,
   });
+
+  // ❌ Pas de return anticipé ici → on garde le hook systematiquement appelé
+  const shouldLoad =
+    !!editor && selectedMapItemId !== null && !isNaN(Number(selectedMapItemId));
+
+  useEffect(() => {
+    if (!shouldLoad) {
+      console.log("🛑 useDitaLoader : conditions non remplies (dans useEffect)");
+      return;
+    }
+
+    setIsLoading(true);
+
+    const xml = getXml(selectedMapItemId!);
+    console.log("🧾 XML récupéré depuis le buffer (via useDitaLoader) :", xml);
+
+    if (!xml || typeof xml !== "string" || xml.trim() === "") {
+      console.warn("⚠️ Aucun XML trouvé ou XML invalide pour l'ID :", selectedMapItemId);
+      editor!.commands.setContent("<p>Aucun contenu disponible pour cette rubrique.</p>");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const nodes = parseXmlToTiptap(xml);
+      console.log("📦 Contenu injecté dans l’éditeur :", nodes);
+
+      setTimeout(() => {
+        editor!.commands.setContent({ type: "doc", content: nodes });
+        setIsLoading(false);
+      }, 0);
+    } catch (err) {
+      console.error("❌ Erreur lors du parsing XML:", err);
+      editor!.commands.setContent("<p>Erreur de conversion XML</p>");
+      setIsLoading(false);
+    }
+  }, [shouldLoad, getXml, editor, selectedMapItemId]);
+
+  return { isLoading };
 }

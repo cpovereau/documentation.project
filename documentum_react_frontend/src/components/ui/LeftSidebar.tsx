@@ -21,6 +21,8 @@ interface LeftSidebarProps {
   onToggle: () => void;
   className?: string;
   onToggleExpand: (itemId: number, expand: boolean) => void;
+  selectedMapItemId: number | null;
+  setSelectedMapItemId: React.Dispatch<React.SetStateAction<number | null>>;
 }
 
 const initialProjects: ProjectItem[] = [
@@ -95,8 +97,9 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   isExpanded,
   onToggle,
   className,
-
   onToggleExpand,
+  selectedMapItemId,
+  setSelectedMapItemId,
 }) => {
   // État local pour gérer l'expansion des projets et des maps
   // Utilise useState pour gérer l'état d'expansion des projets et des maps
@@ -123,7 +126,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const { selectedProjectId } = useSelectedVersion();
   const { selectedProduct } = useSelectedProduct();
   const setSelectedProjectId = useProjectStore((s) => s.setSelectedProjectId);
-  const { setXml } = useXmlBufferStore();
+  const { setXml, getXml } = useXmlBufferStore();
 
   // 📦 Projets chargés depuis l’API
   const [projects, setProjects] = useState<ProjectItem[]>(initialProjects);
@@ -132,22 +135,23 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const [mapItems, setMapItems] = useState<MapItem[]>(
     projects.find((p) => p.id === selectedProjectId)?.mapItems ?? []
   );
-  const [selectedMapItemId, setSelectedMapItemId] = useState<number | null>(
-    projects.find((p) => p.id === selectedProjectId)?.mapItems[0]?.id ?? null
-  );
 
-  const payload: RubriqueInitPayload = {
-    titre: "Nouvelle rubrique",
-    projet_id: selectedProjectId ?? undefined,
-    produitLabelOrAbbrev: selectedProduct?.abreviation ?? null,
-    type: "topic",
-    audience: null,
-    fonctionnalites: null,
-  };
-  const fetchXml = async () => {
-    const xml = await prepareNewRubriqueXml(payload);
-    return xml;
-  };
+  // Initialisation du buffer XML pour chaque rubrique de la map
+  // On s'assure que chaque mapItem a une entrée dans le buffer, même vide
+  useEffect(() => {
+    for (const item of mapItems) {
+      const xml = getXml(item.id);
+      if (!xml) {
+        console.log(
+          `📄 Initialisation XML vide pour la rubrique ID ${item.id}`
+        );
+        setXml(
+          item.id,
+          `<topic><title>${item.title}</title><body><p>Contenu à compléter</p></body></topic>`
+        );
+      }
+    }
+  }, [mapItems, getXml, setXml]);
 
   // État pour gérer l'affichage de la carte d'exportation
   // Utilisé pour afficher une carte d'exportation après la publication d'un projet
@@ -243,7 +247,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     setEditingItemId(null);
   };
 
-  // --- Ajout d'une nouvelle rubrique ---
   const handleAddMapItem = async () => {
     const newId = mapItems.length
       ? Math.max(...mapItems.map((i) => i.id)) + 1
@@ -261,7 +264,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     };
 
     setMapItems((prev) => [...prev, newItem]);
-    setSelectedMapItemId(newId);
 
     if (!selectedProjectId) {
       toast.error("Aucun projet sélectionné.");
@@ -270,19 +272,23 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
     const payload: RubriqueInitPayload = {
       titre: newTitle,
-      projet_id: selectedProjectId, // ✅ nom corrigé
+      projetId: selectedProjectId,
       produitLabelOrAbbrev: selectedProduct?.abreviation ?? null,
+      type_dita: "topic",
       audience: null,
       fonctionnalites: null,
     };
 
-    const fetchXml = async () => {
-      return await prepareNewRubriqueXml(payload);
-    };
-
     try {
-      const xml = await fetchXml();
+      const xml = await prepareNewRubriqueXml(payload);
       setXml(newId, xml);
+
+      console.log("[Buffer test]", getXml(newId));
+      console.log("🧭 ID sélectionné", newId);
+      console.log("📦 Buffer complet:", useXmlBufferStore.getState());
+
+      setSelectedMapItemId(newId); // ✅ on attend que le buffer soit prêt
+
       toast.success("Rubrique initialisée avec succès.");
     } catch (err) {
       console.error("Erreur XML:", err);

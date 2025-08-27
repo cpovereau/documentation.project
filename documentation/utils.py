@@ -172,8 +172,8 @@ def generate_dita_template(
     <task>
       <title>Procédure</title>
       <steps>
-        <step><cmd>Étape 1</cmd><info>Détail…</info></step>
-        <step><cmd>Étape 2</cmd><info>Détail…</info></step>
+        <step><p>Étape 1</p><p>Détail…</p></step>
+        <step><p>Étape 2</p><p>Détail…</p></step>
       </steps>
     </task>
 
