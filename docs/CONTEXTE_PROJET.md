@@ -24,6 +24,10 @@
   - [📝 Backlog / TODO](#-backlog--todo)
     - [Améliorations techniques - AGENT\_IA](#améliorations-techniques---agent_ia)
     - [UI / UX](#ui--ux)
+    - [Unification des balises XML autorisées avec les extensions TipTap](#unification-des-balises-xml-autorisées-avec-les-extensions-tiptap)
+      - [Problème actuel](#problème-actuel)
+      - [Solution envisagée](#solution-envisagée)
+      - [Points d’attention](#points-dattention)
     - [Fonctionnalités futures](#fonctionnalités-futures)
   - [Historique des évolutions](#historique-des-évolutions)
 
@@ -206,6 +210,36 @@ return parseOrThrow(ProjectReadSchema, res.data, "ProjectDetails: payload serveu
 
 ---
 
+### 📥 Import et intégration de contenus
+
+- **Import CSV des fonctionnalités**  
+  - Endpoint : `POST /import/fonctionnalites/`  
+  - Lecture d’un fichier CSV (UTF-8, séparateur `;`) avec mapping dynamique des colonnes (`nom`, `code`, `id_fonctionnalite`).  
+  - Validation stricte (unicité code/identifiant, longueurs max).  
+  - Association directe à un produit (`produit_id`).  
+  - Retour d’un rapport détaillé (succès/erreurs par ligne).
+
+- **Import et remplacement de médias (images)**  
+  - Endpoint : `POST /import/media/`  
+  - Vérification des formats autorisés (`.jpg`, `.jpeg`, `.png`, `.gif`).  
+  - Génération d’un nom de fichier basé sur triplet `Produit-Fonctionnalité-Interface`.  
+  - Endpoint associé `GET /medias-check-nom/` pour lister les noms existants et proposer automatiquement le prochain disponible.  
+  - Support du remplacement d’un média existant (avec conservation du nom pour mise à jour automatique).  
+  - Création en base d’un objet `Media` (nom, chemin, produit, type, rubrique nullable).  
+
+- **Génération de gabarits XML DITA**  
+  - Endpoint : `POST /api/dita-template/`  
+  - Utilisation de `generate_dita_template()` pour produire un squelette XML valide (balises `<title>`, `<prolog>`, `<body>` pré-remplies).  
+  - Métadonnées dynamiques injectées : auteur, audience, produit, version active du projet, codes fonctionnalités.  
+  - Validation XML intégrée au modèle `Rubrique` (parser `xml.etree.ElementTree`).  
+
+- **Publication DITA-OT (simulation actuelle)**  
+  - Endpoint : `POST /api/publier-map/<id>/`  
+  - Support multi-formats (`pdf`, `html5`, `xhtml`, `scorm`, `markdown`, `eclipsehelp`).  
+  - Fonction `export_map_to_dita()` pour préparer les exports à partir des maps et rubriques.
+
+---
+
 ## Fonctionnalités avancées
 
 - **Clonage de version de projet** (duplication des rubriques actives).  
@@ -280,6 +314,25 @@ docs/
 - [ ] Ajout de la **liste des commandes vocales** dans la modale d’aide du CentralEditor.
 - [ ] Amélioration ergonomique du **popup suggestion** (fermeture automatique, réanalyse après correction).
 
+### Unification des balises XML autorisées avec les extensions TipTap
+
+📌 **Objectif à traiter ultérieurement** : fiabiliser la gestion des balises XML converties en nodes TipTap en liant dynamiquement les extensions déclarées avec une whitelist XML unique.
+
+#### Problème actuel
+- La fonction `parseXmlToTiptap` repose sur une whitelist (`WHITELISTED_TAGS`) définie manuellement.
+- Les extensions TipTap utilisées sont déclarées dans `getAllExtensions()` (ex : `DocTag`, `Task`, etc.).
+- Il existe un **décalage potentiel** entre ces deux sources si une extension est ajoutée sans mettre à jour la whitelist.
+
+#### Solution envisagée
+- Ajouter un champ `xmlTag` dans chaque extension TipTap personnalisée (ex : `DocTag.xmlTag = "doc-tag"`).
+- Générer automatiquement la liste des balises autorisées via une fonction `getAllowedXmlTags()` dérivée de `getAllExtensions()`.
+- Supprimer la maintenance manuelle de la whitelist `WHITELISTED_TAGS`.
+
+#### Points d’attention
+- Certaines extensions ne correspondent pas à des balises XML (ex: `StarterKit`, `Color`, etc.).
+- Il faudra ignorer les extensions non-annotées (`xmlTag` absent).
+- Cette évolution est sensible et devra être bien testée, notamment sur les documents XML complexes ou importés.
+
 ### Fonctionnalités futures
 - Pas pour le moment
 
@@ -289,6 +342,7 @@ docs/
 
 ## Historique des évolutions
 
+- **2025-09** : Import CSV des fonctionnalités + import/remplacement médias (images) + génération gabarits XML DITA + publication simulée via DITA-OT.
 - **2025‑08** : Centralisation des hooks dictionnaires + `DictionnaireData`.  
 - **2025‑07** : Dictée vocale + correcteur orthographique dans l’éditeur.  
 - **2025‑06** : Versioning strict (VersionProjet) + clonage.  
