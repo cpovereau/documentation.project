@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ProjectModule } from "@/components/ui/ProjectModule";
 import { MapModule } from "@/components/ui/MapModule";
@@ -9,6 +9,7 @@ import useSelectedProduct from "@/hooks/useSelectedProduct";
 import useSelectedVersion from "@/hooks/useSelectedVersion";
 import useProjectStore from "@/store/projectStore";
 import useXmlBufferStore from "@/store/xmlBufferStore";
+import { useConfirmBeforeUnloadRubriqueChange } from "@/hooks/useConfirmBeforeUnloadRubriqueChange";
 import { toast } from "sonner";
 import { CreateProjectDialog } from "@/components/ui/CreateProjectDialog";
 import { LoadProjectDialog } from "@/components/ui/LoadProjectDialog";
@@ -126,6 +127,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const { selectedProjectId } = useSelectedVersion();
   const { selectedProduct } = useSelectedProduct();
   const setSelectedProjectId = useProjectStore((s) => s.setSelectedProjectId);
+  const nextProjectIdRef = useRef<number | null>(null);
   const { setXml, getXml } = useXmlBufferStore();
 
   // 📦 Projets chargés depuis l’API
@@ -158,8 +160,22 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   // Peut être utilisé pour afficher des options d'exportation ou de partage
   const [showExportCard, setShowExportCard] = useState(false);
 
-  // Callback pour sélectionner un projet
-  const handleSelect = (id: number) => setSelectedProjectId(id);
+  // ✅ Hook pour confirmation si changement avec modification non sauvegardée
+  const { confirmManualChange } = useConfirmBeforeUnloadRubriqueChange(
+    selectedMapItemId,
+    () => {
+      // cette valeur est capturée depuis un scope externe (closure)
+      setSelectedProjectId(nextProjectIdRef.current);
+    },
+    () => {
+      console.log("Changement annulé");
+    }
+  );
+
+  const handleProjectSelect = (projectId: number) => {
+    nextProjectIdRef.current = projectId;
+    confirmManualChange();
+  };
 
   // Callback pour ajouter un nouveau projet
   const handleConfirmNewProject = (newProject: ProjectItem) => {
@@ -247,6 +263,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     setEditingItemId(null);
   };
 
+  // Ajout d'un item de map
   const handleAddMapItem = async () => {
     const newId = mapItems.length
       ? Math.max(...mapItems.map((i) => i.id)) + 1
@@ -281,17 +298,38 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
     try {
       const xml = await prepareNewRubriqueXml(payload);
+
       setXml(newId, xml);
 
-      console.log("[Buffer test]", getXml(newId));
-      console.log("🧭 ID sélectionné", newId);
-      console.log("📦 Buffer complet:", useXmlBufferStore.getState());
+      // 🔍 Lecture sécurisée du buffer (via sélecteurs Zustand)
+      const buffer = useXmlBufferStore.getState().buffer;
+      const xmlPreview =
+        buffer[newId]?.xml?.slice(0, 100).replace(/\s+/g, " ") ??
+        "[XML manquant]";
+      const status = buffer[newId]?.status ?? "inconnu";
 
-      setSelectedMapItemId(newId); // ✅ on attend que le buffer soit prêt
+      console.log("🧭 ID sélectionné :", newId);
+      console.log("📦 Nouvelle rubrique ajoutée au buffer :", {
+        id: newId,
+        status,
+        preview: xmlPreview + "...",
+      });
+
+      // ✅ Affichage global pour debug : toutes les rubriques en mémoire
+      console.table(
+        Object.entries(buffer).map(([id, entry]) => ({
+          id,
+          status: entry.status,
+          length: entry.xml.length,
+          preview: entry.xml.slice(0, 60).replace(/\s+/g, " ") + "...",
+        }))
+      );
+
+      setSelectedMapItemId(newId);
 
       toast.success("Rubrique initialisée avec succès.");
     } catch (err) {
-      console.error("Erreur XML:", err);
+      console.error("❌ Erreur XML :", err);
       toast.error("Échec de la génération de la rubrique DITA.");
     }
   };
@@ -422,7 +460,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   sidebarExpanded={isExpanded}
                   projects={projects}
                   selectedProjectId={selectedProjectId}
-                  onSelect={handleSelect}
+                  onSelect={handleProjectSelect}
                   onAdd={handleAdd}
                   onLoad={handleLoad}
                   onClone={handleClone}

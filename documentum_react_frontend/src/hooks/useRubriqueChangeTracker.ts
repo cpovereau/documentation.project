@@ -1,52 +1,60 @@
-// hooks/useRubriqueChangeTracker.ts
+// src/hooks/useRubriqueChangeTracker.ts
 import { useEffect, useState } from "react";
 import { Editor } from "@tiptap/react";
+import useXmlBufferStore from "@/store/xmlBufferStore";
 
-interface UseRubriqueChangeTrackerResult {
-  hasChanges: boolean;
-  resetInitialContent: () => void;
-  updateInitialContent: (html: string) => void;
-}
-
-export function useRubriqueChangeTracker(
-  editor: Editor | null
-): UseRubriqueChangeTrackerResult {
-  const [initialContent, setInitialContent] = useState("");
+export function useRubriqueChangeTracker(editor: Editor | null, rubriqueId: number | null | undefined) {
   const [hasChanges, setHasChanges] = useState(false);
+  const getRubriqueState = useXmlBufferStore((s) => s.getRubriqueState);
+  const markDirty = useXmlBufferStore((s) => s.markDirty);
+  const markSaved = useXmlBufferStore((s) => s.markSaved);
+  const setXml = useXmlBufferStore((s) => s.setXml);
 
-  // Met à jour l'état à chaque changement dans l'éditeur
+  // 🖊️ Suivi de modifications de contenu
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || rubriqueId == null) return;
 
-    const updateState = () => {
+    const handleUpdate = () => {
       const current = editor.getHTML();
-      setHasChanges(current !== initialContent);
+      const rubrique = getRubriqueState(rubriqueId);
+
+      if (!rubrique) return;
+      if (current !== rubrique.xml) {
+        markDirty(rubriqueId);
+      }
     };
 
-    updateState(); // appel initial
-    editor.on("update", updateState);
-
+    editor.on("update", handleUpdate);
     return () => {
-      editor.off("update", updateState);
+      editor.off("update", handleUpdate);
     };
-  }, [editor, initialContent]);
+  }, [editor, rubriqueId, getRubriqueState, markDirty]);
 
-  // Utilisé après un enregistrement pour réinitialiser la comparaison
+  // 🧭 Mise à jour du flag de modification
+  useEffect(() => {
+    if (rubriqueId == null) return;
+
+    const check = () => {
+      const rubrique = getRubriqueState(rubriqueId);
+      setHasChanges(rubrique?.status === "dirty");
+    };
+
+    check(); // immédiat
+
+    // Option : si tu veux du live-check, garde ce setInterval
+    const interval = setInterval(check, 500);
+    return () => clearInterval(interval);
+  }, [rubriqueId, getRubriqueState]);
+
+  // ✅ Appelé après sauvegarde réussie
   const resetInitialContent = () => {
-    if (editor) {
-      setInitialContent(editor.getHTML());
-      setHasChanges(false);
-    }
+    if (!editor || rubriqueId == null) return;
+
+    const html = editor.getHTML();
+    setXml(rubriqueId, html);
+    markSaved(rubriqueId);
+    setHasChanges(false);
   };
 
-  // Utilisé si tu veux forcer un nouveau point de référence depuis l'externe
-  const updateInitialContent = (html: string) => {
-    setInitialContent(html);
-  };
-
-  return {
-    hasChanges,
-    resetInitialContent,
-    updateInitialContent,
-  };
+  return { hasChanges, resetInitialContent };
 }

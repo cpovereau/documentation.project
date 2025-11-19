@@ -1,10 +1,33 @@
-asgiref==3.9.1
-certifi==2025.7.14
-charset-normalizer==3.4.2
+# === Django & DRF =============================================================
+
 Django==5.2.4
 djangorestframework==3.16.0
-idna==3.10
+django-cors-headers==4.3.1
+django-debug-toolbar==4.2.0
+
+# === PostgreSQL driver ========================================================
+
+psycopg2-binary==2.9.9
+
+# === Configuration ============================================================
+
+python-decouple==3.8
+
+# === API Schema ===============================================================
+
+drf-spectacular==0.27.0
+drf-spectacular-sidecar==2024.11.1
+
+# === HTTP / Utilitaires ======================================================
+
 requests==2.32.4
+charset-normalizer==3.4.2
+urllib3==2.5.0
+idna==3.10
+certifi==2025.7.14
+
+# === Django / Python Internals ===============================================
+
+asgiref==3.9.1
 sqlparse==0.5.3
 tzdata==2025.2
-urllib3==2.5.0

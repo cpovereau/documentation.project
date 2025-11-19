@@ -60,39 +60,30 @@ export function parseXmlNode(xmlNode: Element | Text): TiptapNode | null {
 /**
  * Point d'entrée principal : parse une chaîne XML complète en arbre TipTap JSON
  */
-export function parseXmlToTiptap(xmlString: string): TiptapNode[] {
-  console.groupCollapsed("🔍 [parseXmlToTiptap] Analyse du XML reçu");
+export function parseXmlToTiptap(xml: string): string {
+  console.group("[parseXmlToTiptap] Analyse du XML reçu");
 
-  // 1. Affiche brut
-  console.log("📨 xmlString (brut):", xmlString);
-
-  // 2. Validation basique
-  if (!xmlString || typeof xmlString !== "string") {
-    console.warn("parseXmlToTiptap appelé avec un xml invalide :", xmlString);
-    return [{ type: "paragraph", content: [{ type: "text", text: "..." }] }];
-  }
+  // 🔧 Supprime la ligne DOCTYPE si elle est présente
+  const sanitizedXml = xml.replace(/<!DOCTYPE[^>]*>/, "");
   const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlString, 'application/xml');
+  const doc = parser.parseFromString(sanitizedXml, "application/xml");
 
-   // 3. Vérification d’erreur de parsing XML
-  const parserErrors = doc.getElementsByTagName("parsererror");
-  if (parserErrors.length > 0) {
-    console.error("❌ Erreur XML : ", parserErrors[0].textContent);
-    throw new Error("Le XML fourni n’est pas valide.");
+  // Vérification d’erreur
+  const errorNode = doc.querySelector("parsererror");
+  if (errorNode) {
+    console.error("❌ Erreur DOMParser:", errorNode.textContent);
+    throw new Error("Erreur d’analyse du XML.");
   }
 
-  // 4. Tentative d'extraction du body
-  const root = doc.getElementsByTagName('body')[0];
+  const root = doc.getElementsByTagName("body")[0];
   console.log("📥 XML reçu par parseXmlToTiptap:", root);
 
   if (!root) {
-    console.error("❌ Aucun élément <body> trouvé.");
+    console.error("❌ Balise <body> introuvable dans le XML.");
     console.groupEnd();
     throw new Error("Balise <body> introuvable dans le XML.");
   }
 
-  const result = parseXmlNode(root);
-  console.log("🧬 JSON TipTap généré :", result);
-  return result?.content ?? [];
-  
+  console.groupEnd();
+  return root.innerHTML; // ✅ renvoie une string HTML utilisable
 }

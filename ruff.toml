@@ -1,0 +1,16 @@
+# ======================================
+# Ruff configuration pour Documentum
+# ======================================
+
+line-length = 100
+indent-width = 4
+target-version = "py311"  # Python 3.11 votre runtime Django
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]  # Tolère les lignes longues (utile pour les URLs / XML bruts)
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

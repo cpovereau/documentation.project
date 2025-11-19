@@ -1,17 +1,70 @@
-# Environnements Python
-env/
+# =========================
+#     PYTHON / DJANGO
+# =========================
+
 __pycache__/
-
-# Fichiers de configuration
 *.py[cod]
-.DS_Store
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+*.log
 
-# Fichiers Django
-db.sqlite3
+# Virtual env
+env/
+.venv/
+venv/
+
+# Django stuff
+*.sqlite3
 /logs/
+media/
+staticfiles/
 
-# Migrations
-*/migrations/
+# Migrations (optionnel selon votre usage)
+**/migrations/**
 
-# Fichiers de configurations de l'IDE
+# Ruff / Mypy / cache outils
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# Coverage
+coverage/
+htmlcov/
+
+# =========================
+#     NODE / REACT
+# =========================
+
+node_modules/
+dist/
+build/
+.cache/
+.parcel-cache/
+
+# Vite / Webpack cache (si jamais)
+.vite/
+webpack-stats.json
+
+# Logs Node
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+#     ENV FILES
+# =========================
+
+.env
+.env.*
+*.env
+
+# =========================
+#     IDE / OS
+# =========================
+
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db

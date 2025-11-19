@@ -1,12 +1,25 @@
 // src/store/xmlBufferStore.ts
-import { create } from 'zustand';
+import { create } from "zustand";
 
-interface XmlBufferState {
-  buffer: Record<number, string>; // mapItemId -> contenu XML
+type RubriqueBufferStatus = "ready" | "dirty" | "saved" | "loading";
+
+export type RubriqueBuffer = {
+  xml: string;
+  status: RubriqueBufferStatus;
+};
+
+type XmlBufferState = {
+  buffer: Record<number, RubriqueBuffer>;
+
   setXml: (id: number, xml: string) => void;
-  getXml: (id: number) => string | undefined;
-  clear: () => void;
-}
+  markDirty: (id: number) => void;
+  markSaved: (id: number) => void;
+  clearAll: () => void;
+
+  getXml: (id: number) => string | null;
+  getStatus: (id: number) => RubriqueBufferStatus | null;
+  getRubriqueState: (id: number) => RubriqueBuffer | null;
+};
 
 const useXmlBufferStore = create<XmlBufferState>((set, get) => ({
   buffer: {},
@@ -15,16 +28,53 @@ const useXmlBufferStore = create<XmlBufferState>((set, get) => ({
     set((state) => ({
       buffer: {
         ...state.buffer,
-        [id]: xml,
+        [id]: { xml, status: "ready" },
       },
     })),
 
+  markDirty: (id) =>
+    set((state) => {
+      const entry = state.buffer[id];
+      if (!entry) return state;
+      return {
+        buffer: {
+          ...state.buffer,
+          [id]: { ...entry, status: "dirty" },
+        },
+      };
+    }),
+
+  markSaved: (id) =>
+    set((state) => {
+      const entry = state.buffer[id];
+      if (!entry) return state;
+      return {
+        buffer: {
+          ...state.buffer,
+          [id]: { ...entry, status: "saved" },
+        },
+      };
+    }),
+
+  clearAll: () => set({ buffer: {} }),
+
   getXml: (id) => {
-    const xml = get().buffer[id];
-    return xml ?? null;
+    const entry = get().buffer[id];
+    return entry ? entry.xml : null;
   },
 
-  clear: () => set({ buffer: {} }),
+  getStatus: (id) => {
+    const entry = get().buffer[id];
+    return entry ? entry.status : null;
+  },
+
+  /**
+   * ✅ Nouvelle méthode centrale : retourne l'objet complet { xml, status }
+   */
+  getRubriqueState: (id) => {
+    return get().buffer[id] ?? null;
+  },
 }));
 
 export default useXmlBufferStore;
+

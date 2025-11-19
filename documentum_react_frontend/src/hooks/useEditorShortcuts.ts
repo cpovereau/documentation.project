@@ -1,14 +1,19 @@
 // hooks/useEditorShortcuts.ts
-import { useEffect } from "react";
+import { useEffect, RefObject } from "react";
 import { Editor } from "@tiptap/react";
+import { RubriqueBuffer } from "@/store/xmlBufferStore";
+
 
 export function useEditorShortcuts(
   editor: Editor | null,
+  rubrique: RubriqueBuffer | null | undefined,
   isDictating: boolean,
-  inputSourceRef: React.MutableRefObject<string | null>
+  inputSourceRef: RefObject<string | null>
 ) {
   useEffect(() => {
-    if (!editor || isDictating) return;
+    if (!editor || !rubrique || !rubrique.xml || !editor.view?.dom) return;
+
+    const dom = editor.view.dom;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (inputSourceRef.current === "voice") return;
@@ -32,12 +37,10 @@ export function useEditorShortcuts(
         view.dispatch(state.tr.insertText(", ", pos));
       }
     };
-
-    const dom = editor.view.dom;
+  
     dom.addEventListener("keydown", handleKeyDown);
-
     return () => {
       dom.removeEventListener("keydown", handleKeyDown);
     };
-  }, [editor, isDictating, inputSourceRef]);
+  }, [editor, rubrique, isDictating, inputSourceRef]);
 }

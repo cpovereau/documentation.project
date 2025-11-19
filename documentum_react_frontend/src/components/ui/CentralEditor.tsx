@@ -23,10 +23,7 @@ import {
 } from "components/ui/navigation-menu";
 import { useEditor, EditorContent } from "@tiptap/react";
 import useXmlBufferStore from "@/store/xmlBufferStore";
-import StarterKit from "@tiptap/starter-kit";
-import TextAlign from "@tiptap/extension-text-align";
-import Color from "@tiptap/extension-color";
-import { TextStyle } from "@tiptap/extension-text-style";
+import { parseXmlToTiptap } from "@/utils/xmlToTiptap";
 import { getAllExtensions } from "@/extensions/allExtensions";
 import { FindReplaceDialog } from "components/ui//FindReplaceDialog";
 import { EditorHistoryPanel } from "components/ui/EditorHistoryPanel";
@@ -36,7 +33,7 @@ import { ExerciceEditor } from "./ExerciceEditor";
 import { useLanguageTool } from "@/hooks/useLanguageTool";
 import { useFindReplaceTipTap } from "@/hooks/useFindReplaceTipTap";
 import { useRubriqueChangeTracker } from "@/hooks/useRubriqueChangeTracker";
-import { useDitaLoader } from "@/hooks/useDitaLoader";
+import { useSaveRubrique } from "@/hooks/useSaveRubrique";
 import { useSpeechCommands } from "@/hooks/useSpeechCommands";
 import { useEditorShortcuts } from "@/hooks/useEditorShortcuts";
 import { useGrammarChecker } from "@/hooks/useGrammarChecker";
@@ -125,35 +122,65 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     console.log("🧭 selectedMapItemId dans CentralEditor :", selectedMapItemId);
   }, [selectedMapItemId]);
 
-  // 🔁 On récupère le XML initial depuis le buffer pour la rubrique sélectionnée
-  const getXml = useXmlBufferStore((state) => state.getXml);
-  const xml = selectedMapItemId ? getXml(selectedMapItemId) : null;
-
   // ⚠️ On ne crée l’éditeur que si on a un contenu XML à injecter
+  const getRubriqueState = useXmlBufferStore((s) => s.getRubriqueState);
+  const rubrique =
+    selectedMapItemId != null ? getRubriqueState(selectedMapItemId) : null;
   const editor = useEditor(
     {
       extensions: getAllExtensions(),
-      content: xml || "<p></p>",
+      content: rubrique?.xml || "<p></p>",
       onUpdate({ editor }) {
         checkGrammar(editor.getText());
       },
     },
-    [xml]
+    [rubrique?.xml]
   );
 
+  // 🔁 On récupère le XML initial depuis le buffer pour la rubrique sélectionnée
+
+  const isDirty = rubrique?.status === "dirty";
+  const isReady = !!editor && !!rubrique?.xml && rubrique.status === "ready";
+  const xmlLength = rubrique?.xml?.length ?? 0;
+
   // Référence pour le suivi de la source d'entrée (clavier, voix, etc.)
-  const { hasChanges, resetInitialContent } = useRubriqueChangeTracker(editor);
+  const { hasChanges, resetInitialContent } = useRubriqueChangeTracker(
+    editor,
+    selectedMapItemId ?? undefined
+  );
 
   // Chargement initial du XML dans l’éditeur
   useEffect(() => {
-    if (editor && xml) {
-      console.log("✅ Injection initiale dans l’éditeur :", xml);
+    if (editor && rubrique?.xml) {
+      console.log("✅ Injection initiale dans l’éditeur :", rubrique?.xml);
       resetInitialContent();
     }
-  }, [editor, xml, resetInitialContent]);
+  }, [editor, rubrique?.xml, resetInitialContent]);
 
   // ✅ Injection automatique du contenu XML depuis le buffer au changement de rubrique
-  const { isLoading } = useDitaLoader({ editor, selectedMapItemId });
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!editor || selectedMapItemId == null) return;
+
+    const rubrique =
+      selectedMapItemId != null ? getRubriqueState(selectedMapItemId) : null;
+    if (!rubrique || !rubrique.xml || rubrique.status === "dirty") return;
+
+    setIsLoading(true);
+
+    try {
+      const content = parseXmlToTiptap(rubrique.xml);
+      editor.commands.setContent(content, { emitUpdate: false });
+    } catch (e) {
+      console.error("Erreur injection XML", e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [editor, selectedMapItemId, getRubriqueState]);
+
+  // Fonction pour sauvegarder la rubrique
+  const { saveRubrique, saving } = useSaveRubrique(editor, selectedMapItemId);
 
   // Fonctions pour copier, coller, couper
   function handleCut(editor: Editor | null) {
@@ -290,7 +317,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   }, [isStopping]);
 
   // Gestion des raccourcis clavier de l'éditeur
-  useEditorShortcuts(editor, isDictating, inputSourceRef);
+  useEditorShortcuts(editor, rubrique, isDictating, inputSourceRef);
 
   // Menu du haut (Edition, Insérer, Outils...)
   const menuItems = [
@@ -374,7 +401,16 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   function validateBufferXml() {
     if (!selectedMapItemId) return;
 
-    const xmlString = getXml(selectedMapItemId);
+    const rubrique =
+      selectedMapItemId != null ? getRubriqueState(selectedMapItemId) : null;
+    if (!rubrique || !rubrique.xml) {
+      console.warn(
+        "[validateBufferXml] Aucun XML disponible pour cette rubrique."
+      );
+      return;
+    }
+
+    const xmlString = rubrique.xml;
     if (
       !xmlString ||
       typeof xmlString !== "string" ||
@@ -519,11 +555,12 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
                 : "bg-gray-400 cursor-not-allowed"
             }`}
             onClick={() => {
-              toast.success("Rubrique enregistrée !");
-              resetInitialContent();
+              if (!hasChanges || saving) return;
+              saveRubrique();
             }}
-            disabled={!hasChanges}
+            disabled={!hasChanges || saving}
           >
+            {saving ? "Enregistrement..." : "Enregistrer"}
             Enregistrer
           </Button>
         </div>
@@ -769,21 +806,29 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
               </span>
             </div>
           )}
-          {isXmlView ? (
-            <pre className="bg-gray-100 rounded p-4 font-mono text-xs whitespace-pre-wrap">
-              {editor?.getHTML()}
-            </pre>
+
+          {isReady ? (
+            isXmlView ? (
+              <pre className="bg-gray-100 rounded p-4 font-mono text-xs whitespace-pre-wrap">
+                {editor?.getHTML()}
+              </pre>
+            ) : (
+              <EditorContent
+                editor={editor}
+                className="no-border-editor"
+                spellCheck={false}
+                autoCapitalize="off"
+                autoCorrect="off"
+                autoComplete="off"
+              />
+            )
           ) : (
-            <EditorContent
-              editor={editor}
-              className="no-border-editor"
-              spellCheck={false}
-              autoCapitalize="off"
-              autoCorrect="off"
-              autoComplete="off"
-            />
+            <div className="text-sm text-gray-400 italic">
+              L’éditeur n’est pas encore prêt...
+            </div>
           )}
-          {popup && !isXmlView && (
+
+          {popup && !isXmlView && isReady && (
             <PopupSuggestion
               {...popup}
               onReplace={(text, from, to) => {

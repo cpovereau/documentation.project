@@ -22,6 +22,8 @@ INSTALLED_APPS = [
     "documentation",
     "drf_spectacular",
     "drf_spectacular_sidecar",
+    "debug_toolbar",
+    "django_extensions",
 ]
 
 # Configuration des middlewares
@@ -30,6 +32,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -127,6 +130,11 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Mode debug
 DEBUG = True
+
+# Debug Toolbar
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
 
 # Paramètres régionaux
 LANGUAGE_CODE = "fr-fr"
