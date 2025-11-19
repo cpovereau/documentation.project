@@ -21,48 +21,65 @@
  */
 
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Editor } from "@tiptap/react";
 import useXmlBufferStore from "@/store/xmlBufferStore";
 import { parseXmlToTiptap } from "@/utils/xmlToTiptap";
 
 interface UseDitaLoaderProps {
   editor: Editor | null;
-  selectedMapItemId: number | null | undefined;
+  selectedMapItemId: number | null;
 }
 
+/**
+ * 🔄 Hook qui synchronise le contenu XML du buffer avec l’éditeur TipTap
+ */
 export function useDitaLoader({ editor, selectedMapItemId }: UseDitaLoaderProps) {
-  const getRubriqueState = useXmlBufferStore((s) => s.getRubriqueState);
+  const getXml = useXmlBufferStore((state) => state.getXml);
+  const [isLoading, setIsLoading] = useState(false);
+
+  console.log("🚀 useDitaLoader déclenché", {
+    selectedMapItemId,
+    editor,
+    getXml: typeof getXml,
+  });
+
+  // ❌ Pas de return anticipé ici → on garde le hook systematiquement appelé
+  const shouldLoad =
+    !!editor && selectedMapItemId !== null && !isNaN(Number(selectedMapItemId));
 
   useEffect(() => {
-    if (!editor || selectedMapItemId == null) return;
-
-    const rubrique = getRubriqueState(selectedMapItemId);
-
-    if (!rubrique) {
-      console.warn(`[useDitaLoader] Aucune rubrique trouvée dans le buffer pour l'ID ${selectedMapItemId}`);
+    if (!shouldLoad) {
+      console.log("🛑 useDitaLoader : conditions non remplies (dans useEffect)");
       return;
     }
 
-    const { xml, status } = rubrique;
+    setIsLoading(true);
 
-    if (!xml.trim()) {
-      console.warn(`[useDitaLoader] XML vide pour la rubrique ID ${selectedMapItemId}`);
+    const xml = getXml(selectedMapItemId!);
+    console.log("🧾 XML récupéré depuis le buffer (via useDitaLoader) :", xml);
+
+    if (!xml || typeof xml !== "string" || xml.trim() === "") {
+      console.warn("⚠️ Aucun XML trouvé ou XML invalide pour l'ID :", selectedMapItemId);
+      editor!.commands.setContent("<p>Aucun contenu disponible pour cette rubrique.</p>");
+      setIsLoading(false);
       return;
     }
-
-    if (status === "dirty") {
-      console.warn(`[useDitaLoader] Rubrique ID ${selectedMapItemId} modifiée (dirty), injection annulée`);
-      return;
-    }
-
-    console.log(`[useDitaLoader] Injection de la rubrique ID ${selectedMapItemId} (status: ${status})`);
 
     try {
-      const content = parseXmlToTiptap(xml);
-      editor.commands.setContent(content, { emitUpdate: false });
-    } catch (e) {
-      console.error(`[useDitaLoader] Erreur lors de l'analyse XML rubrique ${selectedMapItemId} :`, e);
+      const nodes = parseXmlToTiptap(xml);
+      console.log("📦 Contenu injecté dans l’éditeur :", nodes);
+
+      setTimeout(() => {
+        editor!.commands.setContent({ type: "doc", content: nodes });
+        setIsLoading(false);
+      }, 0);
+    } catch (err) {
+      console.error("❌ Erreur lors du parsing XML:", err);
+      editor!.commands.setContent("<p>Erreur de conversion XML</p>");
+      setIsLoading(false);
     }
-  }, [editor, selectedMapItemId, getRubriqueState]);
+  }, [shouldLoad, getXml, editor, selectedMapItemId]);
+
+  return { isLoading };
 }
