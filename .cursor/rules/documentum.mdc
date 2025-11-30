@@ -1,0 +1,62 @@
+---
+alwaysApply: true
+---
+
+# == Documentum – Project Rule ==
+This project is a CCMS (Content Component Management System) built with:
+- React + TypeScript + Tailwind (frontend)
+- Zustand for certain global states
+- Django REST Framework (backend)
+- DITA XML and TipTap v3 for structured content
+- Zod for API validation
+- Axios with a global error interceptor
+
+## === Architecture conventions ===
+- src/screens contains main screens: Desktop/ and ProductDocSync/
+- src/screens/Desktop/components contains UI pieces (TopBar, LeftSidebar, RightSidebar, CentralEditor…)
+- src/screens/ProductDocSync/components contains SyncEditor, SyncLeftSidebar, SyncRightSidebar
+- src/components/ui contains reusable UI components (buttons, inputs, cards, selects…)
+- src/hooks contains custom hooks for editor logic, loading, grammar checking, history, find/replace
+- src/extensions contains all TipTap v3 custom nodes. All extensions are exported from src/extensions/index.ts
+- src/store contains Zustand stores (naming config, buffer, dictionary…)
+- src/lib/utils.ts contains common utility functions (formatDate, slugify, isEmpty…)
+
+Keep all imports consistent with this folder structure.
+
+## === Editor rules (TipTap v3 + DITA XML) ===
+- Never break existing TipTap custom extensions.
+- Always import TipTap extensions from src/extensions/index.ts.
+- Respect the DITA structure: <title>, <shortdesc>, <body>, <section>, <task>, <steps>, <concept>, etc.
+- XML is converted to TipTap JSON using xmlToTiptap.ts; respect this pipeline.
+- Avoid modifying deep XML parsing logic unless explicitly requested.
+- Follow existing editor behaviors: grammar checker, speech commands, history tracker, find/replace.
+- CentralEditor and SyncEditor must remain aligned on vertical resizing behavior.
+
+## === Networking rules (API) ===
+- All API calls must go through apiClient.ts (Axios instance with interceptor).
+- All responses must be validated with Zod schemas when applicable.
+- Error format must follow backend conventions: { error, fields?, status? }.
+
+## === Backend conventions ===
+- Django REST endpoints follow documented structure in CONTEXTE_PROJET.md.
+- Error responses must remain consistent with custom_exception_handler.
+- Rubrique, Projet, VersionProjet, Map follow strict versioning logic:
+  - Only one active version per project
+  - Cloning versions uses clone_version() in utils.py
+  - XML is validated in Rubrique.clean()
+
+## === Safety rules ===
+- Do not introduce new libraries without explicit confirmation.
+- Do not refactor multiple files touching TipTap/XML without a clear plan request.
+- Maintain existing UX conventions (TopBar shared between Desktop & ProductDocSync).
+- Never modify Zustand stores structure unless requested.
+- Avoid touching backend unless explicitly asked.
+
+## === Expectations when generating code ===
+- Always generate clean TypeScript.
+- Prefer splitting code into hooks for logic and components for UI.
+- Use Tailwind CSS for all styling.
+- Maintain consistent naming conventions for variables, functions, stores, and components.
+- Use async/await and try/catch for API operations, with standardized error handling.
+
+# == End of Project Rule ==

@@ -1,0 +1,28 @@
+{
+  "folders": [
+    {
+      "name": "Backend - Django",
+      "path": "."
+    },
+    {
+      "name": "Frontend - React",
+      "path": "documentum_react_frontend"
+    }
+  ],
+  "settings": {
+    // Python : auto environment
+    "python.defaultInterpreterPath": "C:\\Users\\%USERNAME%\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+
+    // Afficher les scripts NPM dans la sidebar
+    "npm-scripts.showExplorer": true,
+
+    // Terminal par défaut
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+
+    // Formatage TypeScript
+    "editor.formatOnSave": true,
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
+  }
+}
