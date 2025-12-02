@@ -126,14 +126,14 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const { selectedProjectId } = useSelectedVersion();
   const { selectedProduct } = useSelectedProduct();
   const setSelectedProjectId = useProjectStore((s) => s.setSelectedProjectId);
-  const { setXml, getXml } = useXmlBufferStore();
+  const { setXml, getXml, getStatus } = useXmlBufferStore();
 
   // 📦 Projets chargés depuis l’API
   const [projects, setProjects] = useState<ProjectItem[]>(initialProjects);
 
   // 📌 État de la Map courante liée au projet sélectionné
   const [mapItems, setMapItems] = useState<MapItem[]>(
-    projects.find((p) => p.id === selectedProjectId)?.mapItems ?? []
+    projects.find((p) => p.id === selectedProjectId)?.mapItems ?? [],
   );
 
   // Initialisation du buffer XML pour chaque rubrique de la map
@@ -142,12 +142,10 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     for (const item of mapItems) {
       const xml = getXml(item.id);
       if (!xml) {
-        console.log(
-          `📄 Initialisation XML vide pour la rubrique ID ${item.id}`
-        );
+        console.log(`📄 Initialisation XML vide pour la rubrique ID ${item.id}`);
         setXml(
           item.id,
-          `<topic><title>${item.title}</title><body><p>Contenu à compléter</p></body></topic>`
+          `<topic><title>${item.title}</title><body><p>Contenu à compléter</p></body></topic>`,
         );
       }
     }
@@ -159,7 +157,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const [showExportCard, setShowExportCard] = useState(false);
 
   // Callback pour sélectionner un projet
-  const handleSelect = (id: number) => setSelectedProjectId(id);
+  const handleSelect = (id: number) => {
+    if (hasUnsavedChanges) {
+      toast.error("Enregistrez ou annulez vos modifications avant de changer de projet.");
+      return;
+    }
+    setSelectedProjectId(id);
+  };
 
   // Callback pour ajouter un nouveau projet
   const handleConfirmNewProject = (newProject: ProjectItem) => {
@@ -219,8 +223,21 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const handleLoad = () => setLoadOpen(true);
 
   // Les callbacks d'interaction MapModule
-  const handleSelectMapItem = (id: number) => setSelectedMapItemId(id);
+  const handleSelectMapItem = (id: number) => {
+    // 🛑 Garde-fou : empêcher de changer de rubrique s'il y a des modifications non sauvegardées
+    if (hasUnsavedChanges) {
+      toast.error("Vous avez des modifications non sauvegardées dans la rubrique actuelle.");
+      return;
+    }
+
+    // ✔️ Pas de changement en cours → on peut changer la sélection
+    setSelectedMapItemId(id);
+  };
+
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
+
+  // 🚨 Rubrique courante non sauvegardée ?
+  const hasUnsavedChanges = selectedMapItemId !== null && getStatus(selectedMapItemId) === "dirty";
 
   // Callback pour confirmer le projet chargé depuis le dialogue
   const handleConfirmLoadedProject = (uiProject: ProjectItem) => {
@@ -240,17 +257,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
   const handleRenameSave = (itemId: number, newTitle: string) => {
     setMapItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId ? { ...item, title: newTitle } : item
-      )
+      prev.map((item) => (item.id === itemId ? { ...item, title: newTitle } : item)),
     );
     setEditingItemId(null);
   };
 
   const handleAddMapItem = async () => {
-    const newId = mapItems.length
-      ? Math.max(...mapItems.map((i) => i.id)) + 1
-      : 1;
+    const newId = mapItems.length ? Math.max(...mapItems.map((i) => i.id)) + 1 : 1;
 
     const newTitle = `Nouvelle rubrique ${newId}`;
 
@@ -301,10 +314,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     const item = mapItems.find((i) => i.id === id);
     if (item) {
       const newId = Math.max(...mapItems.map((i) => i.id)) + 1;
-      setMapItems([
-        ...mapItems,
-        { ...item, id: newId, title: item.title + " (Clone)" },
-      ]);
+      setMapItems([...mapItems, { ...item, id: newId, title: item.title + " (Clone)" }]);
       setSelectedMapItemId(newId);
     }
   };
@@ -315,7 +325,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     setMapItems(mapItems.filter((i) => i.id !== id));
     setSelectedMapItemId(null);
   };
-  const handleLoadMap = () => alert("Charger map");
+  const handleLoadMap = () => {
+    if (hasUnsavedChanges) {
+      toast.error("Enregistrez ou annulez vos modifications avant de charger une map.");
+      return;
+    }
+    alert("Charger map");
+  };
 
   // Indentation / Outdentation
   // Indentation augmente le niveau de la map, Outdentation le diminue
@@ -332,26 +348,22 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           return { ...item, level: Math.min(item.level + 1, prevLevel + 1) };
         }
         return item;
-      })
+      }),
     );
   };
 
   const handleOutdent = (itemId: number) => {
     setMapItems((prev) =>
       prev.map((item) =>
-        item.id === itemId && item.level > 1
-          ? { ...item, level: item.level - 1 }
-          : item
-      )
+        item.id === itemId && item.level > 1 ? { ...item, level: item.level - 1 } : item,
+      ),
     );
   };
 
   // Expand/collapse handler
   const handleToggleExpand = (itemId: number, expand: boolean) => {
     setMapItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId ? { ...item, expanded: expand } : item
-      )
+      prev.map((item) => (item.id === itemId ? { ...item, expanded: expand } : item)),
     );
   };
 

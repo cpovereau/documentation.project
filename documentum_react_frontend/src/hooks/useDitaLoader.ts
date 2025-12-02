@@ -1,25 +1,13 @@
 /**
  * useDitaLoader
  * --------------
- * Hook qui synchronise le contenu XML d'une rubrique sélectionnée
- * dans la carte (`mapItems`) avec le contenu affiché dans l'éditeur TipTap.
+ * Charge le XML d’une rubrique depuis le buffer Zustand
+ * et l’injecte DANS TipTap **sans déclencher de boucle update**.
  *
- * 📥 Entrée : `selectedMapItemId` (identifiant numérique de la rubrique sélectionnée)
- * 📤 Action :
- *   - Récupère le contenu XML depuis le buffer store local (Zustand)
- *   - Parse le XML en JSON TipTap via `parseXmlToTiptap(...)`
- *   - Injecte le contenu dans l'éditeur avec `editor.commands.setContent(...)`
- *   - Si aucun XML trouvé, affiche un texte d’attente
- *
- * ⚠️ Ce hook suppose que :
- *   - Les clés du buffer sont bien des `number` (type du `mapItem.id`)
- *   - L’appel à `setXml(mapItemId, xml)` a été effectué AVANT la sélection
- *   - Le buffer Zustand est accessible et synchrone (pas de délai async)
- *
- * Utilisation :
- *   - Appelé dans `CentralEditor` à chaque changement de `selectedMapItemId`
+ * ✔ Déclenchement uniquement lors d’un changement de rubrique OU éditeur
+ * ✔ setContent() avec { emitUpdate: false } pour éviter useXmlBufferSync
+ * ✔ Aucune dépendance au buffer → évite les boucles infinies
  */
-
 
 import { useEffect, useState } from "react";
 import { Editor } from "@tiptap/react";
@@ -31,55 +19,53 @@ interface UseDitaLoaderProps {
   selectedMapItemId: number | null;
 }
 
-/**
- * 🔄 Hook qui synchronise le contenu XML du buffer avec l’éditeur TipTap
- */
 export function useDitaLoader({ editor, selectedMapItemId }: UseDitaLoaderProps) {
   const getXml = useXmlBufferStore((state) => state.getXml);
   const [isLoading, setIsLoading] = useState(false);
 
-  console.log("🚀 useDitaLoader déclenché", {
-    selectedMapItemId,
-    editor,
-    getXml: typeof getXml,
-  });
-
-  // ❌ Pas de return anticipé ici → on garde le hook systematiquement appelé
-  const shouldLoad =
-    !!editor && selectedMapItemId !== null && !isNaN(Number(selectedMapItemId));
-
   useEffect(() => {
-    if (!shouldLoad) {
-      console.log("🛑 useDitaLoader : conditions non remplies (dans useEffect)");
+    // Conditions minimales : si l’éditeur n’est pas prêt ou pas de rubrique sélectionnée
+    if (!editor || selectedMapItemId == null) {
       return;
     }
 
     setIsLoading(true);
 
-    const xml = getXml(selectedMapItemId!);
-    console.log("🧾 XML récupéré depuis le buffer (via useDitaLoader) :", xml);
+    // Lecture du XML depuis Zustand
+    const xml = getXml(selectedMapItemId);
 
+    // Si vide → message fallback
     if (!xml || typeof xml !== "string" || xml.trim() === "") {
-      console.warn("⚠️ Aucun XML trouvé ou XML invalide pour l'ID :", selectedMapItemId);
-      editor!.commands.setContent("<p>Aucun contenu disponible pour cette rubrique.</p>");
+      editor.commands.setContent(
+        "<p>Aucun contenu disponible pour cette rubrique.</p>",
+        { emitUpdate: false } // ⚠️ INDISPENSABLE
+      );
       setIsLoading(false);
       return;
     }
 
     try {
+      // Conversion XML → JSON TipTap
       const nodes = parseXmlToTiptap(xml);
-      console.log("📦 Contenu injecté dans l’éditeur :", nodes);
 
-      setTimeout(() => {
-        editor!.commands.setContent({ type: "doc", content: nodes });
-        setIsLoading(false);
-      }, 0);
+      // Injection dans TipTap → sans update (évite sync → Zustand → reload → boucle !)
+      editor.commands.setContent(
+        { type: "doc", content: nodes },
+        { emitUpdate: false }
+      );
+
+      setIsLoading(false);
     } catch (err) {
       console.error("❌ Erreur lors du parsing XML:", err);
-      editor!.commands.setContent("<p>Erreur de conversion XML</p>");
+      editor.commands.setContent("<p>Erreur de conversion XML</p>", {
+        emitUpdate: false,
+      });
       setIsLoading(false);
     }
-  }, [shouldLoad, getXml, editor, selectedMapItemId]);
+  }, [
+    editor,
+    selectedMapItemId, // ✔ Seuls déclencheurs autorisés
+  ]);
 
   return { isLoading };
 }

@@ -153,6 +153,19 @@ export async function prepareNewRubriqueXml(
   return generateDitaTemplate(request)
 }
 
+export function generateMinimalRubriqueXml(title: string, type: string = "topic") {
+  const today = new Date().toISOString().split("T")[0];
+  return `
+<?xml version="1.0" encoding="UTF-8"?>
+<${type} id="${type}-${today.replace(/-/g, "")}">
+  <title>${title}</title>
+  <body>
+    <p>Contenu en cours de rédaction…</p>
+  </body>
+</${type}>`;
+}
+
+
 export async function getRubrique(id: number): Promise<Rubrique> {
   const { data } = await api.get<Rubrique>(`/rubriques/${id}/`)
   return data

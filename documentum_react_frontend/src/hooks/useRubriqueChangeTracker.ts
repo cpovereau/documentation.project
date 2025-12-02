@@ -1,60 +1,68 @@
-// src/hooks/useRubriqueChangeTracker.ts
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Editor } from "@tiptap/react";
 import useXmlBufferStore from "@/store/xmlBufferStore";
 
-export function useRubriqueChangeTracker(editor: Editor | null, rubriqueId: number | null | undefined) {
+/**
+ * Détection de modifications dans une rubrique.
+ * - Compare le JSON initial et le JSON courant de TipTap.
+ * - Met à jour le store Zustand avec status = "dirty".
+ * - Fournit un resetInitialContent() après une sauvegarde.
+ */
+export function useRubriqueChangeTracker(
+  editor: Editor | null,
+  rubriqueId: number | null | undefined
+) {
   const [hasChanges, setHasChanges] = useState(false);
-  const getRubriqueState = useXmlBufferStore((s) => s.getRubriqueState);
-  const markDirty = useXmlBufferStore((s) => s.markDirty);
-  const markSaved = useXmlBufferStore((s) => s.markSaved);
+
+  const getXml = useXmlBufferStore((s) => s.getXml);
+  const setStatus = useXmlBufferStore((s) => s.setStatus);
   const setXml = useXmlBufferStore((s) => s.setXml);
 
-  // 🖊️ Suivi de modifications de contenu
+  // On mémorise l'état initial de l'éditeur en JSON
+  const initialJsonRef = useRef<any>(null);
+
+  // Réinitialise l'état initial après une sauvegarde réussie
+  const resetInitialContent = () => {
+    if (!editor) return;
+    initialJsonRef.current = editor.getJSON();
+    setHasChanges(false);
+    if (rubriqueId) setStatus(rubriqueId, "saved");
+  };
+
   useEffect(() => {
-    if (!editor || rubriqueId == null) return;
+    if (!editor || !rubriqueId) {
+      return; // <- ceci renvoie `void`, c’est OK
+    }
+
+    initialJsonRef.current = editor.getJSON();
+    setHasChanges(false);
 
     const handleUpdate = () => {
-      const current = editor.getHTML();
-      const rubrique = getRubriqueState(rubriqueId);
+      if (!initialJsonRef.current) return;
 
-      if (!rubrique) return;
-      if (current !== rubrique.xml) {
-        markDirty(rubriqueId);
+      const current = editor.getJSON();
+      const initial = initialJsonRef.current;
+
+      const changed = JSON.stringify(current) !== JSON.stringify(initial);
+
+      if (changed) {
+        if (!hasChanges) {
+          setHasChanges(true);
+          setStatus(rubriqueId, "dirty");
+        }
       }
     };
 
     editor.on("update", handleUpdate);
+
+    // IMPORTANT : retourner une fonction `() => void`
     return () => {
       editor.off("update", handleUpdate);
     };
-  }, [editor, rubriqueId, getRubriqueState, markDirty]);
+  }, [editor, rubriqueId]); // SAFE
 
-  // 🧭 Mise à jour du flag de modification
-  useEffect(() => {
-    if (rubriqueId == null) return;
-
-    const check = () => {
-      const rubrique = getRubriqueState(rubriqueId);
-      setHasChanges(rubrique?.status === "dirty");
-    };
-
-    check(); // immédiat
-
-    // Option : si tu veux du live-check, garde ce setInterval
-    const interval = setInterval(check, 500);
-    return () => clearInterval(interval);
-  }, [rubriqueId, getRubriqueState]);
-
-  // ✅ Appelé après sauvegarde réussie
-  const resetInitialContent = () => {
-    if (!editor || rubriqueId == null) return;
-
-    const html = editor.getHTML();
-    setXml(rubriqueId, html);
-    markSaved(rubriqueId);
-    setHasChanges(false);
+  return {
+    hasChanges,
+    resetInitialContent,
   };
-
-  return { hasChanges, resetInitialContent };
 }

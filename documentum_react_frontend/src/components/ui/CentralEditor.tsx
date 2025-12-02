@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useCallback,
-  useRef,
-  useEffect,
-  useMemo,
-} from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useSpeechToText } from "hooks/useSpeechToText";
 import { Button } from "components/ui/button";
@@ -41,6 +35,7 @@ import { useSpeechCommands } from "@/hooks/useSpeechCommands";
 import { useEditorShortcuts } from "@/hooks/useEditorShortcuts";
 import { useGrammarChecker } from "@/hooks/useGrammarChecker";
 import { useEditorHistoryTracker } from "@/hooks/useEditorHistoryTracker";
+import { useXmlBufferSync } from "@/hooks/useXmlBufferSync";
 import debounce from "lodash.debounce";
 
 // Props du composant
@@ -51,9 +46,7 @@ interface CentralEditorProps {
   isRightSidebarExpanded: boolean;
   isRightSidebarFloating: boolean;
   visibleDockEditor: "question" | "exercice" | null;
-  setVisibleDockEditor: React.Dispatch<
-    React.SetStateAction<"question" | "exercice" | null>
-  >;
+  setVisibleDockEditor: React.Dispatch<React.SetStateAction<"question" | "exercice" | null>>;
   onToggleQuestionEditor: () => void;
   onToggleExerciceEditor: () => void;
   dockEditorHeight: number;
@@ -129,28 +122,37 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   const getXml = useXmlBufferStore((state) => state.getXml);
   const xml = selectedMapItemId ? getXml(selectedMapItemId) : null;
 
-  // ⚠️ On ne crée l’éditeur que si on a un contenu XML à injecter
+  // L’éditeur ne dépend plus du contenu XML
   const editor = useEditor(
     {
       extensions: getAllExtensions(),
-      content: xml || "<p></p>",
+      content: "<p></p>", // contenu placeholder, le vrai XML sera injecté par useDitaLoader
       onUpdate({ editor }) {
         checkGrammar(editor.getText());
       },
     },
-    [xml]
+    [selectedMapItemId], // on recrée seulement quand on change de rubrique
   );
 
+  //
+  const { startSync, stopSync } = useXmlBufferSync(editor, selectedMapItemId);
+
+  useEffect(() => {
+    if (editor) startSync();
+    return () => stopSync();
+  }, [editor, selectedMapItemId]);
+
   // Référence pour le suivi de la source d'entrée (clavier, voix, etc.)
-  const { hasChanges, resetInitialContent } = useRubriqueChangeTracker(editor);
+  const { hasChanges, resetInitialContent } = useRubriqueChangeTracker(editor, selectedMapItemId);
 
   // Chargement initial du XML dans l’éditeur
-  useEffect(() => {
-    if (editor && xml) {
-      console.log("✅ Injection initiale dans l’éditeur :", xml);
-      resetInitialContent();
-    }
-  }, [editor, xml, resetInitialContent]);
+  // ❌ À commenter le temps de stabiliser la chaîne
+  //useEffect(() => {
+  //  if (editor && xml) {
+  //    console.log("✅ Injection initiale dans l’éditeur :", xml);
+  //    resetInitialContent();
+  // }
+  //}, [editor, xml, resetInitialContent]);
 
   // ✅ Injection automatique du contenu XML depuis le buffer au changement de rubrique
   const { isLoading } = useDitaLoader({ editor, selectedMapItemId });
@@ -161,7 +163,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     const selectedText = editor.state.doc.textBetween(
       editor.state.selection.from,
       editor.state.selection.to,
-      "\n"
+      "\n",
     );
     navigator.clipboard.writeText(selectedText);
     editor.commands.deleteSelection();
@@ -173,7 +175,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     const selectedText = editor.state.doc.textBetween(
       editor.state.selection.from,
       editor.state.selection.to,
-      "\n"
+      "\n",
     );
     navigator.clipboard.writeText(selectedText);
     logAction("Texte copié", selectedText);
@@ -194,13 +196,8 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   const { find, replace, replaceAll } = useFindReplaceTipTap(editor);
 
   // Gestion de l'historique de l'éditeur
-  const {
-    historyLog,
-    isHistoryOpen,
-    setIsHistoryOpen,
-    logAction,
-    clearHistory,
-  } = useEditorHistoryTracker();
+  const { historyLog, isHistoryOpen, setIsHistoryOpen, logAction, clearHistory } =
+    useEditorHistoryTracker();
 
   // Gestion des commandes vocales
   const { handleVoiceCommand } = useSpeechCommands(editor);
@@ -241,8 +238,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
       const { state, view } = editor;
 
       const pos = state.selection.$from.pos;
-      const needsSpace =
-        pos > 0 && !/\s$/.test(state.doc.textBetween(pos - 1, pos));
+      const needsSpace = pos > 0 && !/\s$/.test(state.doc.textBetween(pos - 1, pos));
 
       const tr = state.tr.insertText((needsSpace ? " " : "") + text, pos);
       view.dispatch(tr);
@@ -290,7 +286,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   }, [isStopping]);
 
   // Gestion des raccourcis clavier de l'éditeur
-  useEditorShortcuts(editor, isDictating, inputSourceRef);
+  useEditorShortcuts(editor, selectedMapItemId, isDictating, inputSourceRef);
 
   // Menu du haut (Edition, Insérer, Outils...)
   const menuItems = [
@@ -375,11 +371,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     if (!selectedMapItemId) return;
 
     const xmlString = getXml(selectedMapItemId);
-    if (
-      !xmlString ||
-      typeof xmlString !== "string" ||
-      xmlString.trim() === ""
-    ) {
+    if (!xmlString || typeof xmlString !== "string" || xmlString.trim() === "") {
       toast.error("Aucun contenu XML à valider.");
       return;
     }
@@ -423,9 +415,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
 
       if (target.classList.contains("grammar-error")) {
         const message = target.getAttribute("data-message") || "";
-        const suggestions = (
-          target.getAttribute("data-suggestions") || ""
-        ).split(",");
+        const suggestions = (target.getAttribute("data-suggestions") || "").split(",");
 
         const from = editor.view.posAtDOM(target, 0);
         const textContent = target.textContent ?? "";
@@ -480,9 +470,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           )}
           <Button
             className={`h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 ${
-              isPreviewMode
-                ? "bg-[#eb4924] hover:bg-[#d13d1d]"
-                : "bg-[#2463eb] hover:bg-[#1d4ed8]"
+              isPreviewMode ? "bg-[#eb4924] hover:bg-[#d13d1d]" : "bg-[#2463eb] hover:bg-[#1d4ed8]"
             }`}
             onClick={onPreviewToggle}
           >
@@ -491,9 +479,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           <Button
             className="h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 bg-[#2463eb] hover:bg-[#1d4ed8]"
             onClick={() =>
-              setVisibleDockEditor((prev) =>
-                prev === "question" ? null : "question"
-              )
+              setVisibleDockEditor((prev) => (prev === "question" ? null : "question"))
             }
             disabled={visibleDockEditor === "exercice"}
           >
@@ -503,9 +489,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
           <Button
             className="h-11 px-4 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 bg-[#2463eb] hover:bg-[#1d4ed8]"
             onClick={() =>
-              setVisibleDockEditor((prev) =>
-                prev === "exercice" ? null : "exercice"
-              )
+              setVisibleDockEditor((prev) => (prev === "exercice" ? null : "exercice"))
             }
             disabled={visibleDockEditor === "question"}
           >
@@ -514,9 +498,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
 
           <Button
             className={`h-11 px-5 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 ${
-              hasChanges
-                ? "bg-[#15803d] hover:bg-[#166534]"
-                : "bg-gray-400 cursor-not-allowed"
+              hasChanges ? "bg-[#15803d] hover:bg-[#166534]" : "bg-gray-400 cursor-not-allowed"
             }`}
             onClick={() => {
               toast.success("Rubrique enregistrée !");
@@ -550,9 +532,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
             logAction("Texte mis en gras");
           }}
           title="Gras"
-          className={`icon-btn ${
-            editor?.isActive("bold") ? "bg-blue-100" : ""
-          }`}
+          className={`icon-btn ${editor?.isActive("bold") ? "bg-blue-100" : ""}`}
         >
           B
         </button>
@@ -562,9 +542,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
             logAction("Texte mis en italique");
           }}
           title="Italique"
-          className={`icon-btn ${
-            editor?.isActive("italic") ? "bg-blue-100" : ""
-          }`}
+          className={`icon-btn ${editor?.isActive("italic") ? "bg-blue-100" : ""}`}
         >
           I
         </button>
@@ -574,9 +552,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
             logAction("Texte souligné");
           }}
           title="Souligné"
-          className={`icon-btn ${
-            editor?.isActive("underline") ? "bg-blue-100" : ""
-          }`}
+          className={`icon-btn ${editor?.isActive("underline") ? "bg-blue-100" : ""}`}
         >
           U
         </button>
@@ -584,45 +560,35 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         <button
           onClick={() => editor?.chain().focus().setTextAlign("left").run()}
           title="Aligner à gauche"
-          className={`icon-btn ${
-            editor?.isActive({ textAlign: "left" }) ? "bg-blue-100" : ""
-          }`}
+          className={`icon-btn ${editor?.isActive({ textAlign: "left" }) ? "bg-blue-100" : ""}`}
         >
           ⯇
         </button>
         <button
           onClick={() => editor?.chain().focus().setTextAlign("center").run()}
           title="Centrer"
-          className={`icon-btn ${
-            editor?.isActive({ textAlign: "center" }) ? "bg-blue-100" : ""
-          }`}
+          className={`icon-btn ${editor?.isActive({ textAlign: "center" }) ? "bg-blue-100" : ""}`}
         >
           ≡
         </button>
         <button
           onClick={() => editor?.chain().focus().setTextAlign("right").run()}
           title="Aligner à droite"
-          className={`icon-btn ${
-            editor?.isActive({ textAlign: "right" }) ? "bg-blue-100" : ""
-          }`}
+          className={`icon-btn ${editor?.isActive({ textAlign: "right" }) ? "bg-blue-100" : ""}`}
         >
           ⯈
         </button>
         <button
           onClick={() => editor?.chain().focus().setTextAlign("justify").run()}
           title="Justifier"
-          className={`icon-btn ${
-            editor?.isActive({ textAlign: "justify" }) ? "bg-blue-100" : ""
-          }`}
+          className={`icon-btn ${editor?.isActive({ textAlign: "justify" }) ? "bg-blue-100" : ""}`}
         >
           ☰
         </button>
         <div className="h-5 border-l border-gray-300 mx-2"></div>
         <input
           type="color"
-          onChange={(e) =>
-            editor?.chain().focus().setColor(e.target.value).run()
-          }
+          onChange={(e) => editor?.chain().focus().setColor(e.target.value).run()}
           value={editor?.getAttributes("textStyle").color || "#000000"}
           title="Changer la couleur"
           className="ml-2"
@@ -633,9 +599,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
             const url = prompt("Entrez l'URL :");
             if (url) editor?.chain().focus().setLink({ href: url }).run();
           }}
-          className={`icon-btn ${
-            editor?.isActive("link") ? "bg-blue-100" : ""
-          }`}
+          className={`icon-btn ${editor?.isActive("link") ? "bg-blue-100" : ""}`}
         >
           🔗
         </button>
@@ -683,16 +647,16 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
               editor?.isActive("heading", { level: 1 })
                 ? "heading1"
                 : editor?.isActive("heading", { level: 2 })
-                ? "heading2"
-                : editor?.isActive("heading", { level: 3 })
-                ? "heading3"
-                : editor?.isActive("note", { type: "important" })
-                ? "important"
-                : editor?.isActive("note", { type: "note" })
-                ? "note"
-                : editor?.isActive("note", { type: "warning" })
-                ? "warning"
-                : "paragraph"
+                  ? "heading2"
+                  : editor?.isActive("heading", { level: 3 })
+                    ? "heading3"
+                    : editor?.isActive("note", { type: "important" })
+                      ? "important"
+                      : editor?.isActive("note", { type: "note" })
+                        ? "note"
+                        : editor?.isActive("note", { type: "warning" })
+                          ? "warning"
+                          : "paragraph"
             }
             onChange={(e) => {
               const value = e.target.value;
@@ -706,7 +670,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
                   const text = editor?.state.doc.textBetween(
                     editor?.state.selection.from,
                     editor?.state.selection.to,
-                    " "
+                    " ",
                   );
                   editor
                     ?.chain()
@@ -720,12 +684,9 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
                 }
               }
 
-              if (value === "heading1")
-                editor?.chain().focus().toggleHeading({ level: 1 }).run();
-              if (value === "heading2")
-                editor?.chain().focus().toggleHeading({ level: 2 }).run();
-              if (value === "heading3")
-                editor?.chain().focus().toggleHeading({ level: 3 }).run();
+              if (value === "heading1") editor?.chain().focus().toggleHeading({ level: 1 }).run();
+              if (value === "heading2") editor?.chain().focus().toggleHeading({ level: 2 }).run();
+              if (value === "heading3") editor?.chain().focus().toggleHeading({ level: 3 }).run();
 
               if (["important", "note", "warning"].includes(value)) {
                 editor

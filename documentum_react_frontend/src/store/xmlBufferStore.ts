@@ -1,10 +1,19 @@
 // src/store/xmlBufferStore.ts
-import { create } from 'zustand';
+import { create } from "zustand";
+
+export type BufferStatus = "saved" | "dirty" | "error";
+
+interface XmlEntry {
+  xml: string;
+  status: BufferStatus;
+}
 
 interface XmlBufferState {
-  buffer: Record<number, string>; // mapItemId -> contenu XML
+  buffer: Record<number, XmlEntry>; // mapItemId -> { xml, status }
   setXml: (id: number, xml: string) => void;
-  getXml: (id: number) => string | undefined;
+  setStatus: (id: number, status: BufferStatus) => void;
+  getXml: (id: number) => string | null;
+  getStatus: (id: number) => BufferStatus | null;
   clear: () => void;
 }
 
@@ -15,13 +24,32 @@ const useXmlBufferStore = create<XmlBufferState>((set, get) => ({
     set((state) => ({
       buffer: {
         ...state.buffer,
-        [id]: xml,
+        [id]: {
+          xml,
+          status: state.buffer[id]?.status ?? "dirty", // par défaut : non sauvegardé
+        },
+      },
+    })),
+
+  setStatus: (id, status) =>
+    set((state) => ({
+      buffer: {
+        ...state.buffer,
+        [id]: {
+          xml: state.buffer[id]?.xml ?? "",
+          status,
+        },
       },
     })),
 
   getXml: (id) => {
-    const xml = get().buffer[id];
-    return xml ?? null;
+    const entry = get().buffer[id];
+    return entry?.xml ?? null;
+  },
+
+  getStatus: (id) => {
+    const entry = get().buffer[id];
+    return entry?.status ?? null;
   },
 
   clear: () => set({ buffer: {} }),
