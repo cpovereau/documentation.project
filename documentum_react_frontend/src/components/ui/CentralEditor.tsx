@@ -36,7 +36,6 @@ import { useEditorShortcuts } from "@/hooks/useEditorShortcuts";
 import { useGrammarChecker } from "@/hooks/useGrammarChecker";
 import { useEditorHistoryTracker } from "@/hooks/useEditorHistoryTracker";
 import { useXmlBufferSync } from "@/hooks/useXmlBufferSync";
-import debounce from "lodash.debounce";
 
 // Props du composant
 interface CentralEditorProps {
