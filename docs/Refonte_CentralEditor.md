@@ -47,20 +47,20 @@ Cette phase rend le flux **TipTap → XML → Buffer → Guard → UI** pleineme
 
 ### 🧩 Tâches à réaliser
 #### 2.1 — Extraction UI
-- [ ] Créer `EditorToolbar.tsx`
-- [ ] Créer `BlockTypeMenu.tsx` / `InlineMenu.tsx` si besoin
-- [ ] Créer `EditorPanels/HistoryPanel.tsx`
-- [ ] Créer `EditorPanels/FindReplacePanel.tsx`
-- [ ] Déporter les icônes, boutons, menus hors du fichier principal
+- [X] Créer `EditorToolbar.tsx`
+- [X] Créer `BlockTypeMenu.tsx` / `InlineMenu.tsx` si besoin
+- [X] Créer `EditorPanels/HistoryPanel.tsx`
+- [X] Créer `EditorPanels/FindReplacePanel.tsx`
+- [X] Déporter les icônes, boutons, menus hors du fichier principal
 
 #### 2.2 — Extraction logique
-- [ ] Créer `useEditorDialogs` (ouverture/fermeture des panels)
-- [ ] Créer `useEditorUIState` (états locaux de l’éditeur)
-- [ ] Déporter la gestion de la dictée dans `useDictation` (déjà existant, à isoler)
+- [X] Créer `useEditorDialogs` (ouverture/fermeture des panels)
+- [X] Créer `useEditorUIState` (états locaux de l’éditeur)
+- [X] Déporter la gestion de la dictée dans `useDictation` (déjà existant, à isoler)
 
 #### 2.3 — Nettoyage du fichier
-- [ ] Supprimer toute référence à `editor.getHTML()`
-- [ ] Remplacer par `getXml(selectedMapItemId)` partout dans la vue XML
+- [X] Supprimer toute référence à `editor.getHTML()`
+- [X] Remplacer par `getXml(selectedMapItemId)` partout dans la vue XML
 - [ ] Réduire les `useEffect` trop complexes
 - [ ] Rassembler les callbacks liés aux panels dans un hook
 
