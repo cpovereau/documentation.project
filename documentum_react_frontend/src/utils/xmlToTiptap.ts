@@ -2,13 +2,7 @@
 
 /**
  * ⚙️ Utilitaire de conversion XML DITA ➜ JSON TipTap
- * - Parse une chaîne XML
- * - Récupère le contenu utile (en priorité à l'intérieur de <body>)
- * - Convertit récursivement chaque nœud en structure JSON TipTap
- *
- * 📌 Objectif principal : produire une structure STABLE et compatible TipTap v3,
- * pour être injectée dans `editor.commands.setContent({ type: "doc", content: nodes })`
- * sans provoquer de normalisation automatique ni de boucles infinies.
+ * V2 — version structurée, consciente des balises DITA principales
  */
 
 export interface TiptapNode {
@@ -18,40 +12,118 @@ export interface TiptapNode {
   text?: string;
 }
 
-// 🧭 Mapping minimal des balises XML vers les types TipTap
-// (à enrichir progressivement en fonction des extensions réellement utilisées)
-const nodeTypeMap: Record<string, string> = {
+// 🧭 Mapping XML -> type TipTap
+// À enrichir progressivement (concept, reference, learning, etc.)
+const XML_TO_TIPTAP_TAG: Record<string, string> = {
+  // blocs de base
   p: "paragraph",
-  body: "body", // traité comme conteneur logique, pas injecté tel quel dans TipTap
+  title: "title",
+  shortdesc: "shortdesc",
+  body: "body",
+  section: "section",
+  note: "note",
+
+  // tâches DITA
+  task: "task",
+  taskbody: "taskbody",
+  steps: "steps",
+  step: "step",
+
+  // listes DITA (via StarterKit)
+  itemizedlist: "bulletList",
+  orderedlist: "orderedList",
+  listitem: "listItem",
+
+  // médias (supposés alignés avec vos extensions)
+  image: "image",
+  figure: "figure",
+  video: "video",
+
+  // prolog & métadonnées
+  prolog: "prolog",
+  "rubrique-metadata": "rubriqueMetadata",
+  "doc-tag": "docTag",
+
+  // pédagogie de base
+  question: "question",
+  answer: "answer",
+
+  // à compléter : concept, conbody, reference, refbody, learning*, etc.
+  concept: "concept",
+  conbody: "conbody",
+  reference: "reference",
+  refbody: "refbody",
 };
 
-function mapNodeName(element: Element): string {
-  const raw = element.tagName.toLowerCase();
-  return nodeTypeMap[raw] ?? raw;
+function mapXmlTagToTiptapType(el: Element): string {
+  const raw = el.tagName.toLowerCase();
+  return XML_TO_TIPTAP_TAG[raw] ?? raw; // fallback: même nom
+}
+
+// 🧾 Whitelist d'attributs par type TipTap
+// On commence simple : toujours "id", puis on enrichira progressivement.
+const ATTR_WHITELIST: Record<string, string[]> = {
+  "*": ["id"],
+
+  image: ["id", "href", "src", "alt"],
+  crossReference: ["id", "refid", "href"],
+  docTag: ["id", "type", "audience", "product", "feature"],
+  inlineVariable: ["id", "name"],
+};
+
+function extractAttributes(el: Element, type: string): Record<string, any> | undefined {
+  const allowed = new Set([
+    ...(ATTR_WHITELIST["*"] ?? []),
+    ...(ATTR_WHITELIST[type] ?? []),
+  ]);
+
+  const attrs: Record<string, any> = {};
+
+  for (const attr of Array.from(el.attributes)) {
+    if (allowed.has(attr.name)) {
+      attrs[attr.name] = attr.value;
+    }
+  }
+
+  // Normalisation spécifique pour certains types
+  if (type === "image") {
+    const href = el.getAttribute("href") ?? el.getAttribute("src");
+    if (href) {
+      attrs.src = href; // on standardise en "src" côté TipTap
+    }
+  }
+
+  return Object.keys(attrs).length > 0 ? attrs : undefined;
 }
 
 /**
  * Convertit un nœud DOM XML en nœud TipTap JSON (récursif).
+ * Gère TEXT_NODE, ELEMENT_NODE, avec quelques cas spéciaux.
  */
 export function parseXmlNode(xmlNode: Node): TiptapNode | null {
+  // Texte
   if (xmlNode.nodeType === Node.TEXT_NODE) {
-    const text = xmlNode.textContent?.trim();
-    if (!text) return null;
+    const text = xmlNode.textContent ?? "";
+    // On ne garde pas les textes purement vides ou blancs
+    if (!text.trim()) return null;
     return { type: "text", text };
   }
 
+  // On ignore les commentaires, etc.
   if (xmlNode.nodeType !== Node.ELEMENT_NODE) {
     return null;
   }
 
   const element = xmlNode as Element;
-  const type = mapNodeName(element);
+  const tagName = element.tagName.toLowerCase();
+  const type = mapXmlTagToTiptapType(element);
 
-  // Attributs
-  const attrs: Record<string, string> = {};
-  for (const attr of Array.from(element.attributes)) {
-    attrs[attr.name] = attr.value;
-  }
+  // Cas spéciaux éventuels
+  // - listitem -> listItem
+  // - itemizedlist/orderedlist
+  // - etc.
+
+  const attrs = extractAttributes(element, type);
 
   // Enfants récursifs
   const children: TiptapNode[] = [];
@@ -62,13 +134,18 @@ export function parseXmlNode(xmlNode: Node): TiptapNode | null {
     }
   }
 
+  // Certains conteneurs ne doivent pas apparaître tels quels dans TipTap,
+  // mais seulement exposer leurs enfants. Exemple : body.
+  if (tagName === "body") {
+    // On "aplatit" body : on retourne seulement ses enfants.
+    // Note : c'est géré au niveau supérieur dans parseXmlToTiptap, mais
+    // on garde ce garde-fou.
+    return children.length ? { type: "body", content: children } : null;
+  }
+
   const node: TiptapNode = { type };
-  if (Object.keys(attrs).length > 0) {
-    node.attrs = attrs;
-  }
-  if (children.length > 0) {
-    node.content = children;
-  }
+  if (attrs) node.attrs = attrs;
+  if (children.length > 0) node.content = children;
 
   return node;
 }
@@ -104,20 +181,47 @@ export function parseXmlToTiptap(xmlString: string): TiptapNode[] {
     throw new Error("Le XML fourni n'est pas valide.");
   }
 
-  // On tente d'abord de récupérer le contenu du <body>, sinon on prend la racine
-  const body = doc.getElementsByTagName("body")[0];
-  const container: Element = body || (doc.documentElement as Element);
+  const root = doc.documentElement as Element;
+  const rootTag = root.tagName.toLowerCase();
 
-  console.log("📥 Élément racine utilisé pour la conversion :", container.tagName);
+  // Racines structurelles DITA qu'on veut garder telles quelles
+  const STRUCTURAL_ROOTS = new Set(["task", "concept", "reference"]);
+
+  let container: Element;
+
+  if (STRUCTURAL_ROOTS.has(rootTag)) {
+    // Pour <task>, <concept>, <reference> → on garde la racine
+    container = root;
+  } else {
+    // Sinon, on cherche un "body-like" à l'intérieur
+    const bodyLike =
+      (doc.getElementsByTagName("body")[0] as Element | undefined) ||
+      (doc.getElementsByTagName("conbody")[0] as Element | undefined) ||
+      (doc.getElementsByTagName("taskbody")[0] as Element | undefined) ||
+      (doc.getElementsByTagName("refbody")[0] as Element | undefined);
+
+    // S'il y a un body/conbody/taskbody/refbody → on le prend,
+    // sinon on prend la racine telle quelle (p, steps, etc.)
+    container = bodyLike ?? root;
+  }
+
+  console.log("📥 Élément conteneur utilisé pour la conversion :", container.tagName);
 
   const resultNodes: TiptapNode[] = [];
 
-  // Important : on itère sur les enfants du conteneur, et non sur le conteneur lui-même,
-  // pour éviter d'introduire un faux noeud racine non géré par TipTap.
-  for (const child of Array.from(container.childNodes)) {
-    const parsed = parseXmlNode(child);
-    if (parsed) {
-      resultNodes.push(parsed);
+  // Cas particulier : <body> → on aplatit les enfants
+  if (container.tagName.toLowerCase() === "body") {
+    for (const child of Array.from(container.childNodes)) {
+      const parsed = parseXmlNode(child);
+      if (parsed) {
+        resultNodes.push(parsed);
+      }
+    }
+  } else {
+    // Tous les autres cas : on convertit le conteneur LUI-MÊME
+    const parsedRoot = parseXmlNode(container);
+    if (parsedRoot) {
+      resultNodes.push(parsedRoot);
     }
   }
 
@@ -126,3 +230,4 @@ export function parseXmlToTiptap(xmlString: string): TiptapNode[] {
 
   return resultNodes;
 }
+

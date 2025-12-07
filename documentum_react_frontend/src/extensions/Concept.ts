@@ -24,6 +24,9 @@ export const Concept = Node.create({
     return ["concept", mergeAttributes(HTMLAttributes), 0];
   },
 
+  /* ---------------------------------------------------
+   *  Commande de création d'un concept complet
+   * ------------------------------------------------- */
   addCommands() {
     return {
       insertConcept:
@@ -56,8 +59,10 @@ export const Concept = Node.create({
   },
 });
 
+/* -------------------------------------------------------
+ *  DITA <conbody> — Corps du concept
+ * ----------------------------------------------------- */
 
-// Export the Concept node
 export const Conbody = Node.create({
   name: "conbody",
   group: "block",
