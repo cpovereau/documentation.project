@@ -2,7 +2,7 @@
 
 /**
  * ⚙️ Utilitaire de conversion XML DITA ➜ JSON TipTap
- * V2 — version structurée, consciente des balises DITA principales
+ * V3 — support des structures DITA (task, concept, reference…)
  */
 
 export interface TiptapNode {
@@ -13,7 +13,7 @@ export interface TiptapNode {
 }
 
 // 🧭 Mapping XML -> type TipTap
-// À enrichir progressivement (concept, reference, learning, etc.)
+// Aligné avec vos extensions personnalisées et StarterKit.
 const XML_TO_TIPTAP_TAG: Record<string, string> = {
   // blocs de base
   p: "paragraph",
@@ -22,6 +22,16 @@ const XML_TO_TIPTAP_TAG: Record<string, string> = {
   body: "body",
   section: "section",
   note: "note",
+  codeblock: "codeblock",
+  example: "example",
+
+  // tableaux
+  table: "Table",
+  row: "TableRow",
+  entry: "TableCell",     
+  thead: "thead",
+  tbody: "tbody",
+  tgroup: "tgroup",
 
   // tâches DITA
   task: "task",
@@ -48,16 +58,21 @@ const XML_TO_TIPTAP_TAG: Record<string, string> = {
   question: "question",
   answer: "answer",
 
-  // à compléter : concept, conbody, reference, refbody, learning*, etc.
+  // structures DITA "topic-like"
   concept: "concept",
   conbody: "conbody",
   reference: "reference",
   refbody: "refbody",
+  glossentry: "glossentry",
+  xref: "crossReference",
+
+  // variables inline
+  variable: "inlineVariable",
 };
 
 function mapXmlTagToTiptapType(el: Element): string {
   const raw = el.tagName.toLowerCase();
-  return XML_TO_TIPTAP_TAG[raw] ?? raw; // fallback: même nom
+  return XML_TO_TIPTAP_TAG[raw] ?? raw; // fallback: même nom si non mappé
 }
 
 // 🧾 Whitelist d'attributs par type TipTap
@@ -66,30 +81,29 @@ const ATTR_WHITELIST: Record<string, string[]> = {
   "*": ["id"],
 
   image: ["id", "href", "src", "alt"],
-  crossReference: ["id", "refid", "href"],
-  docTag: ["id", "type", "audience", "product", "feature"],
+  crossReference: ["id", "refid"],
+  docTag: ["id", "type"],
   inlineVariable: ["id", "name"],
+  glossentry: ["id", "termid", "term", "definition"],
 };
 
 function extractAttributes(el: Element, type: string): Record<string, any> | undefined {
-  const allowed = new Set([
-    ...(ATTR_WHITELIST["*"] ?? []),
-    ...(ATTR_WHITELIST[type] ?? []),
-  ]);
+  const allowAll = !ATTR_WHITELIST[type];
 
   const attrs: Record<string, any> = {};
 
   for (const attr of Array.from(el.attributes)) {
-    if (allowed.has(attr.name)) {
-      attrs[attr.name] = attr.value;
-    }
+  if (allowAll || ATTR_WHITELIST[type]?.includes(attr.name) || ATTR_WHITELIST["*"]?.includes(attr.name)) {
+    attrs[attr.name] = attr.value;
   }
+}
 
   // Normalisation spécifique pour certains types
   if (type === "image") {
     const href = el.getAttribute("href") ?? el.getAttribute("src");
     if (href) {
-      attrs.src = href; // on standardise en "src" côté TipTap
+      // Standardisation côté TipTap
+      attrs.src = href;
     }
   }
 
@@ -101,15 +115,22 @@ function extractAttributes(el: Element, type: string): Record<string, any> | und
  * Gère TEXT_NODE, ELEMENT_NODE, avec quelques cas spéciaux.
  */
 export function parseXmlNode(xmlNode: Node): TiptapNode | null {
-  // Texte
+  // Cas du Texte
+  // ⚠️ Pour les codeblocks, on NE doit JAMAIS filtrer les espaces.
   if (xmlNode.nodeType === Node.TEXT_NODE) {
     const text = xmlNode.textContent ?? "";
-    // On ne garde pas les textes purement vides ou blancs
+
+    // 🎯 si on est dans un <codeblock>, NE PAS filtrer les espaces
+    if (xmlNode.parentElement?.tagName.toLowerCase() === "codeblock") {
+      return { type: "text", text }; // on garde absolument tout
+    }
+
+    // Comportement normal ailleurs
     if (!text.trim()) return null;
-    return { type: "text", text };
+    return { type: "text", text: text.trim() }
   }
 
-  // On ignore les commentaires, etc.
+  // On ignore tout ce qui n'est pas un élément
   if (xmlNode.nodeType !== Node.ELEMENT_NODE) {
     return null;
   }
@@ -117,15 +138,27 @@ export function parseXmlNode(xmlNode: Node): TiptapNode | null {
   const element = xmlNode as Element;
   const tagName = element.tagName.toLowerCase();
   const type = mapXmlTagToTiptapType(element);
-
-  // Cas spéciaux éventuels
-  // - listitem -> listItem
-  // - itemizedlist/orderedlist
-  // - etc.
-
   const attrs = extractAttributes(element, type);
 
-  // Enfants récursifs
+  // 🧨 Cas particulier PRIORITAIRE : <codeblock>
+  // -----------------------------------------------
+  // On NE traite surtout PAS les enfants individuellement.
+  // On NE supprime PAS les blancs / indentations.
+  // On garde le texte EXACTEMENT tel qu'il est dans le XML.
+  if (tagName === "codeblock") {
+    return {
+      type: "codeblock",
+      attrs,
+      content: [
+        {
+          type: "text",
+          text: element.textContent ?? "",
+        },
+      ],
+    };
+  }
+
+  // Cas général : parcourir les enfants récursivement
   const children: TiptapNode[] = [];
   for (const child of Array.from(element.childNodes)) {
     const parsedChild = parseXmlNode(child);
@@ -134,15 +167,200 @@ export function parseXmlNode(xmlNode: Node): TiptapNode | null {
     }
   }
 
-  // Certains conteneurs ne doivent pas apparaître tels quels dans TipTap,
-  // mais seulement exposer leurs enfants. Exemple : body.
+    // 🧮 ========== TABLE HANDLING (xml → TipTap) ==========
+  if (tagName === "table") {
+    const tableAttrs = attrs;
+    const rows: TiptapNode[] = [];
+
+    /**
+     * Traite une section (thead/tbody ou table directement)
+     * et ajoute les lignes correspondantes dans `rows`.
+     */
+    const processSection = (sectionEl: Element, isHeader: boolean) => {
+      for (const rowEl of Array.from(sectionEl.children)) {
+        if (rowEl.tagName.toLowerCase() !== "row") continue;
+
+        const cells: TiptapNode[] = [];
+
+        for (const entryEl of Array.from(rowEl.children)) {
+          if (entryEl.tagName.toLowerCase() !== "entry") continue;
+
+          const cellType = isHeader ? "tableHeader" : "tableCell";
+          const cellAttrs = extractAttributes(entryEl, cellType);
+          const cellChildren: TiptapNode[] = [];
+
+          for (const child of Array.from(entryEl.childNodes)) {
+            const parsedChild = parseXmlNode(child);
+            if (parsedChild) {
+              cellChildren.push(parsedChild);
+            }
+          }
+
+          const cellNode: TiptapNode = { type: cellType };
+          if (cellAttrs) cellNode.attrs = cellAttrs;
+          if (cellChildren.length > 0) cellNode.content = cellChildren;
+
+          cells.push(cellNode);
+        }
+
+        rows.push({
+          type: "tableRow",
+          content: cells,
+        });
+      }
+    };
+
+    // On cherche des <tgroup> à l'intérieur de la table
+    const tgroups = Array.from(element.children).filter(
+      (el) => el.tagName.toLowerCase() === "tgroup"
+    ) as Element[];
+
+    if (tgroups.length > 0) {
+      for (const tgroupEl of tgroups) {
+        const children = Array.from(tgroupEl.children) as Element[];
+
+        // thead / tbody explicites
+        for (const child of children) {
+          const childTag = child.tagName.toLowerCase();
+          if (childTag === "thead") {
+            processSection(child, true);
+          } else if (childTag === "tbody") {
+            processSection(child, false);
+          }
+        }
+
+        // Si des <row> sont directement dans <tgroup>, on les traite comme body
+        const hasDirectRows = children.some(
+          (c) => c.tagName.toLowerCase() === "row"
+        );
+        if (hasDirectRows) {
+          processSection(tgroupEl, false);
+        }
+      }
+    } else {
+      // Pas de tgroup : lignes directement dans <table>
+      processSection(element, false);
+    }
+
+    return {
+      type: "table",
+      attrs: tableAttrs,
+      content: rows,
+    };
+  }  
+  
+  // ========== CAS PARTICULIERS SPÉCIFIQUES ==========
+
+  // Cas particulier : <reference>
+  if (tagName === "reference") {
+    return {
+      type: "reference",
+      attrs,
+      content: children,  // title, prolog?, refbody
+    };
+  }
+
+  // Cas particulier : <task>
+  if (tagName === "task") {
+    return {
+      type: "task",
+      attrs,
+      content: children, // title, shortdesc?, taskbody
+    };
+  }
+
+  if (tagName === "taskbody") {
+    return {
+      type: "taskbody",
+      attrs,
+      content: children, // steps
+    };
+  }
+
+  if (tagName === "steps") {
+    return {
+      type: "steps", attrs,
+      content: children, // step+
+    };
+  }
+
+  if (tagName === "step") {
+    return {
+      type: "step", attrs,
+      content: children, // paragraph+
+    };
+  }
+
+  // Cas particulier : <example>
+  if (tagName === "example") {
+    return {
+      type: "example",
+      attrs,
+      content: children,
+    };
+  }
+
+  // Cas particulier : <figure>
+  if (tagName === "figure") {
+    return {
+      type: "figure",
+      attrs,
+      content: children    // title + image + autres blocs éventuels
+    };
+  }
+
+  // Cas particulier : <glossentry>
+  if (tagName === "glossentry") {
+    return {
+      type: "glossentry",
+      attrs,
+      content: []   // pas de contenu interne
+    };
+  }
+
+  // Cas particulier : <xref>
+  if (tagName === "xref") {
+    return {
+      type: "crossReference",
+      attrs: {
+        ...attrs,
+        text: element.textContent ?? "",
+      },
+      content: [], // Inline node → pas de children TipTap
+    };
+  }
+
+  // Cas particulier : <doc-tag>
+  if (tagName === "doc-tag") {
+    return {
+      type: "docTag",
+      attrs,
+      content: [
+        {
+          type: "text",
+          text: element.textContent ?? "",
+        },
+      ],
+    };
+  }
+
+  // Cas particulier : <variable>
+  if (tagName === "variable") {
+    return {
+      type: "inlineVariable",
+      attrs,
+      content: [],  // Pas de contenu : node atomique
+    };
+  }
+
+  // ========== FIN DES CAS PARTICULIERS ==========
+
+  // <body> → on l'aplatit proprement
   if (tagName === "body") {
-    // On "aplatit" body : on retourne seulement ses enfants.
-    // Note : c'est géré au niveau supérieur dans parseXmlToTiptap, mais
-    // on garde ce garde-fou.
     return children.length ? { type: "body", content: children } : null;
   }
 
+  // Construction du nœud TipTap générique
   const node: TiptapNode = { type };
   if (attrs) node.attrs = attrs;
   if (children.length > 0) node.content = children;
@@ -156,7 +374,6 @@ export function parseXmlNode(xmlNode: Node): TiptapNode | null {
  */
 export function parseXmlToTiptap(xmlString: string): TiptapNode[] {
   console.groupCollapsed("🔍 [parseXmlToTiptap] Analyse du XML reçu");
-
   console.log("📨 xmlString (brut):", xmlString);
 
   if (!xmlString || typeof xmlString !== "string") {
@@ -184,7 +401,10 @@ export function parseXmlToTiptap(xmlString: string): TiptapNode[] {
   const root = doc.documentElement as Element;
   const rootTag = root.tagName.toLowerCase();
 
-  // Racines structurelles DITA qu'on veut garder telles quelles
+  // 🧱 Racines DITA "structurelles" :
+  // - <task>
+  // - <concept>
+  // - <reference>
   const STRUCTURAL_ROOTS = new Set(["task", "concept", "reference"]);
 
   let container: Element;
@@ -220,9 +440,12 @@ export function parseXmlToTiptap(xmlString: string): TiptapNode[] {
   } else {
     // Tous les autres cas : on convertit le conteneur LUI-MÊME
     const parsedRoot = parseXmlNode(container);
-    if (parsedRoot) {
+    if (Array.isArray(parsedRoot)) {
+      resultNodes.push(...parsedRoot);
+    } else if (parsedRoot) {
       resultNodes.push(parsedRoot);
     }
+
   }
 
   console.log("🧬 JSON TipTap généré (doc.content) :", resultNodes);
@@ -230,4 +453,3 @@ export function parseXmlToTiptap(xmlString: string): TiptapNode[] {
 
   return resultNodes;
 }
-
