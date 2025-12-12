@@ -1,15 +1,26 @@
 // src/utils/xmlUtils.ts
 
 /**
- * 🛡️ Fonction utilitaire pour échapper les caractères XML
+ * 🛡️ Fonction utilitaire pour échapper les caractères dans le texte XML
  * (utilisée dans tiptapToXml.ts et d’autres modules)
  */
-export function escapeXml(str: string): string {
+export function escapeXmlText(str: string): string {
   return str
-    .replace(/&/g, "&amp;")
+    .replace(/&(?!amp;|lt;|gt;|quot;|apos;)/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
+ * 🛡️ Fonction utilitaire pour échapper les caractères dans les attributs XML
+ * (utilisée dans tiptapToXml.ts et d’autres modules)
+ */
+export function escapeXmlAttr(str: string): string {
+  return str
+    .replace(/&(?!amp;|lt;|gt;|quot;|apos;)/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/"/g, "&quot;");
 }
 
 /**

@@ -1,12 +1,19 @@
 // src/utils/tiptapToXml.ts
 
-import { escapeXml, indent } from "./xmlUtils";
+import { escapeXmlText, escapeXmlAttr, indent } from "./xmlUtils";
 
 interface TiptapNode {
   type: string;
   attrs?: Record<string, any>;
   content?: TiptapNode[];
   text?: string;
+}
+
+// 🔒 Type guard interne à la sérialisation
+function isTiptapNode(
+  node: TiptapNode | undefined | null
+): node is TiptapNode {
+  return Boolean(node);
 }
 
 /* ----------------------------------------------
@@ -67,7 +74,7 @@ function serializeAttributes(attrs?: Record<string, any>): string {
   if (!attrs) return "";
 
   return Object.entries(attrs)
-    .map(([k, v]) => `${k}="${escapeXml(String(v))}"`)
+    .map(([k, v]) => `${k}="${escapeXmlAttr(String(v))}"`)
     .join(" ");
 }
 
@@ -180,13 +187,13 @@ function serializeNode(node: TiptapNode, level = 0): string {
       title,
       ...(prolog ? [prolog] : []),
       refbody,
-    ].filter(Boolean);
+    ].filter(isTiptapNode);
 
     const attrs = serializeAttributes(node.attrs);
     const open = attrs ? `<reference ${attrs}>` : `<reference>`;
 
     const inner = ordered
-      .map(c => serializeNode(c, level + 1))
+      .map(node => serializeNode(node, level + 1))
       .join("\n");
 
     return [
@@ -208,13 +215,13 @@ function serializeNode(node: TiptapNode, level = 0): string {
       title,
       ...(prolog ? [prolog] : []),
       taskbody,
-    ].filter(Boolean);
+    ].filter(isTiptapNode);
 
     const attrs = serializeAttributes(node.attrs);
     const open = attrs ? `<task ${attrs}>` : `<task>`;
 
     const inner = ordered
-      .map(c => serializeNode(c, level + 1))
+      .map(node => serializeNode(node, level + 1))
       .join("\n");
 
   return [
@@ -295,7 +302,7 @@ function serializeNode(node: TiptapNode, level = 0): string {
     const { text, ...rest } = allAttrs;
 
     const attrs = serializeAttributes(rest);
-    const innerText = escapeXml(text ?? "");
+    const innerText = escapeXmlText(text ?? "");
 
     const open = attrs ? `<xref ${attrs}>` : `<xref>`;
 
@@ -306,7 +313,7 @@ function serializeNode(node: TiptapNode, level = 0): string {
   if (node.type === "docTag") {
     const attrs = serializeAttributes(node.attrs);
     const textNode = node.content?.find(c => c.type === "text");
-    const text = escapeXml(textNode?.text ?? "");
+    const text = escapeXmlText(textNode?.text ?? "");
 
     const open = attrs ? `<doc-tag ${attrs}>` : `<doc-tag>`;
   return indent(level) + open + text + `</doc-tag>`;
@@ -320,7 +327,7 @@ function serializeNode(node: TiptapNode, level = 0): string {
 
   // Texte pur
   if (node.type === "text") {
-  return indent(level) + escapeXml(node.text ?? "");
+  return indent(level) + escapeXmlText(node.text ?? "");
   }
 
   const tag = toXmlTag(node.type);
@@ -341,7 +348,7 @@ function serializeNode(node: TiptapNode, level = 0): string {
     return (
       indent(level) +
       open +
-      escapeXml(children[0].text ?? "") +
+      escapeXmlText(children[0].text ?? "") +
       `</${tag}>`
     );
   }
@@ -431,8 +438,8 @@ function serializeTable(node: TiptapNode, level = 0): string {
     }
 
     return indent(lvl) + 
-      (attrs ? `<entry ${attrs}>${escapeXml(text)}</entry>` 
-             : `<entry>${escapeXml(text)}</entry>`);
+      (attrs ? `<entry ${attrs}>${escapeXmlText(text)}</entry>` 
+             : `<entry>${escapeXmlText(text)}</entry>`);
   };
 
   // Construction thead

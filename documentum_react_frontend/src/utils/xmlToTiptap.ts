@@ -26,9 +26,9 @@ const XML_TO_TIPTAP_TAG: Record<string, string> = {
   example: "example",
 
   // tableaux
-  table: "Table",
-  row: "TableRow",
-  entry: "TableCell",     
+  table: "table",
+  row: "tableRow",
+  entry: "tableCell",     
   thead: "thead",
   tbody: "tbody",
   tgroup: "tgroup",
@@ -78,11 +78,26 @@ function mapXmlTagToTiptapType(el: Element): string {
 // 🧾 Whitelist d'attributs par type TipTap
 // On commence simple : toujours "id", puis on enrichira progressivement.
 const ATTR_WHITELIST: Record<string, string[]> = {
-  "*": ["id"],
+  "*": [
+    "id",
+    "xml:id",
+    "class",
+    "outputclass",
+    "conref",
+    "keyref",
+    "href",
+    "scope",
+    "format",
+    "audience",
+    "product",
+    "feature",
+    "props",
+    "otherprops",
+  ],
 
-  image: ["id", "href", "src", "alt"],
+  image: ["id", "href", "src", "alt", "alt", "format", "scope"],
   crossReference: ["id", "refid"],
-  docTag: ["id", "type"],
+  docTag: ["id", "type", "audience", "product", "feature"],
   inlineVariable: ["id", "name"],
   glossentry: ["id", "termid", "term", "definition"],
 };
@@ -126,8 +141,10 @@ export function parseXmlNode(xmlNode: Node): TiptapNode | null {
     }
 
     // Comportement normal ailleurs
+    // Supprimer UNIQUEMENT les nœuds texte composés exclusivement de whitespace
+    // Conserver les espaces internes et les espaces autour des inlines
     if (!text.trim()) return null;
-    return { type: "text", text: text.trim() }
+    return { type: "text", text }
   }
 
   // On ignore tout ce qui n'est pas un élément

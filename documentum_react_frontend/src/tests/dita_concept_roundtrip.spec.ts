@@ -771,3 +771,25 @@ it("Round-trip: Mix Concept + Task + Reference", () => {
     expect(normalize(xmlOut)).toBe(normalize(inputReference));
   }
 });
+
+describe("DITA — Attributs standards (whitelist)", () => {
+
+  it("Round-trip: conservation des attributs DITA courants", () => {
+    const input = `
+      <concept id="attr1">
+        <title>Concept avec attributs</title>
+        <conbody>
+          <p outputclass="highlight" conref="para123" audience="expert">
+            Texte avec attributs standards.
+          </p>
+        </conbody>
+      </concept>
+    `;
+
+    const parsed = parseXmlToTiptap(input);
+    const xmlOut = tiptapToXml(parsed);
+
+    expect(normalize(xmlOut)).toBe(normalize(input));
+  });
+
+});
