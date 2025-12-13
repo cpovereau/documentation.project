@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useSpeechToText } from "hooks/useSpeechToText";
-import { Button } from "components/ui/button";
 import { Card } from "components/ui/card";
 import { Checkbox } from "components/ui/checkbox"; // À intégrer dans la barre d'outils plus tard
 import PopupSuggestion from "components/ui/PopupSuggestion";
@@ -22,6 +21,7 @@ import { useEditorShortcuts } from "@/hooks/useEditorShortcuts";
 import { useGrammarChecker } from "@/hooks/useGrammarChecker";
 import { useEditorHistoryTracker } from "@/hooks/useEditorHistoryTracker";
 import { useXmlBufferSync } from "@/hooks/useXmlBufferSync";
+import { useRubriqueSave } from "@/hooks/useSaveRubrique";
 import EditorHeader from "components/ui/CentralEditor/EditorHeader";
 import EditorToolbar from "components/ui/CentralEditor/EditorToolbar";
 import BlockTypeMenu from "components/ui/CentralEditor/BlockTypeMenu";
@@ -63,16 +63,12 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   console.log("🧩 CentralEditor monté");
 
   // États pour la gestion de l'éditeur
-  const [initialContent, setInitialContent] = useState<string>("");
-  const inputSourceRef = useRef<string | null>(null);
   const [wordCount, setWordCount] = useState(0);
   const [findValue, setFindValue] = useState("");
   const [replaceValue, setReplaceValue] = useState("");
   const [batchMode, setBatchMode] = useState(false);
 
   // Référence pour l'éditeur central
-  const MIN_QUESTION_EDITOR_HEIGHT = 200;
-  const MIN_EXERCICE_EDITOR_HEIGHT = 300;
   const centralEditorRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -128,28 +124,26 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     [selectedMapItemId], // on recrée seulement quand on change de rubrique
   );
 
-  //
-  const { startSync, stopSync } = useXmlBufferSync(editor, selectedMapItemId);
-
-  useEffect(() => {
-    if (editor) startSync();
-    return () => stopSync();
-  }, [editor, selectedMapItemId]);
-
-  // Référence pour le suivi de la source d'entrée (clavier, voix, etc.)
-  const { hasChanges, resetInitialContent } = useRubriqueChangeTracker(editor, selectedMapItemId);
-
-  // Chargement initial du XML dans l’éditeur
-  // ❌ À commenter le temps de stabiliser la chaîne
-  //useEffect(() => {
-  //  if (editor && xml) {
-  //    console.log("✅ Injection initiale dans l’éditeur :", xml);
-  //    resetInitialContent();
-  // }
-  //}, [editor, xml, resetInitialContent]);
+  useXmlBufferSync(editor, selectedMapItemId);
 
   // ✅ Injection automatique du contenu XML depuis le buffer au changement de rubrique
   const { isLoading } = useDitaLoader({ editor, selectedMapItemId });
+  const { hasChanges, resetAfterSave } = useRubriqueChangeTracker(editor, selectedMapItemId);
+
+  useEffect(() => {
+    if (!isLoading && editor) {
+      resetAfterSave();
+    }
+  }, [isLoading, editor]);
+
+  // Sauvegarde de la rubrique
+  const { saveRubrique, saving } = useRubriqueSave(selectedMapItemId);
+
+  // Fonctions pour enregistrer une rubrique
+  const onSaveRubrique = async () => {
+    await saveRubrique();
+    resetAfterSave();
+  };
 
   // Fonctions pour copier, coller, couper
   function handleCut(editor: Editor | null) {
@@ -183,6 +177,9 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     });
   }
 
+  //Vérification de la grammaire
+  const { checkGrammar } = useGrammarChecker(editor);
+
   // Recherche et remplacement de texte
   const { find, replace, replaceAll } = useFindReplaceTipTap(editor);
 
@@ -192,32 +189,9 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   // Gestion des commandes vocales
   const { handleVoiceCommand } = useSpeechCommands(editor);
 
-  // Etat initial de l'éditeur (bouton "Enregistrer" désactivé)
-  useEffect(() => {
-    if (editor) {
-      resetInitialContent();
-    }
-  }, [editor]);
-
-  // Fonctions pour enregistrer une rubrique
-  const onSaveRubrique = () => {
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 800)), {
-      loading: "Enregistrement en cours...",
-      success: "Rubrique enregistrée avec succès !",
-      error: "Échec de l’enregistrement",
-    });
-
-    if (editor) {
-      const current = editor.getHTML();
-      resetInitialContent();
-    }
-  };
-
-  //Vérification de la grammaire
-  const { checkGrammar } = useGrammarChecker(editor);
-
   // État de la dictée vocale
   const [isDictating, setIsDictating] = useState(false);
+  const inputSourceRef = useRef<"keyboard" | "voice" | null>(null);
 
   const { start, stop, isRecording, isStopping, error } = useSpeechToText({
     onResult: (text) => {

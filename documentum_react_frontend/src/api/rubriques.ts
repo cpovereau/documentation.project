@@ -55,12 +55,16 @@ export interface RubriqueCreatePayload {
   titre: string
   contenu_xml: string
   projet: number
-  type_rubrique: number
+
+  // Champs optionnels (backend-driven ou tardifs)
+  type_rubrique?: number | null
   fonctionnalite_id?: number | null
   audience?: string
-  revision_numero: number
-  version: number
+  revision_numero?: number
+  version?: number
+  version_projet?: number
 }
+
 
 export interface RubriqueUpdatePayload extends Partial<RubriqueCreatePayload> {}
 

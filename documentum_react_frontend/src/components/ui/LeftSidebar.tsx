@@ -4,7 +4,7 @@ import { ProjectModule } from "@/components/ui/ProjectModule";
 import { MapModule } from "@/components/ui/MapModule";
 import type { MapItem } from "@/types/MapItem";
 import type { ProjectItem } from "@/types/ProjectItem";
-import { prepareNewRubriqueXml, RubriqueInitPayload } from "@/api/rubriques";
+import { prepareNewRubriqueXml, RubriqueInitPayload, createRubrique } from "@/api/rubriques";
 import useSelectedProduct from "@/hooks/useSelectedProduct";
 import useSelectedVersion from "@/hooks/useSelectedVersion";
 import useProjectStore from "@/store/projectStore";
@@ -262,50 +262,54 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     setEditingItemId(null);
   };
 
+  // Ajouter une nouvelle rubrique
   const handleAddMapItem = async () => {
-    const newId = mapItems.length ? Math.max(...mapItems.map((i) => i.id)) + 1 : 1;
-
-    const newTitle = `Nouvelle rubrique ${newId}`;
-
-    const newItem: MapItem = {
-      id: newId,
-      title: newTitle,
-      level: 1,
-      isMaster: false,
-      expanded: false,
-      versionOrigine: "",
-    };
-
-    setMapItems((prev) => [...prev, newItem]);
-
     if (!selectedProjectId) {
       toast.error("Aucun projet sélectionné.");
       return;
     }
 
-    const payload: RubriqueInitPayload = {
-      titre: newTitle,
-      projetId: selectedProjectId,
-      produitLabelOrAbbrev: selectedProduct?.abreviation ?? null,
-      type_dita: "topic",
-      audience: null,
-      fonctionnalites: null,
-    };
-
     try {
-      const xml = await prepareNewRubriqueXml(payload);
-      setXml(newId, xml);
+      // 1️⃣ Génération du XML initial
+      const xml = await prepareNewRubriqueXml({
+        titre: "Nouvelle rubrique",
+        projetId: selectedProjectId,
+        type_dita: "topic",
+        audience: null,
+        fonctionnalites: null,
+        produitLabelOrAbbrev: selectedProduct?.abreviation ?? null,
+      });
 
-      console.log("[Buffer test]", getXml(newId));
-      console.log("🧭 ID sélectionné", newId);
-      console.log("📦 Buffer complet:", useXmlBufferStore.getState());
+      // 2️⃣ Création MÉTIER
+      const rubrique = await createRubrique({
+        titre: "Nouvelle rubrique",
+        contenu_xml: xml,
+        projet: selectedProjectId,
+        version: 1,
+      });
 
-      setSelectedMapItemId(newId); // ✅ on attend que le buffer soit prêt
+      // 3️⃣ Ajout dans la map
+      const newItem: MapItem = {
+        id: rubrique.id, // ✅ ID backend
+        title: rubrique.titre,
+        level: 1,
+        isMaster: false,
+        expanded: false,
+        versionOrigine: "",
+      };
 
-      toast.success("Rubrique initialisée avec succès.");
+      setMapItems((prev) => [...prev, newItem]);
+
+      // 4️⃣ Initialisation du buffer XML
+      setXml(rubrique.id, rubrique.contenu_xml);
+
+      // 5️⃣ Sélection de la rubrique
+      setSelectedMapItemId(rubrique.id);
+
+      toast.success("Rubrique créée avec succès.");
     } catch (err) {
-      console.error("Erreur XML:", err);
-      toast.error("Échec de la génération de la rubrique DITA.");
+      console.error(err);
+      toast.error("Échec de la création de la rubrique.");
     }
   };
 

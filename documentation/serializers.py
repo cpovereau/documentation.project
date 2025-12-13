@@ -5,6 +5,7 @@ from .models import (
     Gamme,
     Produit,
     Rubrique,
+    TypeRubrique,
     Map,
     VersionProjet,
     Fonctionnalite,
@@ -161,6 +162,12 @@ class RubriqueSerializer(serializers.ModelSerializer):
         source="fonctionnalite",
         write_only=True,
         allow_null=True,
+        required=False,
+    )
+    type_rubrique = serializers.PrimaryKeyRelatedField(
+        queryset=TypeRubrique.objects.all(),
+        allow_null=True,
+        required=False,
     )
     locked_by = serializers.StringRelatedField(read_only=True)
 

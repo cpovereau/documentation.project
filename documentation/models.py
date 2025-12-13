@@ -126,14 +126,16 @@ class TypeRubrique(models.Model):
 
 
 class Rubrique(models.Model):
-    type_rubrique = models.ForeignKey("TypeRubrique", on_delete=models.CASCADE)
+    type_rubrique = models.ForeignKey(
+        "TypeRubrique", on_delete=models.SET_NULL, null=True, blank=True
+    )
     titre = models.CharField(max_length=200)
     contenu_xml = models.TextField()
     auteur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     date_creation = models.DateField(auto_now_add=True)
     date_mise_a_jour = models.DateField(auto_now=True)
     audience = models.CharField(max_length=200, default="générique")
-    revision_numero = models.IntegerField()
+    revision_numero = models.IntegerField(default=1)
     projet = models.ForeignKey(Projet, on_delete=models.CASCADE)
     version = models.IntegerField()
     version_precedente = models.ForeignKey(

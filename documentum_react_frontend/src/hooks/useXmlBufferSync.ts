@@ -14,62 +14,40 @@ import useXmlBufferStore from "../store/xmlBufferStore";
  */
 export function useXmlBufferSync(editor: Editor | null, selectedMapItemId: number | null) {
   const { setXml, setStatus } = useXmlBufferStore();
-  const isSyncingRef = useRef(false);
+  const handlerRef = useRef<(() => void) | null>(null);
 
   // Debounce pour éviter des conversions trop fréquentes
   const debouncedSync = useRef(
     debounce((xml: string, rubriqueId: number) => {
       setXml(rubriqueId, xml);
-      setStatus(rubriqueId, "dirty");
     }, 400),
   ).current;
 
-  /**
-   * Démarre la synchronisation : chaque update TipTap est converti en XML
-   * puis poussé dans Zustand.
-   */
-  const startSync = () => {
+  useEffect(() => {
     if (!editor || !selectedMapItemId) return;
-    if (isSyncingRef.current) return; // déjà actif
 
-    isSyncingRef.current = true;
-
-    editor.on("update", () => {
-      if (!isSyncingRef.current) return;
-      if (!selectedMapItemId) return;
-
+    const onUpdate = () => {
       try {
         const json = editor.getJSON();
-        const xml = tiptapToXml(json);
+        const xml = tiptapToXml(json.content ?? []);
         debouncedSync(xml, selectedMapItemId);
       } catch (err) {
-        console.error("[useXmlBufferSync] Erreur de conversion TipTap -> XML :", err);
+        console.error("[useXmlBufferSync] Erreur TipTap → XML", err);
         setStatus(selectedMapItemId, "error");
       }
-    });
-  };
-
-  /** Stoppe la synchro (appelé avant changement de rubrique) */
-  const stopSync = () => {
-    isSyncingRef.current = false;
-  };
-
-  /**
-   * Reset lors du changement d'éditeur ou changement de rubrique.
-   */
-  useEffect(() => {
-    stopSync();
-
-    if (editor && selectedMapItemId) {
-      startSync();
-    }
-
-    return () => {
-      stopSync();
     };
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, selectedMapItemId]);
+    handlerRef.current = onUpdate;
+    editor.on("update", onUpdate);
 
-  return { startSync, stopSync };
+    return () => {
+      if (handlerRef.current) {
+        editor.off("update", handlerRef.current);
+        handlerRef.current = null;
+      }
+      debouncedSync.cancel();
+    };
+  }, [editor, selectedMapItemId, debouncedSync, setXml, setStatus]);
+
+  return {};
 }

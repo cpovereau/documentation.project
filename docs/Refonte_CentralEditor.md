@@ -37,7 +37,7 @@ Cette phase rend le flux **TipTap → XML → Buffer → Guard → UI** pleineme
 
 ---
 
-# 🔧 Phase 2 — Refactor structurel du CentralEditor (EN COURS)
+# 🔧 Phase 2 — Refactor structurel du CentralEditor (TERMINÉ)
 
 ### 🎯 Objectifs
 - Alléger `CentralEditor.tsx`, devenu trop massif.
@@ -73,7 +73,7 @@ L’objectif n’est **pas de changer le comportement**, mais d’obtenir un `Ce
 
 ---
 
-# 📦 Phase 3 — Parsing XML ⇄ TipTap complet (À FAIRE)
+# 📦 Phase 3 — Parsing XML ⇄ TipTap complet (TERMINÉ)
 
 ### 🎯 Objectifs
 - Comprendre *toutes* les balises DITA utilisées dans Documentum.
@@ -102,7 +102,7 @@ C’est la phase la plus technique, mais la plus critique pour assurer la fidél
 
 ---
 
-# 💾 Phase 4 — Sauvegarde backend & validation XML (À FAIRE)
+# 💾 Phase 4 — Sauvegarde backend & validation XML (EN COURS)
 
 ### 🎯 Objectifs
 - Implémenter une sauvegarde réelle côté Django.
@@ -112,10 +112,10 @@ C’est la phase la plus technique, mais la plus critique pour assurer la fidél
 
 ### 🧩 Tâches
 #### 4.1 — Hook `useRubriqueSave`
-- [ ] Sérialisation XML depuis le buffer
-- [ ] Appel API `/rubriques/{id}/`
-- [ ] Mise à jour `status = "saved"` dans Zustand
-- [ ] Reset du `useRubriqueChangeTracker`
+- [x] Sérialisation XML depuis le buffer
+- [x] Appel API `/rubriques/{id}/`
+- [x] Mise à jour `status = "saved"` dans Zustand
+- [x] Reset du `useRubriqueChangeTracker`
 
 #### 4.2 — Validation XML
 - [ ] Endpoint côté Django

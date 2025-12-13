@@ -1,28 +1,25 @@
-// src/hooks/useSaveRubrique.ts
+// src/hooks/useRubriqueSave.ts
 import { useCallback, useState } from "react";
-import { Editor } from "@tiptap/react";
 import apiClient from "@/lib/apiClient";
 import useXmlBufferStore from "@/store/xmlBufferStore";
 import { toast } from "sonner";
 
-export function useSaveRubrique(editor: Editor | null, rubriqueId: number | null | undefined) {
+export function useRubriqueSave(rubriqueId: number | null | undefined) {
   const [saving, setSaving] = useState(false);
 
-  const setXml = useXmlBufferStore((s) => s.setXml);
-  const markSaved = useXmlBufferStore((s) => s.markSaved);
-  const getRubriqueState = useXmlBufferStore((s) => s.getRubriqueState);
+  const getXml = useXmlBufferStore((s) => s.getXml);
+  const setStatus = useXmlBufferStore((s) => s.setStatus);
 
   const saveRubrique = useCallback(async () => {
-    if (!editor || rubriqueId == null) {
-      toast.error("Éditeur ou rubrique indisponible. Sauvegarde annulée.");
+    if (rubriqueId == null) {
+      toast.error("Rubrique non sélectionnée. Sauvegarde impossible.");
       return;
     }
 
-    const content = editor.getHTML();
-    const rubrique = getRubriqueState(rubriqueId);
+    const xml = getXml(rubriqueId);
 
-    if (!rubrique) {
-      toast.error("Rubrique non trouvée en mémoire. Impossible de sauvegarder.");
+    if (!xml) {
+      toast.error("Aucun contenu XML en mémoire. Sauvegarde annulée.");
       return;
     }
 
@@ -30,19 +27,27 @@ export function useSaveRubrique(editor: Editor | null, rubriqueId: number | null
       setSaving(true);
 
       await apiClient.patch(`/rubriques/${rubriqueId}/`, {
-        contenu_xml: content,
+        contenu_xml: xml,
       });
 
-      setXml(rubriqueId, content);
-      markSaved(rubriqueId);
+      setStatus(rubriqueId, "saved");
       toast.success("Rubrique sauvegardée avec succès.");
     } catch (error: any) {
-      console.error("[saveRubrique] Erreur lors de la sauvegarde :", error);
-      toast.error("Erreur lors de la sauvegarde de la rubrique.");
+      console.error("[useRubriqueSave] Erreur sauvegarde :", error);
+
+      setStatus(rubriqueId, "error");
+
+      toast.error(
+        error?.message ??
+          "Erreur lors de la sauvegarde de la rubrique (XML invalide ?).",
+      );
     } finally {
       setSaving(false);
     }
-  }, [editor, rubriqueId, getRubriqueState, setXml, markSaved]);
+  }, [rubriqueId, getXml, setStatus]);
 
-  return { saveRubrique, saving };
+  return {
+    saveRubrique,
+    saving,
+  };
 }
