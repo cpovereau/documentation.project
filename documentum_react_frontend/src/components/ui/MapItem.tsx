@@ -49,19 +49,11 @@ export const MapItem: React.FC<MapItemProps> = ({
   onRename,
   onRenameSave,
   editing,
-  onToggleExpand,
   onIndent,
   onOutdent,
 }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-    isOver,
-  } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
+    useSortable({ id: item.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -80,33 +72,19 @@ export const MapItem: React.FC<MapItemProps> = ({
       {...listeners}
       className={cn(
         "relative flex items-center h-[28px] px-1 rounded group transition cursor-pointer",
-        selectedMapItemId === item.id
-          ? "bg-blue-100 font-bold"
-          : "hover:bg-gray-100"
+        selectedMapItemId === item.id ? "bg-blue-100 font-bold" : "hover:bg-gray-100",
       )}
       onClick={() => onSelect(item.id)}
     >
       {hasChildren(mapItems, idx) && item.expanded !== false && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleExpand(item.id, false);
-          }}
-          className="mr-1"
-        >
+        <span className="mr-1 text-gray-600">
           <ChevronDown size={16} />
-        </button>
+        </span>
       )}
       {hasChildren(mapItems, idx) && item.expanded === false && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleExpand(item.id, true);
-          }}
-          className="mr-1"
-        >
+        <span className="mr-1 text-gray-600">
           <ChevronRight size={16} />
-        </button>
+        </span>
       )}
 
       {/* ✅ Titre cliquable avec renommage */}
@@ -139,9 +117,7 @@ export const MapItem: React.FC<MapItemProps> = ({
             </span>
           )}
           {item.versionOrigine && (
-            <span className="ml-2 text-[10px] text-gray-500">
-              v{item.versionOrigine}
-            </span>
+            <span className="ml-2 text-[10px] text-gray-500">v{item.versionOrigine}</span>
           )}
         </div>
       )}
@@ -155,7 +131,7 @@ export const MapItem: React.FC<MapItemProps> = ({
           disabled={!canOutdent(item)}
           className={cn(
             "w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200",
-            !canOutdent(item) && "opacity-30 cursor-not-allowed"
+            !canOutdent(item) && "opacity-30 cursor-not-allowed",
           )}
         >
           <ChevronLeft size={14} />
@@ -168,7 +144,7 @@ export const MapItem: React.FC<MapItemProps> = ({
           disabled={!canIndent(item, idx, mapItems)}
           className={cn(
             "w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200",
-            !canIndent(item, idx, mapItems) && "opacity-30 cursor-not-allowed"
+            !canIndent(item, idx, mapItems) && "opacity-30 cursor-not-allowed",
           )}
         >
           <ChevronRight size={14} />

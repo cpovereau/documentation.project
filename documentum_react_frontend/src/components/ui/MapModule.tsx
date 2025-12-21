@@ -13,29 +13,30 @@ import {
   DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-
 import type { MapItem } from "@/types/MapItem";
 
 export interface MapModuleProps {
   isExpanded: boolean;
   onToggle: () => void;
+
   mapItems: MapItem[];
   selectedMapItemId: number | null;
+
+  onSelect: (itemId: number) => void;
   onRename: (itemId: number) => void;
   editingItemId: number | null;
   onRenameSave: (itemId: number, newTitle: string) => void;
-  setLoadMapOpen: (open: boolean) => void;
-  onLoadMapDialog: () => void;
-  onSelect: (itemId: number) => void;
+
   onAdd: () => void;
   onImportWord: () => void;
   onClone: (itemId: number) => void;
   onDelete: (itemId: number) => void;
   onLoad: () => void;
+
   onIndent: (itemId: number) => void;
   onOutdent: (itemId: number) => void;
-  onReorder: (newItems: MapItem[]) => void;
-  onToggleExpand: (itemId: number, expand: boolean) => void;
+
+  onReorder: (orderedIds: number[]) => void;
 }
 
 function getVisibleItems(items: MapItem[]): MapItem[] {
@@ -70,20 +71,23 @@ export const MapModule: React.FC<MapModuleProps> = ({
   onIndent,
   onOutdent,
   onReorder,
-  onToggleExpand,
 }) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    if (!over) return;
-    if (active.id !== over.id) {
-      const visibleItems = getVisibleItems(mapItems);
-      const oldIndex = visibleItems.findIndex((item) => item.id === active.id);
-      const newIndex = visibleItems.findIndex((item) => item.id === over.id);
-      const reorderedVisible = arrayMove(visibleItems, oldIndex, newIndex);
-      onReorder(reorderedVisible);
-    }
+    if (!over || active.id === over.id) return;
+
+    const visibleItems = getVisibleItems(mapItems);
+    const oldIndex = visibleItems.findIndex((i) => i.id === active.id);
+    const newIndex = visibleItems.findIndex((i) => i.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(visibleItems, oldIndex, newIndex);
+    const orderedIds = reordered.map((i) => i.id);
+
+    onReorder(orderedIds);
   }
 
   const visibleItems = getVisibleItems(mapItems);
@@ -230,7 +234,6 @@ export const MapModule: React.FC<MapModuleProps> = ({
                           editing={editingItemId === item.id}
                           onRenameSave={onRenameSave}
                           mapItems={mapItems}
-                          onToggleExpand={onToggleExpand}
                           onIndent={onIndent}
                           onOutdent={onOutdent}
                         />

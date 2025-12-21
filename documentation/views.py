@@ -73,10 +73,14 @@ from .serializers import (
     MapRubriqueStructureSerializer,
     MapRubriqueCreateSerializer,
     RubriqueSerializer,
+    CreateRubriqueInMapSerializer,
     UserSerializer,
     MediaSerializer,
 )
-from .services import add_rubrique_to_map
+from .services import (
+    add_rubrique_to_map,
+    create_rubrique_in_map,
+)
 from django.utils.timezone import now
 
 
@@ -446,6 +450,42 @@ class MapViewSet(viewsets.ModelViewSet):
                 MapRubriqueSerializer(map_rubrique).data,
                 status=status.HTTP_201_CREATED,
             )
+
+    @action(detail=True, methods=["post"], url_path="create-rubrique")
+    def create_rubrique(self, request, pk=None):
+        serializer = CreateRubriqueInMapSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {"error": "Erreur de validation", "fields": serializer.errors},
+                status=400,
+            )
+
+        data = serializer.validated_data
+        try:
+            mr = create_rubrique_in_map(
+                map_id=int(pk),
+                titre=data["titre"],
+                contenu_xml=data["contenu_xml"],
+                auteur=request.user,
+                parent_id=data.get("parent"),
+                insert_after_id=data.get("insert_after"),
+                insert_before_id=data.get("insert_before"),
+            )
+            return Response(
+                MapRubriqueSerializer(mr).data, status=status.HTTP_201_CREATED
+            )
+
+        except ValidationError as e:
+            detail = getattr(e, "detail", None)
+            if isinstance(detail, dict):
+                return Response(
+                    {"error": "Erreur métier", "fields": detail}, status=400
+                )
+            return Response({"error": "Erreur métier", "detail": str(e)}, status=400)
+
+        except Exception as e:
+            logger.exception("[MapRubrique] Erreur inattendue create-rubrique")
+            return Response({"error": "Erreur interne", "detail": str(e)}, status=500)
 
 
 # ViewSet pour les rubriques

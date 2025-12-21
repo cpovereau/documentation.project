@@ -14,5 +14,5 @@ export interface MapItem {
   isRoot?: boolean
 
   /** Pour gérer une arborescence explicite */
-  parentId?: number | null;
+  parentId: number | null;
 }

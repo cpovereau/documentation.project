@@ -2,16 +2,14 @@
 
 import type { MapRubrique } from "@/api/mapRubriques"
 
-
 /**
  * Contrat minimal pour raisonner sur l'arbre documentaire.
- * Compatible MapRubrique ET MapRubriqueDTO.
+ * Compatible MapRubrique, MapRubriqueDTO, MapItem (via adaptation).
  */
 export interface MapNode {
   id: number
   parent: number | null
 }
-
 
 /**
  * Retourne la MapRubrique racine d'une map.
@@ -33,12 +31,11 @@ export function getRootMapRubrique<T extends MapNode>(
   return roots[0]
 }
 
-
 /**
- * Détermine le parent MapRubrique pour une insertion.
+ * Détermine le parent pour une insertion.
  *
  * Règle :
- * - si une MapRubrique est sélectionnée → insertion en enfant
+ * - si un nœud est sélectionné → insertion en enfant
  * - sinon → insertion sous la racine
  */
 export function getInsertionParentId<T extends MapNode>(
@@ -53,7 +50,39 @@ export function getInsertionParentId<T extends MapNode>(
   return root.id
 }
 
+/**
+ * Retourne le chemin (ids) de la racine vers un nœud cible.
+ *
+ * Exemple :
+ *   [rootId, parentId, targetId]
+ */
+export function getPathToNode<T extends MapNode>(
+  nodes: T[],
+  targetId: number
+): number[] | null {
+  const byId = new Map<number, T>(
+    nodes.map((n) => [n.id, n])
+  )
 
+  const path: number[] = []
+  let current = byId.get(targetId)
+
+  while (current) {
+    path.unshift(current.id)
+
+    if (current.parent === null) {
+      break
+    }
+
+    current = byId.get(current.parent)
+  }
+
+  return path.length ? path : null
+}
+
+/**
+ * Indique si une MapRubrique est la racine.
+ */
 export function isRootMapRubrique(
   mr: MapRubrique
 ): boolean {

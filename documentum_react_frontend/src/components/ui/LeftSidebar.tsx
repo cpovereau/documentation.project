@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import api from "@/lib/apiClient";
+import { mapRubriquesToMapItems } from "@/lib/mapMappers";
 import { Button } from "@/components/ui/button";
 import { ProjectModule } from "@/components/ui/ProjectModule";
 import { MapModule } from "@/components/ui/MapModule";
@@ -6,13 +8,10 @@ import type { MapItem } from "@/types/MapItem";
 import type { ProjectMap } from "@/types/ProjectMap";
 import type { ProjectDTO } from "@/types/ProjectDTO";
 import type { MapRubriqueDTO } from "@/api/maps";
-import { prepareNewRubriqueXml } from "@/api/rubriqueTemplates";
-import { createRubrique } from "@/api/rubriques";
-import api from "@/lib/apiClient";
-import { createMapRubrique } from "@/api/mapRubriques";
-import { listMapRubriques } from "@/api/maps";
 import useSelectedProduct from "@/hooks/useSelectedProduct";
 import useSelectedVersion from "@/hooks/useSelectedVersion";
+import { prepareNewRubriqueXml } from "@/api/rubriqueTemplates";
+import { listMapRubriques } from "@/api/maps";
 import { getInsertionParentId } from "@/lib/mapStructure";
 import useProjectStore from "@/store/projectStore";
 import useXmlBufferStore from "@/store/xmlBufferStore";
@@ -30,6 +29,12 @@ interface LeftSidebarProps {
   onToggleExpand: (itemId: number, expand: boolean) => void;
   rubriqueId: number | null;
   setSelectedMapItemId: React.Dispatch<React.SetStateAction<number | null>>;
+}
+
+function assertMapId(mapId: number | null): asserts mapId is number {
+  if (mapId === null) {
+    throw new Error("Map indisponible.");
+  }
 }
 
 export const LeftSidebar: React.FC<LeftSidebarProps> = ({
@@ -62,6 +67,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   // Etat pour gérer les MapRubriques
   const [mapRubriques, setMapRubriques] = useState<MapRubriqueDTO[]>([]);
   const [currentMapId, setCurrentMapId] = useState<number | null>(null);
+  const [selectedMapItemId] = useState<number | null>(null);
 
   // État pour gérer l'ouverture du dialogue de chargement de map
   const [loadMapOpen, setLoadMapOpen] = useState(false);
@@ -70,6 +76,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const [importWordOpen, setImportWordOpen] = useState(false);
 
   // 🧠 Stores / sélection globale (produit, version, projet)
+  const [pendingSelectId, setPendingSelectId] = useState<number | null>(null);
+
   const { selectedProjectId } = useSelectedVersion();
   const { selectedProduct } = useSelectedProduct();
   const setSelectedProjectId = useProjectStore((s) => s.setSelectedProjectId);
@@ -86,24 +94,35 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   // 📦 Projets chargés depuis l’API
   const [projects, setProjects] = useState<ProjectDTO[]>([]);
 
-  // Fonction de mapping des MapRubriques
-  function mapRubriquesToMapItems(mrs: MapRubriqueDTO[]): MapItem[] {
-    return mrs.map((mr) => ({
-      id: mr.id, // ✅ MapRubrique.id
-      rubriqueId: mr.rubrique.id, // ✅ Rubrique.id
-      title: mr.rubrique.titre,
-      level: mr.parent ? 2 : 1,
-      expanded: false,
-      isMaster: false,
-      versionOrigine: "",
-      isRoot: mr.parent === null,
-    }));
-  }
-
-  // Synchronisation des mapItems avec les mapRubriques chargées
+  // Effet pour gérer la sélection différée d'une rubrique après création
   useEffect(() => {
-    setMapItems(mapRubriquesToMapItems(mapRubriques));
-  }, [mapRubriques]);
+    if (!pendingSelectId || mapRubriques.length === 0) return;
+
+    // 1️⃣ sélection
+    setSelectedMapItemId(pendingSelectId);
+
+    // 2️⃣ reset
+    setPendingSelectId(null);
+  }, [mapRubriques, pendingSelectId]);
+
+  // Effet pour reconstruire les mapItems lorsque les mapRubriques changent
+  useEffect(() => {
+    // 🛑 Aucun projet ou aucune map → rien à afficher
+    if (!currentMapId || mapRubriques.length === 0) {
+      setMapItems([]);
+      return;
+    }
+
+    // 🛑 Structure incomplète (pas encore prête)
+    const hasRoot = mapRubriques.some((r) => r.parent === null);
+    if (!hasRoot) {
+      console.warn("[MapStructure] MapRubriques sans racine, mapping ignoré.");
+      setMapItems([]);
+      return;
+    }
+
+    setMapItems(mapRubriquesToMapItems(mapRubriques, selectedMapItemId));
+  }, [currentMapId, mapRubriques, selectedMapItemId]);
 
   // Initialisation du buffer XML pour chaque rubrique de la map
   // On s'assure que chaque mapItem a une entrée dans le buffer, même vide
@@ -130,8 +149,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   }, [mapItems, getXml, setXml]);
 
   // ID de la rubrique sélectionnée dans la map
-  const [selectedMapItemId] = useState<number | null>(null);
-
   const selectedMapItem = mapItems.find((item) => item.id === selectedMapItemId);
   const selectedRubriqueId = selectedMapItem?.rubriqueId ?? null;
 
@@ -247,10 +264,10 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     }
 
     try {
-      // Détermination du parent d'insertion
+      // 1️⃣ Détermination du parent logique (métier)
       const parentId = getInsertionParentId(mapRubriques, selectedMapItemId);
 
-      // 1️⃣ Génération XML
+      // 2️⃣ Génération du XML (source de vérité du contenu)
       const xml = await prepareNewRubriqueXml({
         titre: "Nouvelle rubrique",
         projetId: selectedProjectId,
@@ -258,29 +275,21 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         produitLabelOrAbbrev: selectedProduct?.abreviation ?? null,
       });
 
-      // 2️⃣ Création Rubrique
-      const rubrique = await createRubrique({
+      // 3️⃣ Création atomique backend (rubrique + rattachement map)
+      const created = await api.post(`/api/maps/${currentMapId}/create-rubrique/`, {
         titre: "Nouvelle rubrique",
         contenu_xml: xml,
-        projet: selectedProjectId,
+        parent: parentId, // déjà number | null
       });
 
-      // 3️⃣ Attache à la map master (backend)
-      await createMapRubrique(currentMapId, {
-        rubrique: rubrique.id,
-        parent: null,
-      });
+      const createdMapRubriqueId = created.data.id;
 
-      // 4️⃣ 🔁 RECHARGEMENT STRUCTURE (source de vérité)
+      // 4️⃣ 🔁 Rechargement complet de la structure (source de vérité)
       const refreshed = await listMapRubriques(currentMapId);
       setMapRubriques(refreshed);
 
-      // 5️⃣ Sélection logique
-      const createdItem = refreshed.find((mr) => mr.rubrique.id === rubrique.id);
-
-      if (createdItem) {
-        setSelectedMapItemId(createdItem.id);
-      }
+      // 5️⃣ Sélection différée (déclenche rebuild + expansion dérivée)
+      setPendingSelectId(createdMapRubriqueId);
 
       toast.success("Rubrique créée.");
     } catch (e) {
@@ -378,126 +387,61 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   };
 
   // Indentation / Outdentation
-  // Indentation augmente le niveau de la map, Outdentation le diminue
-  // On ne peut pas indenter au-delà du niveau 2 (pour éviter les arborescences trop profondes)
-  // On ne peut pas outdenter si on est déjà au niveau 1
-  // On utilise l'index pour trouver l'élément à modifier
-  // et on ajuste le niveau en conséquence
-  const MAX_LEVEL = 2; // ou 3 si vous changez plus tard
-
-  const handleIndent = (itemId: number) => {
-    setMapItems((prev) =>
-      prev.map((item, i, arr) => {
-        if (item.id !== itemId) return item;
-
-        // ⛔ Racine : jamais indentable
-        if (item.isRoot) return item;
-
-        // ⛔ Premier item (pas de parent possible)
-        if (i === 0) return item;
-
-        const prevItem = arr[i - 1];
-
-        // ⛔ Impossible de devenir enfant de la racine si déjà niveau max
-        const targetLevel = Math.min(item.level + 1, prevItem.level + 1);
-
-        if (targetLevel > MAX_LEVEL) return item;
-
-        return {
-          ...item,
-          level: targetLevel,
-        };
-      }),
-    );
+  const handleIndent = async (mapRubriqueId: number) => {
+    try {
+      assertMapId(currentMapId);
+      await api.post(`/api/map-rubriques/${mapRubriqueId}/indent/`);
+      setMapRubriques(await listMapRubriques(currentMapId));
+    } catch {
+      toast.error("Indentation impossible.");
+    }
   };
 
-  const MIN_LEVEL = 1;
+  const handleOutdent = async (mapRubriqueId: number) => {
+    try {
+      assertMapId(currentMapId);
 
-  const handleOutdent = (itemId: number) => {
-    setMapItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== itemId) return item;
+      await api.post(`/api/map-rubriques/${mapRubriqueId}/outdent/`);
 
-        // ⛔ Racine
-        if (item.isRoot) return item;
-
-        // ⛔ Déjà au niveau minimum
-        if (item.level <= MIN_LEVEL) return item;
-
-        return {
-          ...item,
-          level: item.level - 1,
-        };
-      }),
-    );
-  };
-
-  // Expand/collapse handler
-  const handleToggleExpand = (itemId: number, expand: boolean) => {
-    setMapItems((prev) =>
-      prev.map((item) => (item.id === itemId ? { ...item, expanded: expand } : item)),
-    );
+      const refreshed = await listMapRubriques(currentMapId);
+      setMapRubriques(refreshed);
+    } catch (e) {
+      console.error(e);
+      toast.error("Désindentation impossible.");
+    }
   };
 
   // Drag & drop reorder handler
-  const handleReorder = (newItems: MapItem[]) => {
-    const rootIndex = newItems.findIndex((i) => i.isRoot);
+  const handleReorder = async (orderedMapRubriqueIds: number[]) => {
+    try {
+      assertMapId(currentMapId);
 
-    // ⛔ Cas invalide (ne devrait jamais arriver)
-    if (rootIndex === -1) return;
+      await api.post(`/api/maps/${currentMapId}/reorder/`, {
+        ordered_ids: orderedMapRubriqueIds,
+      });
 
-    // 🔒 On force la racine à rester en première position
-    if (rootIndex !== 0) {
-      const root = newItems[rootIndex];
-      const withoutRoot = newItems.filter((i) => !i.isRoot);
-      setMapItems([root, ...withoutRoot]);
-      return;
+      const refreshed = await listMapRubriques(currentMapId);
+      setMapRubriques(refreshed);
+    } catch (e) {
+      console.error(e);
+      toast.error("Réorganisation impossible.");
     }
-
-    setMapItems(newItems);
   };
 
   //Synchronisation des mapItems avec le projet sélectionné
   useEffect(() => {
     if (!selectedProjectId) {
       setMapRubriques([]);
-      setMapItems([]);
       setSelectedMapItemId(null);
       return;
     }
 
     (async () => {
-      try {
-        const res = await api.get(`/api/projets/${selectedProjectId}/structure/`);
-
-        const { map, structure } = res.data;
-
-        setCurrentMapId(map.id);
-        setMapRubriques(structure);
-
-        console.group("[FLOW][LoadProject][structure]");
-        console.log("projectId", selectedProjectId);
-        console.log("response", res.data);
-        console.groupEnd();
-      } catch (e) {
-        console.error(e);
-        toast.error("Impossible de charger la structure du projet.");
-      }
+      const res = await api.get(`/api/projets/${selectedProjectId}/structure/`);
+      setCurrentMapId(res.data.map.id);
+      setMapRubriques(res.data.structure);
     })();
   }, [selectedProjectId]);
-
-  // Synchronisation des mapItems avec les mapRubriques chargées
-  useEffect(() => {
-    if (mapRubriques.length === 0) {
-      setMapItems([]);
-      setSelectedMapItemId(null);
-      return;
-    }
-
-    const items = mapRubriquesToMapItems(mapRubriques);
-    setMapItems(items);
-    setSelectedMapItemId(items[0]?.id ?? null);
-  }, [mapRubriques]);
 
   return (
     <>
@@ -570,9 +514,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                     onToggle={toggleMapExpand}
                     mapItems={mapItems}
                     selectedMapItemId={selectedMapItemId}
-                    setLoadMapOpen={setLoadMapOpen}
-                    onLoadMapDialog={() => setLoadMapOpen(true)}
-                    onReorder={handleReorder}
                     onSelect={handleSelectMapItem}
                     onRename={handleRename}
                     editingItemId={editingItemId}
@@ -584,7 +525,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                     onLoad={handleLoadMap}
                     onIndent={handleIndent}
                     onOutdent={handleOutdent}
-                    onToggleExpand={handleToggleExpand}
+                    onReorder={handleReorder}
                   />
                 </div>
               )}

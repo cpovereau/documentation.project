@@ -283,6 +283,21 @@ class RubriqueSerializer(serializers.ModelSerializer):
         return data
 
 
+class CreateRubriqueInMapSerializer(serializers.Serializer):
+    titre = serializers.CharField()
+    contenu_xml = serializers.CharField()
+
+    type_dita = serializers.ChoiceField(
+        choices=["topic", "concept", "task", "reference"],
+        required=False,
+        default="topic",
+    )
+
+    parent = serializers.IntegerField(required=False, allow_null=True)
+    insert_after = serializers.IntegerField(required=False, allow_null=True)
+    insert_before = serializers.IntegerField(required=False, allow_null=True)
+
+
 class MediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Media
