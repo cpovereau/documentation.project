@@ -4,7 +4,7 @@
 export interface Gamme {
   id: number;
   nom: string;
-  description: string;
+  description: string | null;
   is_archived: boolean;
 }
 

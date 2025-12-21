@@ -5,13 +5,13 @@ from documentation.models import Projet
 
 User = get_user_model()
 
+
 class CRUDOperationsTests(TestCase):
 
     def setUp(self):
         # Configuration initiale : créer un utilisateur et initialiser le client API
         self.user = User.objects.create_user(
-            username="testuser",
-            password="testpassword123"
+            username="testuser", password="testpassword123"
         )
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
@@ -21,18 +21,16 @@ class CRUDOperationsTests(TestCase):
         payload = {
             "nom": "Nouveau Projet",
             "description": "Description de test",
-            "gamme": "Hebergement"  # Remplacez avec un champ valide si nécessaire
+            "gamme": "Hebergement",  # Remplacez avec un champ valide si nécessaire
         }
-        response = self.client.post("/api/projet/create/", payload, format="json")
+        response = self.client.post("/api/projets/", payload, format="json")
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["nom"], "Nouveau Projet")
 
     def test_read_project(self):
         # Test de lecture d'un projet
         project = Projet.objects.create(
-            nom="Projet existant",
-            description="Description existante",
-            gamme="Usager"
+            nom="Projet existant", description="Description existante", gamme="Usager"
         )
         response = self.client.get(f"/api/projets/{project.id}/")
         self.assertEqual(response.status_code, 200)
@@ -43,22 +41,19 @@ class CRUDOperationsTests(TestCase):
         project = Projet.objects.create(
             nom="Projet à mettre à jour",
             description="Ancienne description",
-            gamme="Planning"
+            gamme="Planning",
         )
-        payload = {
-            "nom": "Projet mis à jour",
-            "description": "Nouvelle description"
-        }
-        response = self.client.put(f"/api/projets/{project.id}/", payload, format="json")
+        payload = {"nom": "Projet mis à jour", "description": "Nouvelle description"}
+        response = self.client.put(
+            f"/api/projets/{project.id}/", payload, format="json"
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["nom"], "Projet mis à jour")
 
     def test_delete_project(self):
         # Test de suppression d'un projet
         project = Projet.objects.create(
-            nom="Projet à supprimer",
-            description="Description",
-            gamme="Hebergement"
+            nom="Projet à supprimer", description="Description", gamme="Hebergement"
         )
         response = self.client.delete(f"/api/projets/{project.id}/")
         self.assertEqual(response.status_code, 204)

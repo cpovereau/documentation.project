@@ -10,7 +10,7 @@ export function useProduits() {
   return useQuery<Produit[]>({
     queryKey: ["produits"],
     queryFn: async () => {
-      const response = await api.get("/produits/?archived=false");
+      const response = await api.get("/api/produits/?archived=false");
       return response.data;
     },
   });

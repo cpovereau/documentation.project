@@ -6,7 +6,7 @@ export function useFonctionnalites() {
   return useQuery<Fonctionnalite[]>({
     queryKey: ["fonctionnalites"],
     queryFn: async () => {
-      const response = await api.get("/fonctionnalites/?archived=false");
+      const response = await api.get("/api/fonctionnalites/?archived=false");
       return response.data;
     },
   });

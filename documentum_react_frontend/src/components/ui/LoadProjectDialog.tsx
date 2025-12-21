@@ -1,19 +1,10 @@
 // src/components/ui/LoadProjectDialog.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import api from "@/lib/apiClient";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import api, {
-  getProjectDetailsValidated as getProjectDetails,
-} from "@/lib/apiClient";
-import { mapApiProjectToItem } from "@/lib/mappers";
-import type { ProjectItem } from "@/types/ProjectItem";
 import { toast } from "sonner";
 
 // Type minimal pour la liste (réponse de GET /projets/)
@@ -31,65 +22,63 @@ interface ProjectListItem {
 interface Props {
   open: boolean;
   onClose: () => void;
-  onConfirm: (loadedProject: ProjectItem) => void;
+  onSelect: (projectId: number) => void;
   initialSelectedId?: number | null;
 }
 
 export const LoadProjectDialog: React.FC<Props> = ({
   open,
   onClose,
-  onConfirm,
+  onSelect,
   initialSelectedId = null,
 }) => {
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [selectedId, setSelectedId] = useState<string>(
-    initialSelectedId ? String(initialSelectedId) : ""
+    initialSelectedId ? String(initialSelectedId) : "",
   );
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+
+    // Reset UI
     setSelectedId(initialSelectedId ? String(initialSelectedId) : "");
     setQuery("");
+
+    // Chargement de la liste (UI uniquement)
     setLoading(true);
+
     api
-      .get<ProjectListItem[]>("/projets/?archived=false")
-      .then((res) => setProjects(res.data))
+      .get<ProjectListItem[]>("/api/projets/?archived=false")
+      .then((res) => {
+        setProjects(res.data);
+      })
       .catch((err) => {
         console.error(err);
         toast.error("Impossible de charger la liste des projets.");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+      });
   }, [open, initialSelectedId]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return projects;
     return projects.filter(
-      (p) =>
-        p.nom.toLowerCase().includes(q) ||
-        (p.gamme?.nom || "").toLowerCase().includes(q)
+      (p) => p.nom.toLowerCase().includes(q) || (p.gamme?.nom || "").toLowerCase().includes(q),
     );
   }, [projects, query]);
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!selectedId) {
-      toast.error("Sélectionne un projet à charger.");
+      toast.error("Sélectionnez un projet à charger.");
       return;
     }
-    try {
-      setLoading(true);
-      const full = await getProjectDetails(Number(selectedId));
-      const uiProject = mapApiProjectToItem(full);
-      onConfirm(uiProject);
-      onClose();
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.message ?? "Erreur lors du chargement du projet.");
-    } finally {
-      setLoading(false);
-    }
+
+    onSelect(Number(selectedId));
+    onClose();
   };
 
   return (
@@ -124,9 +113,7 @@ export const LoadProjectDialog: React.FC<Props> = ({
                 </option>
               ))}
             </select>
-            <p className="text-xs text-muted-foreground mt-1">
-              {filtered.length} projet(s)
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">{filtered.length} projet(s)</p>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

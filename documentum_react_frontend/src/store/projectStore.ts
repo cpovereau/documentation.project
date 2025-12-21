@@ -11,6 +11,7 @@ export interface Version {
 
 export interface MapItem {
   id: number;
+  rubriqueId: number | null;
   title: string;
   level: number;
   isMaster: boolean;

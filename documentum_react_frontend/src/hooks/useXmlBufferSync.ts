@@ -12,7 +12,7 @@ import useXmlBufferStore from "../store/xmlBufferStore";
  * ⚠️ Il ne gère aucune sauvegarde API : il ne fait que maintenir
  *     un buffer XML cohérent et marqué comme "dirty".
  */
-export function useXmlBufferSync(editor: Editor | null, selectedMapItemId: number | null) {
+export function useXmlBufferSync(editor: Editor | null, rubriqueId: number | null) {
   const { setXml, setStatus } = useXmlBufferStore();
   const handlerRef = useRef<(() => void) | null>(null);
 
@@ -24,16 +24,16 @@ export function useXmlBufferSync(editor: Editor | null, selectedMapItemId: numbe
   ).current;
 
   useEffect(() => {
-    if (!editor || !selectedMapItemId) return;
+    if (!editor || !rubriqueId) return;
 
     const onUpdate = () => {
       try {
         const json = editor.getJSON();
         const xml = tiptapToXml(json.content ?? []);
-        debouncedSync(xml, selectedMapItemId);
+        debouncedSync(xml, rubriqueId);
       } catch (err) {
         console.error("[useXmlBufferSync] Erreur TipTap → XML", err);
-        setStatus(selectedMapItemId, "error");
+        setStatus(rubriqueId, "error");
       }
     };
 
@@ -47,7 +47,7 @@ export function useXmlBufferSync(editor: Editor | null, selectedMapItemId: numbe
       }
       debouncedSync.cancel();
     };
-  }, [editor, selectedMapItemId, debouncedSync, setXml, setStatus]);
+  }, [editor, rubriqueId, debouncedSync, setXml, setStatus]);
 
   return {};
 }

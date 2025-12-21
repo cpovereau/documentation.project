@@ -1,5 +1,6 @@
 // src/lib/mappers.ts
 import type { Project, Map as ApiMap, VersionProjet } from "../types/api";
+import type { ProjectReadZ } from "@/types/api.zod";
 import type { ProjectItem } from "../types/ProjectItem";
 import type { MapItem } from "../types/MapItem";
 
@@ -11,9 +12,14 @@ export function getActiveVersionNumero(p: Project): string | undefined {
 
     // Fallback : prend la dernière par date_lancement si présentes
     const withDate = p.versions
-      .filter(v => !!v.date_lancement)
-      .sort((a: VersionProjet, b: VersionProjet) =>
-        new Date(b.date_lancement).getTime() - new Date(a.date_lancement).getTime()
+      .filter(
+        (v): v is VersionProjet & { date_lancement: string } =>
+          typeof v.date_lancement === "string"
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.date_lancement).getTime() -
+          new Date(a.date_lancement).getTime()
       );
     if (withDate.length) return withDate[0].version_numero;
 
@@ -36,6 +42,7 @@ export function mapApiMapToItem(
 ): MapItem {
   return {
     id: m.id,
+    rubriqueId: null,
     title: m.nom,
     isMaster: m.is_master,
     level: options?.level ?? 0,
@@ -68,4 +75,23 @@ export function mapApiProjectToItem(p: Project): ProjectItem {
 /** Convenience : tableau de projets API → tableau de ProjectItem */
 export function mapApiProjectsToItems(projects: Project[]): ProjectItem[] {
   return projects.map(mapApiProjectToItem);
+}
+
+/** Map ProjectReadZ (API) → Project (UI interne) */
+export function mapProjectReadZToProject(p: ProjectReadZ): Project {
+  return {
+    id: p.id,
+    nom: p.nom,
+    description: p.description,
+    gamme: p.gamme
+      ? {
+          id: p.gamme.id,
+          nom: p.gamme.nom,
+          description: p.gamme.description ?? "",
+          is_archived: p.gamme.is_archived,
+        }
+      : null,
+    maps: p.maps ?? [],
+    versions: p.versions ?? [],
+  };
 }

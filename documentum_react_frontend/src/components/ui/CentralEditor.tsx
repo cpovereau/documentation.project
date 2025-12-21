@@ -42,7 +42,7 @@ interface CentralEditorProps {
   onToggleExerciceEditor: () => void;
   dockEditorHeight: number;
   onResizeDockEditorHeight: (newHeight: number) => void;
-  selectedMapItemId: number | null;
+  rubriqueId: number | null;
 }
 
 // Début du composant CentralEditor
@@ -58,7 +58,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   onToggleExerciceEditor,
   dockEditorHeight,
   onResizeDockEditorHeight,
-  selectedMapItemId,
+  rubriqueId,
 }) => {
   console.log("🧩 CentralEditor monté");
 
@@ -97,18 +97,18 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     setIsDragging(true);
   };
 
-  // Debug selectedMapItemId
+  // Debug rubriqueId
   useEffect(() => {
-    console.log("🧭 selectedMapItemId dans CentralEditor :", selectedMapItemId);
-  }, [selectedMapItemId]);
+    console.log("🧭 rubriqueId dans CentralEditor :", rubriqueId);
+  }, [rubriqueId]);
 
   // 🔁 On récupère le XML initial depuis le buffer pour la rubrique sélectionnée
   const getXml = useXmlBufferStore((state) => state.getXml);
-  const xml = selectedMapItemId ? getXml(selectedMapItemId) : null;
+  const xml = rubriqueId ? getXml(rubriqueId) : null;
 
   const dialogs = useEditorDialogs({
     getXml,
-    selectedMapItemId,
+    rubriqueId,
     toast,
   });
 
@@ -121,14 +121,14 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         checkGrammar(editor.getText());
       },
     },
-    [selectedMapItemId], // on recrée seulement quand on change de rubrique
+    [rubriqueId], // on recrée seulement quand on change de rubrique
   );
 
-  useXmlBufferSync(editor, selectedMapItemId);
+  useXmlBufferSync(editor, rubriqueId);
 
   // ✅ Injection automatique du contenu XML depuis le buffer au changement de rubrique
-  const { isLoading } = useDitaLoader({ editor, selectedMapItemId });
-  const { hasChanges, resetAfterSave } = useRubriqueChangeTracker(editor, selectedMapItemId);
+  const { isLoading } = useDitaLoader({ editor, rubriqueId });
+  const { hasChanges, resetAfterSave } = useRubriqueChangeTracker(editor, rubriqueId);
 
   useEffect(() => {
     if (!isLoading && editor) {
@@ -137,7 +137,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   }, [isLoading, editor]);
 
   // Sauvegarde de la rubrique
-  const { saveRubrique, saving } = useRubriqueSave(selectedMapItemId);
+  const { saveRubrique, saving } = useRubriqueSave(rubriqueId);
 
   // Fonctions pour enregistrer une rubrique
   const onSaveRubrique = async () => {
@@ -250,7 +250,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   }, [isStopping]);
 
   // Gestion des raccourcis clavier de l'éditeur
-  useEditorShortcuts(editor, selectedMapItemId, isDictating, inputSourceRef);
+  useEditorShortcuts(editor, rubriqueId, isDictating, inputSourceRef);
 
   // Callbacks mémorisés pour éviter les rerenders inutiles
   const handleStartDictation = useCallback(() => {

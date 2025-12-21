@@ -3,10 +3,17 @@ import { Button } from "@/components/ui/button";
 import { ProjectModule } from "@/components/ui/ProjectModule";
 import { MapModule } from "@/components/ui/MapModule";
 import type { MapItem } from "@/types/MapItem";
-import type { ProjectItem } from "@/types/ProjectItem";
-import { prepareNewRubriqueXml, RubriqueInitPayload, createRubrique } from "@/api/rubriques";
+import type { ProjectMap } from "@/types/ProjectMap";
+import type { ProjectDTO } from "@/types/ProjectDTO";
+import type { MapRubriqueDTO } from "@/api/maps";
+import { prepareNewRubriqueXml } from "@/api/rubriqueTemplates";
+import { createRubrique } from "@/api/rubriques";
+import api from "@/lib/apiClient";
+import { createMapRubrique } from "@/api/mapRubriques";
+import { listMapRubriques } from "@/api/maps";
 import useSelectedProduct from "@/hooks/useSelectedProduct";
 import useSelectedVersion from "@/hooks/useSelectedVersion";
+import { getInsertionParentId } from "@/lib/mapStructure";
 import useProjectStore from "@/store/projectStore";
 import useXmlBufferStore from "@/store/xmlBufferStore";
 import { toast } from "sonner";
@@ -21,84 +28,16 @@ interface LeftSidebarProps {
   onToggle: () => void;
   className?: string;
   onToggleExpand: (itemId: number, expand: boolean) => void;
-  selectedMapItemId: number | null;
+  rubriqueId: number | null;
   setSelectedMapItemId: React.Dispatch<React.SetStateAction<number | null>>;
 }
-
-const initialProjects: ProjectItem[] = [
-  {
-    id: 1,
-    title: "Documentation Utilisateur - Planning",
-    gamme: "Planning",
-    mapItems: [
-      {
-        id: 101,
-        title: "Vue d’ensemble",
-        isMaster: true,
-        level: 0,
-        expanded: true,
-        versionOrigine: "2.0.0",
-      },
-      {
-        id: 102,
-        title: "Module RDV",
-        isMaster: false,
-        level: 1,
-        expanded: true,
-        versionOrigine: "2.0.0",
-      },
-    ],
-  },
-  {
-    id: 2,
-    title: "Documentation Utilisateur - Usager",
-    gamme: "Usager",
-    mapItems: [
-      {
-        id: 201,
-        title: "Vue globale",
-        isMaster: true,
-        level: 0,
-        expanded: true,
-        versionOrigine: "1.3.0",
-      },
-      {
-        id: 202,
-        title: "Module AN",
-        isMaster: false,
-        level: 1,
-        expanded: false,
-        versionOrigine: "1.3.0",
-      },
-    ],
-  },
-];
-
-const availableMaps = [
-  {
-    id: 5001,
-    title: "Carte Profil Planning",
-    isMaster: true,
-    versionOrigine: "2.0.0",
-    projet: "Profil Utilisateur",
-    gamme: "Planning",
-  },
-  {
-    id: 5002,
-    title: "Vue Établissement",
-    isMaster: false,
-    versionOrigine: "2.1.0",
-    projet: "Dossier Usager",
-    gamme: "Usager",
-  },
-];
 
 export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   isExpanded,
   onToggle,
   className,
   onToggleExpand,
-  selectedMapItemId,
+  rubriqueId,
   setSelectedMapItemId,
 }) => {
   // État local pour gérer l'expansion des projets et des maps
@@ -106,6 +45,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   // Initialement, les projets et maps sont tous ouverts
   const [isProjectExpanded, setIsProjectExpanded] = useState(true);
   const [isMapExpanded, setIsMapExpanded] = useState(true);
+  const [projectMaps, setProjectMaps] = useState<ProjectMap[]>([]);
 
   const toggleProjectExpand = () => setIsProjectExpanded(!isProjectExpanded);
   const toggleMapExpand = () => setIsMapExpanded(!isMapExpanded);
@@ -115,6 +55,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
   // État pour gérer l'ouverture du dialogue de chargement de projet
   const [loadOpen, setLoadOpen] = useState(false);
+
+  // État pour gérer l'élément de la map sélectionné
+  const [mapItems, setMapItems] = useState<MapItem[]>([]);
+
+  // Etat pour gérer les MapRubriques
+  const [mapRubriques, setMapRubriques] = useState<MapRubriqueDTO[]>([]);
+  const [currentMapId, setCurrentMapId] = useState<number | null>(null);
 
   // État pour gérer l'ouverture du dialogue de chargement de map
   const [loadMapOpen, setLoadMapOpen] = useState(false);
@@ -126,30 +73,67 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const { selectedProjectId } = useSelectedVersion();
   const { selectedProduct } = useSelectedProduct();
   const setSelectedProjectId = useProjectStore((s) => s.setSelectedProjectId);
+
   const { setXml, getXml, getStatus } = useXmlBufferStore();
 
-  // 📦 Projets chargés depuis l’API
-  const [projects, setProjects] = useState<ProjectItem[]>(initialProjects);
+  // 🔎 DEBUG — comparaison des sources selectedProjectId
+  const rawSelectedProjectId = useProjectStore((s) => s.selectedProjectId);
 
-  // 📌 État de la Map courante liée au projet sélectionné
-  const [mapItems, setMapItems] = useState<MapItem[]>(
-    projects.find((p) => p.id === selectedProjectId)?.mapItems ?? [],
-  );
+  console.log("[DEBUG][LeftSideBar] selectedProjectId via useSelectedVersion:", selectedProjectId);
+
+  console.log("[DEBUG][LeftSideBar] selectedProjectId via raw projectStore:", rawSelectedProjectId);
+
+  // 📦 Projets chargés depuis l’API
+  const [projects, setProjects] = useState<ProjectDTO[]>([]);
+
+  // Fonction de mapping des MapRubriques
+  function mapRubriquesToMapItems(mrs: MapRubriqueDTO[]): MapItem[] {
+    return mrs.map((mr) => ({
+      id: mr.id, // ✅ MapRubrique.id
+      rubriqueId: mr.rubrique.id, // ✅ Rubrique.id
+      title: mr.rubrique.titre,
+      level: mr.parent ? 2 : 1,
+      expanded: false,
+      isMaster: false,
+      versionOrigine: "",
+      isRoot: mr.parent === null,
+    }));
+  }
+
+  // Synchronisation des mapItems avec les mapRubriques chargées
+  useEffect(() => {
+    setMapItems(mapRubriquesToMapItems(mapRubriques));
+  }, [mapRubriques]);
 
   // Initialisation du buffer XML pour chaque rubrique de la map
   // On s'assure que chaque mapItem a une entrée dans le buffer, même vide
   useEffect(() => {
     for (const item of mapItems) {
-      const xml = getXml(item.id);
+      if (item.rubriqueId == null) {
+        continue; // ⛔ pas une rubrique → pas de XML
+      }
+
+      const xml = getXml(item.rubriqueId);
       if (!xml) {
-        console.log(`📄 Initialisation XML vide pour la rubrique ID ${item.id}`);
+        console.log(`📄 Initialisation XML vide pour la rubrique ID ${item.rubriqueId}`);
         setXml(
-          item.id,
-          `<topic><title>${item.title}</title><body><p>Contenu à compléter</p></body></topic>`,
+          item.rubriqueId,
+          `<topic>
+           <title>${item.title}</title>
+           <body>
+             <p>Contenu à compléter</p>
+           </body>
+         </topic>`,
         );
       }
     }
   }, [mapItems, getXml, setXml]);
+
+  // ID de la rubrique sélectionnée dans la map
+  const [selectedMapItemId] = useState<number | null>(null);
+
+  const selectedMapItem = mapItems.find((item) => item.id === selectedMapItemId);
+  const selectedRubriqueId = selectedMapItem?.rubriqueId ?? null;
 
   // État pour gérer l'affichage de la carte d'exportation
   // Utilisé pour afficher une carte d'exportation après la publication d'un projet
@@ -157,31 +141,18 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const [showExportCard, setShowExportCard] = useState(false);
 
   // Callback pour sélectionner un projet
-  const handleSelect = (id: number) => {
+  const handleSelect = (projectId: number) => {
     if (hasUnsavedChanges) {
       toast.error("Enregistrez ou annulez vos modifications avant de changer de projet.");
       return;
     }
-    setSelectedProjectId(id);
+    openProject(projectId);
   };
 
   // Callback pour ajouter un nouveau projet
-  const handleConfirmNewProject = (newProject: ProjectItem) => {
-    setProjects((prev) => [newProject, ...prev]);
-    setSelectedProjectId(newProject.id);
+  const handleConfirmNewProject = (projectId: number) => {
+    openProject(projectId);
   };
-
-  // Récupère les détails du projet sélectionné
-  useEffect(() => {
-    const proj = projects.find((p) => p.id === selectedProjectId);
-    if (proj) {
-      setMapItems(proj.mapItems ?? []);
-      setSelectedMapItemId(proj.mapItems?.[0]?.id ?? null);
-    } else {
-      setMapItems([]);
-      setSelectedMapItemId(null);
-    }
-  }, [selectedProjectId, projects]);
 
   // Ajoute un nouveau projet
   const handleAdd = () => setCreateOpen(true);
@@ -237,17 +208,18 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
 
   // 🚨 Rubrique courante non sauvegardée ?
-  const hasUnsavedChanges = selectedMapItemId !== null && getStatus(selectedMapItemId) === "dirty";
+  const hasUnsavedChanges =
+    selectedRubriqueId !== null && getStatus(selectedRubriqueId) === "dirty";
 
   // Callback pour confirmer le projet chargé depuis le dialogue
-  const handleConfirmLoadedProject = (uiProject: ProjectItem) => {
+  const handleConfirmLoadedProject = (project: ProjectDTO) => {
     setProjects((prev) => {
-      const exists = prev.some((p) => p.id === uiProject.id);
-      return exists
-        ? prev.map((p) => (p.id === uiProject.id ? uiProject : p))
-        : [uiProject, ...prev];
+      const exists = prev.some((p) => p.id === project.id);
+
+      return exists ? prev.map((p) => (p.id === project.id ? project : p)) : [project, ...prev];
     });
-    setSelectedProjectId(uiProject.id); // le useEffect recalcule mapItems + sélection
+
+    openProject(project.id);
   };
 
   // Renommer un item de la map
@@ -263,52 +235,56 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   };
 
   // Ajouter une nouvelle rubrique
+  // Hypothèses existantes :
+  // - masterMapId disponible
+  // - mapItems = UI only
+  // - mapRubriques = nouveau state à introduire
+
   const handleAddMapItem = async () => {
-    if (!selectedProjectId) {
-      toast.error("Aucun projet sélectionné.");
+    if (!selectedProjectId || !currentMapId) {
+      toast.error("Projet ou map indisponible.");
       return;
     }
 
     try {
-      // 1️⃣ Génération du XML initial
+      // Détermination du parent d'insertion
+      const parentId = getInsertionParentId(mapRubriques, selectedMapItemId);
+
+      // 1️⃣ Génération XML
       const xml = await prepareNewRubriqueXml({
         titre: "Nouvelle rubrique",
         projetId: selectedProjectId,
         type_dita: "topic",
-        audience: null,
-        fonctionnalites: null,
         produitLabelOrAbbrev: selectedProduct?.abreviation ?? null,
       });
 
-      // 2️⃣ Création MÉTIER
+      // 2️⃣ Création Rubrique
       const rubrique = await createRubrique({
         titre: "Nouvelle rubrique",
         contenu_xml: xml,
         projet: selectedProjectId,
-        version: 1,
       });
 
-      // 3️⃣ Ajout dans la map
-      const newItem: MapItem = {
-        id: rubrique.id, // ✅ ID backend
-        title: rubrique.titre,
-        level: 1,
-        isMaster: false,
-        expanded: false,
-        versionOrigine: "",
-      };
+      // 3️⃣ Attache à la map master (backend)
+      await createMapRubrique(currentMapId, {
+        rubrique: rubrique.id,
+        parent: null,
+      });
 
-      setMapItems((prev) => [...prev, newItem]);
+      // 4️⃣ 🔁 RECHARGEMENT STRUCTURE (source de vérité)
+      const refreshed = await listMapRubriques(currentMapId);
+      setMapRubriques(refreshed);
 
-      // 4️⃣ Initialisation du buffer XML
-      setXml(rubrique.id, rubrique.contenu_xml);
+      // 5️⃣ Sélection logique
+      const createdItem = refreshed.find((mr) => mr.rubrique.id === rubrique.id);
 
-      // 5️⃣ Sélection de la rubrique
-      setSelectedMapItemId(rubrique.id);
+      if (createdItem) {
+        setSelectedMapItemId(createdItem.id);
+      }
 
-      toast.success("Rubrique créée avec succès.");
-    } catch (err) {
-      console.error(err);
+      toast.success("Rubrique créée.");
+    } catch (e) {
+      console.error(e);
       toast.error("Échec de la création de la rubrique.");
     }
   };
@@ -322,6 +298,70 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       setSelectedMapItemId(newId);
     }
   };
+
+  async function openProject(projectId: number) {
+    if (hasUnsavedChanges) {
+      toast.error("Enregistrez ou annulez vos modifications avant de changer de projet.");
+      return;
+    }
+
+    // 1️⃣ Chercher dans le cache
+    let project = projects.find((p) => p.id === projectId);
+
+    // 2️⃣ Fallback API
+    if (!project) {
+      try {
+        const res = await api.get(`/api/projets/${projectId}/`);
+        const fetchedProject = res.data.project ?? res.data;
+
+        // ⚠️ ici on sait que fetchedProject existe
+        project = fetchedProject;
+
+        setProjects((prev) => [...prev, fetchedProject]);
+      } catch (e) {
+        console.error(e);
+        toast.error("Projet introuvable !");
+        return;
+      }
+    }
+
+    // À ce stade, project a été trouvé ou chargé
+    if (!project) {
+      // sécurité ultime, ne devrait jamais arriver
+      toast.error("Projet introuvable !");
+      return;
+    }
+
+    // 3️⃣ Store UNIQUE
+    setSelectedProjectId(project.id);
+
+    // 4️⃣ Maps
+    setProjectMaps(project.maps ?? []);
+
+    // 5️⃣ Reset contexte
+    setCurrentMapId(null);
+    setMapRubriques([]);
+    setMapItems([]);
+    setSelectedMapItemId(null);
+  }
+
+  async function openMap(mapId: number) {
+    if (hasUnsavedChanges) {
+      toast.error("Enregistrez ou annulez vos modifications avant de changer de map.");
+      return;
+    }
+
+    setCurrentMapId(mapId);
+
+    try {
+      const rubriques = await listMapRubriques(mapId);
+      setMapRubriques(rubriques);
+      setSelectedMapItemId(null);
+    } catch (e) {
+      console.error(e);
+      toast.error("Impossible de charger la map.");
+    }
+  }
 
   // Delete map item
   // On supprime l'item de la map et on réinitialise la sélection si nécessaire
@@ -343,24 +383,52 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   // On ne peut pas outdenter si on est déjà au niveau 1
   // On utilise l'index pour trouver l'élément à modifier
   // et on ajuste le niveau en conséquence
+  const MAX_LEVEL = 2; // ou 3 si vous changez plus tard
+
   const handleIndent = (itemId: number) => {
     setMapItems((prev) =>
       prev.map((item, i, arr) => {
-        if (item.id === itemId) {
-          if (i === 0) return item;
-          const prevLevel = arr[i - 1].level;
-          return { ...item, level: Math.min(item.level + 1, prevLevel + 1) };
-        }
-        return item;
+        if (item.id !== itemId) return item;
+
+        // ⛔ Racine : jamais indentable
+        if (item.isRoot) return item;
+
+        // ⛔ Premier item (pas de parent possible)
+        if (i === 0) return item;
+
+        const prevItem = arr[i - 1];
+
+        // ⛔ Impossible de devenir enfant de la racine si déjà niveau max
+        const targetLevel = Math.min(item.level + 1, prevItem.level + 1);
+
+        if (targetLevel > MAX_LEVEL) return item;
+
+        return {
+          ...item,
+          level: targetLevel,
+        };
       }),
     );
   };
 
+  const MIN_LEVEL = 1;
+
   const handleOutdent = (itemId: number) => {
     setMapItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId && item.level > 1 ? { ...item, level: item.level - 1 } : item,
-      ),
+      prev.map((item) => {
+        if (item.id !== itemId) return item;
+
+        // ⛔ Racine
+        if (item.isRoot) return item;
+
+        // ⛔ Déjà au niveau minimum
+        if (item.level <= MIN_LEVEL) return item;
+
+        return {
+          ...item,
+          level: item.level - 1,
+        };
+      }),
     );
   };
 
@@ -372,14 +440,64 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   };
 
   // Drag & drop reorder handler
-  const handleReorder = (newItems: MapItem[]) => setMapItems(newItems);
+  const handleReorder = (newItems: MapItem[]) => {
+    const rootIndex = newItems.findIndex((i) => i.isRoot);
+
+    // ⛔ Cas invalide (ne devrait jamais arriver)
+    if (rootIndex === -1) return;
+
+    // 🔒 On force la racine à rester en première position
+    if (rootIndex !== 0) {
+      const root = newItems[rootIndex];
+      const withoutRoot = newItems.filter((i) => !i.isRoot);
+      setMapItems([root, ...withoutRoot]);
+      return;
+    }
+
+    setMapItems(newItems);
+  };
 
   //Synchronisation des mapItems avec le projet sélectionné
   useEffect(() => {
-    const selected = projects.find((p) => p.id === selectedProjectId);
-    setMapItems(selected?.mapItems ?? []);
-    setSelectedMapItemId(selected?.mapItems[0]?.id ?? null);
-  }, [selectedProjectId, projects]);
+    if (!selectedProjectId) {
+      setMapRubriques([]);
+      setMapItems([]);
+      setSelectedMapItemId(null);
+      return;
+    }
+
+    (async () => {
+      try {
+        const res = await api.get(`/api/projets/${selectedProjectId}/structure/`);
+
+        const { map, structure } = res.data;
+
+        setCurrentMapId(map.id);
+        setMapRubriques(structure);
+
+        console.group("[FLOW][LoadProject][structure]");
+        console.log("projectId", selectedProjectId);
+        console.log("response", res.data);
+        console.groupEnd();
+      } catch (e) {
+        console.error(e);
+        toast.error("Impossible de charger la structure du projet.");
+      }
+    })();
+  }, [selectedProjectId]);
+
+  // Synchronisation des mapItems avec les mapRubriques chargées
+  useEffect(() => {
+    if (mapRubriques.length === 0) {
+      setMapItems([]);
+      setSelectedMapItemId(null);
+      return;
+    }
+
+    const items = mapRubriquesToMapItems(mapRubriques);
+    setMapItems(items);
+    setSelectedMapItemId(items[0]?.id ?? null);
+  }, [mapRubriques]);
 
   return (
     <>
@@ -392,7 +510,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       <LoadProjectDialog
         open={loadOpen}
         onClose={() => setLoadOpen(false)}
-        onConfirm={handleConfirmLoadedProject}
+        onSelect={(projectId) => openProject(projectId)}
         initialSelectedId={selectedProjectId}
       />
       ;
@@ -411,11 +529,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       <LoadMapDialog
         open={loadMapOpen}
         onClose={() => setLoadMapOpen(false)}
-        availableMaps={availableMaps}
-        onLoad={(newMapItems) => {
-          setMapItems(newMapItems);
-          setSelectedMapItemId(newMapItems[0]?.id ?? null);
-        }}
+        maps={projectMaps}
+        onSelect={(mapId) => openMap(mapId)}
       />
       ;
       <div

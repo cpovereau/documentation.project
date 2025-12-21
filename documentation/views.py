@@ -29,6 +29,7 @@ from .models import (
     Gamme,
     Produit,
     Map,
+    MapRubrique,
     Fonctionnalite,
     Audience,
     Tag,
@@ -59,6 +60,7 @@ from .serializers import (
     GammeSerializer,
     ProduitSerializer,
     MapSerializer,
+    MapRubriqueSerializer,
     FonctionnaliteSerializer,
     VersionProjetSerializer,
     AudienceSerializer,
@@ -66,10 +68,15 @@ from .serializers import (
     TagSerializer,
     ProfilPublicationSerializer,
     InterfaceUtilisateurSerializer,
+    ProjetMiniSerializer,
+    MapMiniSerializer,
+    MapRubriqueStructureSerializer,
+    MapRubriqueCreateSerializer,
     RubriqueSerializer,
     UserSerializer,
     MediaSerializer,
 )
+from .services import add_rubrique_to_map
 from django.utils.timezone import now
 
 
@@ -296,6 +303,151 @@ class VersionProjetViewSet(viewsets.ModelViewSet):
             )
 
 
+# Viewset pour ajouter une rubrique à une map
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def add_rubrique_to_map_view(request):
+    """
+    Body attendu:
+    {
+      "map": 123,
+      "rubrique": 456,
+      "parent": null,
+      "ordre": null
+    }
+    """
+    map_id = request.data.get("map")
+    rubrique_id = request.data.get("rubrique")
+    parent_id = request.data.get("parent")
+    ordre = request.data.get("ordre")
+
+    fields = {}
+    if map_id is None:
+        fields["map"] = ["Champ requis."]
+    if rubrique_id is None:
+        fields["rubrique"] = ["Champ requis."]
+    if fields:
+        return Response({"error": "Erreur de validation", "fields": fields}, status=400)
+
+    try:
+        mr = add_rubrique_to_map(
+            map_id=int(map_id),
+            rubrique_id=int(rubrique_id),
+            parent_id=int(parent_id) if parent_id is not None else None,
+            ordre=int(ordre) if ordre is not None else None,
+        )
+        return Response(MapRubriqueSerializer(mr).data, status=status.HTTP_201_CREATED)
+
+    except ValidationError as e:
+        # Harmonisation de votre format d’erreur “frontend-friendly”
+        detail = getattr(e, "detail", None)
+        if isinstance(detail, dict):
+            return Response({"error": "Erreur métier", "fields": detail}, status=400)
+        return Response({"error": "Erreur métier", "detail": str(e)}, status=400)
+
+    except Exception as e:
+        logger.exception("[MapRubrique] Erreur inattendue")
+        return Response({"error": "Erreur interne", "detail": str(e)}, status=500)
+
+
+# Vue pour obtenir la structure documentaire complète d’un projet
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def projet_structure_view(request, projet_id: int):
+    """
+    Retourne la structure documentaire complète d’un projet :
+    - projet
+    - map master
+    - structure MapRubrique ordonnée
+    """
+    try:
+        projet = Projet.objects.get(pk=projet_id)
+    except Projet.DoesNotExist:
+        return Response(
+            {"error": "Projet introuvable."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    try:
+        map_master = Map.objects.get(projet=projet, is_master=True)
+    except Map.DoesNotExist:
+        return Response(
+            {"error": "Aucune map master définie pour ce projet."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Structure ordonnée de la map
+    structure_qs = (
+        MapRubrique.objects.filter(map=map_master)
+        .select_related("rubrique", "parent")
+        .order_by("ordre")
+    )
+
+    data = {
+        "projet": ProjetMiniSerializer(projet).data,
+        "map": MapMiniSerializer(map_master).data,
+        "structure": MapRubriqueStructureSerializer(structure_qs, many=True).data,
+    }
+
+    logger.info(f"[ProjetStructure] Chargement structure projet_id={projet_id}")
+
+    return Response(data, status=status.HTTP_200_OK)
+
+
+# Viewset pour obtenir la structure documentaire d’une map
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def map_rubriques_view(request, map_id: int):
+    """
+    Retourne la structure documentaire (MapRubrique) d’une map donnée
+    """
+    try:
+        map_obj = Map.objects.get(pk=map_id)
+    except Map.DoesNotExist:
+        return Response(
+            {"error": "Map introuvable."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    structure_qs = (
+        MapRubrique.objects.filter(map=map_obj)
+        .select_related("rubrique", "parent")
+        .order_by("ordre")
+    )
+
+    serializer = MapRubriqueStructureSerializer(structure_qs, many=True)
+
+    logger.info(f"[MapStructure] Chargement structure map_id={map_id}")
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# ViewSet pour les maps
+class MapViewSet(viewsets.ModelViewSet):
+    queryset = Map.objects.all()
+    serializer_class = MapSerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=True, methods=["get", "post"])
+    def rubriques(self, request, pk=None):
+        map_obj = self.get_object()
+
+        if request.method == "GET":
+            qs = MapRubrique.objects.filter(map=map_obj).order_by("ordre")
+            serializer = MapRubriqueSerializer(qs, many=True)
+            return Response(serializer.data)
+
+        if request.method == "POST":
+            serializer = MapRubriqueCreateSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            map_rubrique = serializer.save(map=map_obj)
+
+            return Response(
+                MapRubriqueSerializer(map_rubrique).data,
+                status=status.HTTP_201_CREATED,
+            )
+
+
 # ViewSet pour les rubriques
 class RubriqueViewSet(viewsets.ModelViewSet):
     queryset = (
@@ -381,7 +533,12 @@ class CreateProjectAPIView(APIView):
 
     @transaction.atomic
     def post(self, request, *args, **kwargs):
-        serializer = ProjetSerializer(data=request.data, context={"request": request})
+        serializer = ProjetSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        logger.info("[FLOW][CreateProject][START]", extra={"user": request.user.id})
+        logger.error("[DEBUG][CreateProject] POST called", extra={"data": request.data})
 
         if not serializer.is_valid():
             logger.warning("[Projet] Données invalides à la création")
@@ -391,12 +548,20 @@ class CreateProjectAPIView(APIView):
             )
 
         try:
+            # 1️⃣ Création du projet
             projet = serializer.save()
             logger.info(
                 f"[Projet] Projet '{projet.nom}' créé par {request.user.username}"
             )
+            logger.info(
+                "[FLOW][CreateProject] Project created",
+                extra={
+                    "project_id": projet.id,
+                },
+            )
 
-            version = VersionProjet.objects.create(
+            # 2️⃣ Création de la version initiale (obligatoire métier)
+            VersionProjet.objects.create(
                 projet=projet,
                 version_numero="1.0.0",
                 date_lancement=now(),
@@ -406,42 +571,106 @@ class CreateProjectAPIView(APIView):
             logger.info(
                 f"[Version] Version initiale '1.0.0' créée pour le projet '{projet.nom}'"
             )
+            logger.info(
+                "[FLOW][CreateProject] Version created",
+                extra={
+                    "project_id": projet.id,
+                    "version_numero": "1.0.0",
+                },
+            )
 
-            map_data = {
-                "nom": "Carte par défaut",
-                "projet": projet.id,
-                "is_master": True,
-            }
-            map_serializer = MapSerializer(data=map_data)
+            # 3️⃣ Création de la map master par défaut
+            map_serializer = MapSerializer(
+                data={
+                    "nom": "Carte par défaut",
+                    "projet": projet.id,
+                    "is_master": True,
+                }
+            )
 
-            if map_serializer.is_valid():
-                map = map_serializer.save()
-                logger.info(
-                    f"[Map] Carte par défaut créée pour le projet '{projet.nom}'"
-                )
-                return Response(
-                    {
-                        "projet": ProjetSerializer(projet).data,
-                        "map": MapSerializer(map).data,
-                    },
-                    status=201,
-                )
-            else:
-                projet.delete()
+            if not map_serializer.is_valid():
                 logger.warning(
-                    f"[Map] Échec création de la map par défaut pour projet '{projet.nom}', rollback."
+                    f"[Map] Échec création map par défaut pour projet '{projet.nom}'"
                 )
-                return Response(
-                    {
-                        "error": "Erreur lors de la création de la carte par défaut",
-                        "fields": map_serializer.errors,
-                    },
-                    status=400,
-                )
+                raise ValidationError(map_serializer.errors)
+
+            map_instance = map_serializer.save()
+            logger.info(f"[Map] Carte par défaut créée pour le projet '{projet.nom}'")
+            logger.info(
+                "[FLOW][CreateProject] Map created",
+                extra={
+                    "project_id": projet.id,
+                    "map_id": map_instance.id,
+                },
+            )
+
+            # 3️⃣bis Création d'une rubrique technique minimale (ancrage UX)
+            rubrique = Rubrique.objects.create(
+                projet=projet,
+                titre="Racine documentaire",
+                auteur=request.user,
+                is_active=True,
+            )
+            logger.info(
+                "[FLOW][CreateProject] Default rubrique created",
+                extra={
+                    "project_id": projet.id,
+                    "rubrique_id": rubrique.id,
+                },
+            )
+
+            # 3️⃣ter Liaison Map ↔ Rubrique
+            MapRubrique.objects.create(
+                map=map_instance,
+                rubrique=rubrique,
+                parent=None,
+                ordre=1,
+            )
+            logger.info(
+                "[FLOW][CreateProject] MapRubrique created",
+                extra={
+                    "project_id": projet.id,
+                    "map_id": map_instance.id,
+                    "rubrique_id": rubrique.id,
+                },
+            )
+
+            # 4️⃣ RECHARGEMENT EXPLICITE du projet (contrat API)
+            projet = (
+                Projet.objects.prefetch_related("versions", "maps")
+                .select_related("gamme", "auteur")
+                .get(pk=projet.pk)
+            )
+            logger.info(
+                "[FLOW][CreateProject] RESPONSE payload",
+                extra={
+                    "has_versions": projet.versions.exists(),
+                    "project_id": projet.id,
+                    "versions_count": projet.versions.count(),
+                    "has_maps": projet.maps.exists(),
+                    "maps_count": projet.maps.count(),
+                },
+            )
+
+            # 5️⃣ Réponse complète et déterministe
+            return Response(
+                {
+                    "projet": ProjetSerializer(projet).data,
+                    "map": MapSerializer(map_instance).data,
+                },
+                status=201,
+            )
+
+        except ValidationError as e:
+            logger.warning("[Projet] Erreur métier lors de la création")
+            raise e  # géré par custom_exception_handler
 
         except Exception as e:
             logger.exception("[Projet] Erreur inattendue lors de la création du projet")
-            return Response({"error": "Erreur interne", "detail": str(e)}, status=500)
+            return Response(
+                {"error": "Erreur interne", "detail": str(e)},
+                status=500,
+            )
 
 
 # Vue pour la consultation des projets

@@ -12,6 +12,6 @@ export interface Gamme {
 }
 
 export const getAllGammes = async (): Promise<Gamme[]> => {
-  const response = await api.get<Gamme[]>("/gammes/?archived=false");
+  const response = await api.get<Gamme[]>("/api/gammes/?archived=false");
   return response.data;
 };

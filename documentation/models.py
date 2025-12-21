@@ -137,7 +137,7 @@ class Rubrique(models.Model):
     audience = models.CharField(max_length=200, default="générique")
     revision_numero = models.IntegerField(default=1)
     projet = models.ForeignKey(Projet, on_delete=models.CASCADE)
-    version = models.IntegerField()
+    version = models.IntegerField(default=1)
     version_precedente = models.ForeignKey(
         "self", on_delete=models.SET_NULL, null=True, blank=True
     )

@@ -7,6 +7,7 @@ from .models import (
     Rubrique,
     TypeRubrique,
     Map,
+    MapRubrique,
     VersionProjet,
     Fonctionnalite,
     Tag,
@@ -53,6 +54,35 @@ class MapSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Validation ou logique supplémentaire si nécessaire
         return Map.objects.create(**validated_data)
+
+
+class MapRubriqueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MapRubrique
+        fields = ["id", "map", "rubrique", "ordre", "parent"]
+
+
+class MapRubriqueCreateSerializer(serializers.Serializer):
+    rubrique = serializers.PrimaryKeyRelatedField(queryset=Rubrique.objects.all())
+    parent = serializers.PrimaryKeyRelatedField(
+        queryset=MapRubrique.objects.all(), required=False, allow_null=True
+    )
+
+    def validate(self, data):
+        map_instance: Map = self.context["map"]
+
+        # Vérifier que la rubrique appartient bien au projet de la map
+        if data["rubrique"].projet_id != map_instance.projet_id:
+            raise serializers.ValidationError(
+                "La rubrique n’appartient pas au projet de cette map."
+            )
+
+        # Vérifier que le parent appartient à la même map
+        parent = data.get("parent")
+        if parent and parent.map_id != map_instance.id:
+            raise serializers.ValidationError("Le parent n’appartient pas à cette map.")
+
+        return data
 
 
 class VersionProjetSerializer(serializers.ModelSerializer):
@@ -155,6 +185,43 @@ class AudienceSerializer(serializers.ModelSerializer):
         ]
 
 
+class RubriqueMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rubrique
+        fields = [
+            "id",
+            "titre",
+            "revision_numero",
+            "is_active",
+            "is_archived",
+        ]
+
+
+class MapRubriqueStructureSerializer(serializers.ModelSerializer):
+    rubrique = RubriqueMiniSerializer(read_only=True)
+
+    class Meta:
+        model = MapRubrique
+        fields = [
+            "id",
+            "ordre",
+            "parent",
+            "rubrique",
+        ]
+
+
+class MapMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Map
+        fields = ["id", "nom", "is_master"]
+
+
+class ProjetMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Projet
+        fields = ["id", "nom"]
+
+
 class RubriqueSerializer(serializers.ModelSerializer):
     fonctionnalite = FonctionnaliteSerializer(read_only=True)
     fonctionnalite_id = serializers.PrimaryKeyRelatedField(
@@ -193,6 +260,16 @@ class RubriqueSerializer(serializers.ModelSerializer):
             "version",
             "version_precedente",
         ]
+        read_only_fields = (
+            "version",
+            "version_precedente",
+            "revision_numero",
+            "version_projet",
+            "date_creation",
+            "date_mise_a_jour",
+            "locked_by",
+            "locked_at",
+        )
 
     def validate(self, data):
         projet = data.get("projet")

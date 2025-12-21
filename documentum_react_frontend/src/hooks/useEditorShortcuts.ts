@@ -1,17 +1,16 @@
 // hooks/useEditorShortcuts.ts
 import { useEffect, RefObject } from "react";
 import { Editor } from "@tiptap/react";
-import { RubriqueBuffer } from "@/store/xmlBufferStore";
 
 
 export function useEditorShortcuts(
   editor: Editor | null,
-  rubrique: RubriqueBuffer | null | undefined,
+  rubriqueId: number | null,
   isDictating: boolean,
   inputSourceRef: RefObject<string | null>
 ) {
   useEffect(() => {
-    if (!editor || !rubrique || !rubrique.xml || !editor.view?.dom) return;
+    if (!editor || rubriqueId === null || !editor.view?.dom) return;
 
     const dom = editor.view.dom;
 
@@ -42,5 +41,5 @@ export function useEditorShortcuts(
     return () => {
       dom.removeEventListener("keydown", handleKeyDown);
     };
-  }, [editor, rubrique, isDictating, inputSourceRef]);
+  }, [editor, rubriqueId, isDictating, inputSourceRef]);
 }

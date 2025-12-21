@@ -6,6 +6,7 @@ from .views import (
     GammeViewSet,
     ProduitViewSet,
     ProjetViewSet,
+    projet_structure_view,
     RubriqueViewSet,
     VersionProjetViewSet,
     FonctionnaliteViewSet,
@@ -19,6 +20,9 @@ from .views import (
     CreateProjectAPIView,
     get_project_details,
     CreateMapView,
+    MapViewSet,
+    add_rubrique_to_map_view,
+    map_rubriques_view,
     get_type_sortie_choices,
     import_fonctionnalites,
     MediaViewSet,
@@ -35,6 +39,7 @@ router = DefaultRouter()
 router.register(r"gammes", GammeViewSet)
 router.register(r"produits", ProduitViewSet)
 router.register(r"projets", ProjetViewSet)
+router.register(r"maps", MapViewSet, basename="map")
 router.register(r"rubriques", RubriqueViewSet)
 router.register(r"versions", VersionProjetViewSet)
 router.register(r"fonctionnalites", FonctionnaliteViewSet)
@@ -52,8 +57,16 @@ urlpatterns = [
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("projet/create/", CreateProjectAPIView.as_view(), name="create_project_api"),
     path("projets/<int:pk>/details/", get_project_details, name="project_details"),
+    path("api/", include(router.urls)),
     path("api/maps/", CreateMapView.as_view(), name="create_map"),
+    path("api/map-rubriques/", add_rubrique_to_map_view, name="add_rubrique_to_map"),
     path("api/publier-map/<int:map_id>/", publier_map, name="publier_map"),
+    path(
+        "api/projets/<int:projet_id>/structure/",
+        projet_structure_view,
+        name="projet_structure",
+    ),
+    path("api/maps/<int:map_id>/rubriques/", map_rubriques_view, name="map_rubriques"),
     path(
         "api/formats-publication/", get_formats_publication, name="formats_publication"
     ),
@@ -63,7 +76,6 @@ urlpatterns = [
     ),
     path("medias-check-nom/", check_media_names, name="check_media_names"),
     path("import/media/", upload_media, name="upload_media"),
-    path("", include(router.urls)),
     path("api/dita-template/", generate_dita, name="generate_dita_template"),
     path("api/orthographe/", check_orthographe_view, name="check_orthographe"),
 ]

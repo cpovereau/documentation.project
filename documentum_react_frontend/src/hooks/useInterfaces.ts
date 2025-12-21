@@ -6,7 +6,7 @@ export function useInterfaces() {
   return useQuery<InterfaceUtilisateur[]>({
     queryKey: ["interfaces"],
     queryFn: async () => {
-      const response = await api.get("/interfaces/?archived=false");
+      const response = await api.get("/api/interfaces/?archived=false");
       return response.data;
     },
   });

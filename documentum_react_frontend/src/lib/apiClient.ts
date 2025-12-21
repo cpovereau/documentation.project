@@ -5,7 +5,9 @@ import {
   type ProjectReadZ,
   type CreateProjectResponseZ,
   parseOrThrow,
+  ProjectCreateZ,
 } from "@/types/api.zod";
+import type { Project } from "@/types/api";
 export const API_BASE = "/api";
 
 // Création d'une instance Axios
@@ -94,17 +96,41 @@ api.interceptors.response.use(
 );
 
 // --- Création de projet avec sa version initiale et map racine ---
-export async function createProjectValidated(payload: {
-  nom: string; description: string; gamme_id: number;
-}): Promise<CreateProjectResponseZ> {
+export async function createProjectValidated(
+  payload: ProjectCreateZ
+): Promise<CreateProjectResponseZ> {
   const res = await api.post("/projet/create/", payload);
-  return parseOrThrow(CreateProjectResponseSchema, res.data, "CreateProject: payload serveur inattendu");
+
+  console.group("[FLOW][CreateProject]");
+  console.log("payload sent", payload);
+  console.log("raw response", res.data);
+  console.groupEnd();
+
+
+  return parseOrThrow(
+    CreateProjectResponseSchema,
+    res.data,
+    "CreateProject: payload serveur inattendu"
+  );
 }
+
 
 // --- Récupération des détails d’un projet (projet + gamme + versions + maps) ---
 export async function getProjectDetailsValidated(id: number): Promise<ProjectReadZ> {
   const res = await api.get(`/projets/${id}/details/`);
-  return parseOrThrow(ProjectReadSchema, res.data, "ProjectDetails: payload serveur inattendu");
+  return parseOrThrow(
+    ProjectReadSchema,
+    res.data,
+    "GetProjectDetails: payload serveur inattendu"
+  );
+}
+
+// --- Récupération des détails d’un projet (projet + gamme + versions + maps) ---
+export async function getProjectDetails(
+  id: number
+): Promise<Project> {
+  const { data } = await api.get(`/api/projets/${id}/`);
+  return data;
 }
 
 export default api;

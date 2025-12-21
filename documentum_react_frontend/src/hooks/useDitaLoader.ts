@@ -16,23 +16,23 @@ import { parseXmlToTiptap } from "@/utils/xmlToTiptap";
 
 interface UseDitaLoaderProps {
   editor: Editor | null;
-  selectedMapItemId: number | null;
+  rubriqueId: number | null;
 }
 
-export function useDitaLoader({ editor, selectedMapItemId }: UseDitaLoaderProps) {
+export function useDitaLoader({ editor, rubriqueId }: UseDitaLoaderProps) {
   const getXml = useXmlBufferStore((state) => state.getXml);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Conditions minimales : si l’éditeur n’est pas prêt ou pas de rubrique sélectionnée
-    if (!editor || selectedMapItemId == null) {
+    if (!editor || rubriqueId == null) {
       return;
     }
 
     setIsLoading(true);
 
     // Lecture du XML depuis Zustand
-    const xml = getXml(selectedMapItemId);
+    const xml = getXml(rubriqueId);
 
     // Si vide → message fallback
     if (!xml || typeof xml !== "string" || xml.trim() === "") {
@@ -64,7 +64,7 @@ export function useDitaLoader({ editor, selectedMapItemId }: UseDitaLoaderProps)
     }
   }, [
     editor,
-    selectedMapItemId, // ✔ Seuls déclencheurs autorisés
+    rubriqueId, // ✔ Seuls déclencheurs autorisés
   ]);
 
   return { isLoading };

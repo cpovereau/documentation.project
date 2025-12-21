@@ -15,7 +15,7 @@ export function useGammes() {
   return useQuery<Gamme[]>({
     queryKey: ["gammes"],
     queryFn: async () => {
-      const response = await api.get("/gammes/?archived=false");
+      const response = await api.get("/api/gammes/?archived=false");
       return response.data;
     },
   });
@@ -26,7 +26,7 @@ export function useProduits() {
   return useQuery<Produit[]>({
     queryKey: ["produits"],
     queryFn: async () => {
-      const response = await api.get("/produits/?archived=false");
+      const response = await api.get("/api/produits/?archived=false");
       return response.data;
     },
   });
@@ -37,7 +37,7 @@ export function useFonctionnalites() {
   return useQuery<Fonctionnalite[]>({
     queryKey: ["fonctionnalites"],
     queryFn: async () => {
-      const response = await api.get("/fonctionnalites/?archived=false");
+      const response = await api.get("/api/fonctionnalites/?archived=false");
       return response.data;
     },
   });
@@ -48,7 +48,7 @@ export function useInterfaces() {
   return useQuery<InterfaceUtilisateur[]>({
     queryKey: ["interfaces"],
     queryFn: async () => {
-      const response = await api.get("/interfaces/?archived=false");
+      const response = await api.get("/api/interfaces/?archived=false");
       return response.data;
     },
   });
@@ -59,7 +59,7 @@ export function useTags() {
   return useQuery<Tag[]>({
     queryKey: ["tags"],
     queryFn: async () => {
-      const response = await api.get("/tags/?archived=false");
+      const response = await api.get("/api/tags/?archived=false");
       return response.data;
     },
   });
@@ -70,7 +70,7 @@ export function useAudiences() {
   return useQuery<Audience[]>({
     queryKey: ["audiences"],
     queryFn: async () => {
-      const response = await api.get("/audiences/?archived=false");
+      const response = await api.get("/api/audiences/?archived=false");
       return response.data;
     },
   });

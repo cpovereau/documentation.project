@@ -11,7 +11,7 @@ const isoDate = z.string();      // ex: "2025-08-19" (date)
 const isoDateTime = z.string();  // ex: "2025-08-19T12:34:56Z" (datetime)
 
 // Pour json libre (paramètres de profils, etc.)
-export const JsonRecord = z.record(z.any());
+export const JsonRecord = z.record(z.string(), z.any());
 
 /* ---------------------------------------------------------
  * User
@@ -199,6 +199,18 @@ export const RubriqueWriteSchema = z.object({
 export type RubriqueWriteZ = z.infer<typeof RubriqueWriteSchema>;
 
 /* ---------------------------------------------------------
+ * Project – Create response
+ * --------------------------------------------------------- */
+export const ProjectCreateResponseSchema = z.object({
+  projet: ProjectReadSchema,
+  map: MapSchema,
+});
+export type ProjectCreateResponseZ = z.infer<
+  typeof ProjectCreateResponseSchema
+>;
+
+
+/* ---------------------------------------------------------
  * Media
  * --------------------------------------------------------- */
 export const MediaTypeSchema = z.union([z.literal("image"), z.literal("video")]);
@@ -238,8 +250,6 @@ export const CreateProjectResponseSchema = z.object({
 });
 export type CreateProjectResponseZ = z.infer<typeof CreateProjectResponseSchema>;
 
-export type GetProjectDetailsResponseZ = ProjectReadZ;
-
 /* ---------------------------------------------------------
  * Utils de validation ergonomiques
  * --------------------------------------------------------- */
@@ -255,7 +265,7 @@ export function parseOrThrow<T extends z.ZodTypeAny>(
 ): z.infer<T> {
   const parsed = schema.safeParse(data);
   if (!parsed.success) {
-    console.error(parsed.error.format());
+    console.error(parsed.error.flatten());
     throw new Error(errMsg ?? "Réponse API invalide");
   }
   return parsed.data;

@@ -2,14 +2,7 @@ import React from "react";
 import { Button } from "components/ui/button";
 import { ScrollArea, ScrollBar } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
-import {
-  ChevronDown,
-  FilePlus,
-  FolderSearch,
-  Download,
-  Copy,
-  Trash,
-} from "lucide-react";
+import { ChevronDown, FilePlus, FolderSearch, Download, Copy, Trash } from "lucide-react";
 import { MapItem as MapItemComponent } from "components/ui/MapItem";
 import {
   DndContext,
@@ -19,11 +12,7 @@ import {
   useSensors,
   DragEndEvent,
 } from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 import type { MapItem } from "@/types/MapItem";
 
@@ -68,7 +57,6 @@ export const MapModule: React.FC<MapModuleProps> = ({
   onToggle,
   mapItems,
   selectedMapItemId,
-  setLoadMapOpen,
   onLoadMapDialog,
   onSelect,
   onRename,
@@ -84,9 +72,7 @@ export const MapModule: React.FC<MapModuleProps> = ({
   onReorder,
   onToggleExpand,
 }) => {
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -101,6 +87,9 @@ export const MapModule: React.FC<MapModuleProps> = ({
   }
 
   const visibleItems = getVisibleItems(mapItems);
+  const selectedItem = mapItems.find((i) => i.id === selectedMapItemId);
+  const isRootSelected = selectedItem?.isRoot === true;
+  const hasSelection = selectedMapItemId !== null;
 
   return (
     <div
@@ -133,17 +122,17 @@ export const MapModule: React.FC<MapModuleProps> = ({
       {isExpanded && (
         <>
           <div className="flex items-center justify-between gap-2 bg-[#d9d9d94c] rounded-[15px] mt-2 mx-[5px] py-1 px-1">
+            {/* ➕ Créer une rubrique */}
             <Button
               variant="ghost"
               className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
               onClick={onAdd}
               title="Créer une rubrique"
             >
-              <FilePlus
-                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
-                strokeWidth={2.5}
-              />
+              <FilePlus className="w-8 h-8 transition group-hover:scale-110" strokeWidth={2.5} />
             </Button>
+
+            {/* 📂 Charger une map */}
             <Button
               variant="ghost"
               className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
@@ -151,10 +140,12 @@ export const MapModule: React.FC<MapModuleProps> = ({
               title="Charger une map existante"
             >
               <FolderSearch
-                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
+                className="w-8 h-8 transition group-hover:scale-110"
                 strokeWidth={2.5}
               />
             </Button>
+
+            {/* 📄 Import Word */}
             <Button
               variant="ghost"
               className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
@@ -162,47 +153,57 @@ export const MapModule: React.FC<MapModuleProps> = ({
               title="Importer un document Word"
             >
               <img
-                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
+                className="w-8 h-8 transition group-hover:scale-110"
                 alt="Importer Word"
                 src="/word-import2.svg"
               />
             </Button>
+
+            {/* ⬇️ Charger une rubrique */}
             <Button
               variant="ghost"
               className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
               onClick={onLoad}
               title="Charger une rubrique existante"
             >
-              <Download
-                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
-                strokeWidth={2.5}
-              />
+              <Download className="w-8 h-8 transition group-hover:scale-110" strokeWidth={2.5} />
             </Button>
+
+            {/* 📄 Dupliquer */}
             <Button
               variant="ghost"
               className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
-              onClick={() => selectedMapItemId && onClone(selectedMapItemId)}
-              disabled={!selectedMapItemId}
-              title="Dupliquer la rubrique sélectionnée"
+              onClick={() => hasSelection && onClone(selectedMapItemId!)}
+              disabled={!hasSelection || isRootSelected}
+              title={
+                !hasSelection
+                  ? "Sélectionnez une rubrique à dupliquer"
+                  : isRootSelected
+                    ? "La racine documentaire ne peut pas être dupliquée"
+                    : "Dupliquer la rubrique sélectionnée"
+              }
             >
-              <Copy
-                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
-                strokeWidth={2.5}
-              />
+              <Copy className="w-8 h-8 transition group-hover:scale-110" strokeWidth={2.5} />
             </Button>
+
+            {/* 🗑️ Supprimer */}
             <Button
               variant="ghost"
-              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
-              onClick={() => selectedMapItemId && onDelete(selectedMapItemId)}
-              disabled={!selectedMapItemId}
-              title="Supprimer la rubrique sélectionnée"
+              className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-red-100/70 hover:text-red-700 group"
+              onClick={() => hasSelection && onDelete(selectedMapItemId!)}
+              disabled={!hasSelection || isRootSelected}
+              title={
+                !hasSelection
+                  ? "Sélectionnez une rubrique à supprimer"
+                  : isRootSelected
+                    ? "La racine documentaire ne peut pas être supprimée"
+                    : "Supprimer la rubrique sélectionnée"
+              }
             >
-              <Trash
-                className="w-8 h-8 transition group-hover:scale-110 group-hover:text-blue-700"
-                strokeWidth={2.5}
-              />
+              <Trash className="w-8 h-8 transition group-hover:scale-110" strokeWidth={2.5} />
             </Button>
           </div>
+
           {/* --- LISTE AVEC SCROLL --- */}
           <div style={{ maxHeight: "380px", overflowY: "auto" }}>
             <ScrollArea>
@@ -217,9 +218,7 @@ export const MapModule: React.FC<MapModuleProps> = ({
                 >
                   <div>
                     {visibleItems.map((item) => {
-                      const origIdx = mapItems.findIndex(
-                        (x) => x.id === item.id
-                      );
+                      const origIdx = mapItems.findIndex((x) => x.id === item.id);
                       return (
                         <MapItemComponent
                           key={item.id}

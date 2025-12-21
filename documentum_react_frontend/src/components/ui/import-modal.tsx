@@ -108,9 +108,7 @@ export const ImportModal = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [doublon, setDoublon] = useState<boolean>(false);
   const [existingImages, setExistingImages] = useState<string[]>([]);
-  const [selectedImageToReplace, setSelectedImageToReplace] = useState<
-    string | null
-  >(null);
+  const [selectedImageToReplace, setSelectedImageToReplace] = useState<string | null>(null);
 
   // Nommage des Médias et remplacement
   useEffect(() => {
@@ -122,7 +120,7 @@ export const ImportModal = ({
       }
 
       try {
-        const res = await api.get("/medias-check-nom/", {
+        const res = await api.get("/api/medias-check-nom/", {
           params: {
             produit: produitId,
             fonctionnalite: fonctionnaliteId,
@@ -140,10 +138,7 @@ export const ImportModal = ({
         setExistingImages(existing);
         setSelectedImageToReplace(null);
       } catch (err) {
-        console.error(
-          "❌ Erreur lors de la vérification du nom du média :",
-          err
-        );
+        console.error("❌ Erreur lors de la vérification du nom du média :", err);
         setNomMedia("ERREUR_GENERATION_NOM");
         setExistingImages([]);
       }
@@ -189,7 +184,7 @@ export const ImportModal = ({
   const handleConfirmClick = () => {
     if (selectedImageToReplace) {
       const confirmed = window.confirm(
-        `⚠️ Vous allez remplacer l’image "${selectedImageToReplace}".\n\nToutes les documentations qui utilisent cette image seront actualisées.\nAucune mise en arrière n’est possible.\n\nSouhaitez-vous confirmer ?`
+        `⚠️ Vous allez remplacer l’image "${selectedImageToReplace}".\n\nToutes les documentations qui utilisent cette image seront actualisées.\nAucune mise en arrière n’est possible.\n\nSouhaitez-vous confirmer ?`,
       );
       if (!confirmed) return;
     }
@@ -221,13 +216,7 @@ export const ImportModal = ({
 
     // --- Cas : import de média (image ou vidéo)
     if (context === "media") {
-      if (
-        !file ||
-        !produitId ||
-        !fonctionnaliteId ||
-        !interfaceId ||
-        !nomMedia
-      ) {
+      if (!file || !produitId || !fonctionnaliteId || !interfaceId || !nomMedia) {
         toast.error("Veuillez remplir tous les champs obligatoires.");
         return;
       }
@@ -332,9 +321,7 @@ export const ImportModal = ({
                   onDrop={handleDrop}
                   className="border border-dashed p-6 rounded text-center bg-gray-50"
                 >
-                  <p className="mb-2 text-gray-700">
-                    Glissez un fichier .csv ici
-                  </p>
+                  <p className="mb-2 text-gray-700">Glissez un fichier .csv ici</p>
                   <input
                     type="file"
                     accept=".csv"
@@ -385,8 +372,7 @@ export const ImportModal = ({
                         >
                           {rawData[0].map((_, idx) => (
                             <option key={idx} value={idx.toString()}>
-                              Colonne {idx + 1} ({rawData[0][idx]?.slice(0, 15)}
-                              )
+                              Colonne {idx + 1} ({rawData[0][idx]?.slice(0, 15)})
                             </option>
                           ))}
                         </select>
@@ -413,9 +399,7 @@ export const ImportModal = ({
                   </div>
 
                   <div className="mb-6">
-                    <h4 className="text-sm font-medium text-gray-600 mb-2">
-                      Aperçu du fichier :
-                    </h4>
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">Aperçu du fichier :</h4>
                     <div className="border rounded max-h-40 overflow-auto text-sm font-mono bg-white">
                       <table className="table-auto w-full">
                         <tbody>
@@ -434,11 +418,7 @@ export const ImportModal = ({
                   </div>
 
                   <div className="flex justify-end gap-4 mt-4">
-                    <Button
-                      className={"h-11 w-36"}
-                      variant="ghost"
-                      onClick={onClose}
-                    >
+                    <Button className={"h-11 w-36"} variant="ghost" onClick={onClose}>
                       Annuler
                     </Button>
                     <Button className={"h-11 w-36"} onClick={handleConfirm}>
@@ -466,8 +446,7 @@ export const ImportModal = ({
                     const f = e.target.files?.[0] || null;
                     setFile(f);
                     if (f) {
-                      const ext =
-                        f.name.split(".").pop()?.toLowerCase() || "jpg";
+                      const ext = f.name.split(".").pop()?.toLowerCase() || "jpg";
                       setFileExtension(ext);
                       setPreviewUrl(URL.createObjectURL(f));
                     }
@@ -475,10 +454,7 @@ export const ImportModal = ({
                   className="hidden"
                   id="media-file-input"
                 />
-                <label
-                  htmlFor="media-file-input"
-                  className="text-sm text-gray-600 cursor-pointer"
-                >
+                <label htmlFor="media-file-input" className="text-sm text-gray-600 cursor-pointer">
                   {file ? (
                     <span>{file.name}</span>
                   ) : (
@@ -490,19 +466,13 @@ export const ImportModal = ({
               {/* Aperçu image */}
               {previewUrl && (
                 <div className="flex justify-center mb-4">
-                  <img
-                    src={previewUrl}
-                    alt="Aperçu"
-                    className="max-h-40 rounded shadow border"
-                  />
+                  <img src={previewUrl} alt="Aperçu" className="max-h-40 rounded shadow border" />
                 </div>
               )}
 
               {/* Sélection produit */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Produit
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Produit</label>
                 <select
                   className="w-full border rounded px-2 py-1 text-sm"
                   value={produitId?.toString() || ""}
@@ -525,9 +495,7 @@ export const ImportModal = ({
                 <select
                   className="w-full border rounded px-2 py-1 text-sm"
                   value={fonctionnaliteId?.toString() || ""}
-                  onChange={(e) =>
-                    setFonctionnaliteId(parseInt(e.target.value))
-                  }
+                  onChange={(e) => setFonctionnaliteId(parseInt(e.target.value))}
                 >
                   <option value="">Sélectionner une fonctionnalité</option>
                   {fonctionnalites
@@ -574,15 +542,11 @@ export const ImportModal = ({
               )}
 
               {/* Affichage de l'extension de composant si image existante */}
-              {nomMedia?.match(
-                new RegExp(`-\\d{3}\\.${fileExtension}$`, "i")
-              ) &&
+              {nomMedia?.match(new RegExp(`-\\d{3}\\.${fileExtension}$`, "i")) &&
                 parseInt(nomMedia.split("-").pop()?.split(".")[0] || "0") > 1 &&
                 existingImages.length > 0 && (
                   <div className="mt-6 border-l pl-4 max-h-64 overflow-y-auto">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                      Images existantes
-                    </h3>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Images existantes</h3>
                     <div className="grid grid-cols-2 gap-2">
                       {existingImages.map((imgName) => (
                         <div
@@ -592,7 +556,7 @@ export const ImportModal = ({
                             "cursor-pointer border rounded p-1 transition hover:shadow-md",
                             selectedImageToReplace === imgName
                               ? "border-blue-500 ring-2 ring-blue-300"
-                              : "border-gray-300"
+                              : "border-gray-300",
                           )}
                         >
                           <img
@@ -609,11 +573,7 @@ export const ImportModal = ({
 
               {/* Boutons */}
               <div className="flex justify-end gap-4 mt-4">
-                <Button
-                  className={"h-11 w-36"}
-                  variant="ghost"
-                  onClick={onClose}
-                >
+                <Button className={"h-11 w-36"} variant="ghost" onClick={onClose}>
                   Annuler
                 </Button>
                 <Button

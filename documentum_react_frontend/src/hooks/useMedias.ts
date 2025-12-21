@@ -30,7 +30,7 @@ export const useMedias = ({ produitId, fonctionnaliteCode, interfaceCode, search
     setError(null)
 
     try {
-      const res = await api.get<MediaItem[]>("/media-items/")
+      const res = await api.get<MediaItem[]>("/api/media-items/")
       let results = res.data
 
       // 🔎 Filtres simulés côté client

@@ -16,7 +16,7 @@ export type UseEditorDialogsApi = {
 
 const useEditorDialogs = (deps: {
   getXml: (id: number) => string | null;
-  selectedMapItemId: number | null;
+  rubriqueId: number | null;
   toast: typeof import("sonner").toast;
 }) => {
   // États internes
@@ -47,9 +47,9 @@ const useEditorDialogs = (deps: {
 
   // Validation XML
   const validateXml = useCallback(() => {
-    const { getXml, selectedMapItemId, toast } = deps;
-    if (!selectedMapItemId) return;
-    const xmlString = getXml(selectedMapItemId);
+    const { getXml, rubriqueId, toast } = deps;
+    if (!rubriqueId) return;
+    const xmlString = getXml(rubriqueId);
     if (!xmlString || typeof xmlString !== "string" || xmlString.trim() === "") {
       toast.error("Aucun contenu XML à valider.");
       return;

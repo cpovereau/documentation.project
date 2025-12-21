@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { ProjectItem } from "types/ProjectItem";
+import type { ProjectDTO } from "@/types/ProjectDTO";
 import { Button } from "components/ui/button";
 import { ScrollArea, ScrollBar } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
@@ -30,7 +30,7 @@ export interface ProjectModuleProps {
   isExpanded: boolean;
   onToggle: () => void;
   sidebarExpanded: boolean;
-  projects: ProjectItem[];
+  projects: ProjectDTO[];
   selectedProjectId: number | null;
   onSelect: (projectId: number) => void;
   onAdd: () => void;
@@ -82,9 +82,7 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
   const handleExport = async () => {
     if (!selectedFormat || !selectedProjectId) return;
     try {
-      console.log(
-        `Export du projet ${selectedProjectId} au format ${selectedFormat}`
-      );
+      console.log(`Export du projet ${selectedProjectId} au format ${selectedFormat}`);
       toast.success(`Export lancé au format ${selectedFormat}`);
       setShowExportCard(false); // ⬅️ fermeture automatique après succès
     } catch (error) {
@@ -203,14 +201,10 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
                     onClick={() => onSelect(project.id)}
                   >
                     <div className="font-['Roboto',Helvetica] font-normal text-black text-xs tracking-[0] leading-normal">
-                      {project.title}{" "}
-                      <span className="italic">({project.gamme})</span>
+                      {project.nom} <span className="italic"></span>
                     </div>
                     {selectedProjectId === project.id && (
-                      <div
-                        className="absolute w-6 h-6 top-0 right-0"
-                        aria-label="Projet actif"
-                      />
+                      <div className="absolute w-6 h-6 top-0 right-0" aria-label="Projet actif" />
                     )}
                   </div>
                 ))}
@@ -228,33 +222,18 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
             <div className="mt-3 mx-[5px]">
               <Card>
                 <CardContent>
-                  <div className="font-bold text-sm mb-2">
-                    Publier le projet
-                  </div>
+                  <div className="font-bold text-sm mb-2">Publier le projet</div>
                   <div className="text-xs text-muted-foreground mb-3">
                     Choisissez le format de sortie et lancez la publication.
                   </div>
-                  <Select
-                    value={selectedFormat}
-                    onValueChange={setSelectedFormat}
-                  >
+                  <Select value={selectedFormat} onValueChange={setSelectedFormat}>
                     <SelectTrigger>
                       <SelectValue placeholder="Sélectionner un format de sortie">
                         {selectedFormat &&
-                          EXPORT_OPTIONS.find(
-                            (opt) => opt.value === selectedFormat
-                          ) && (
+                          EXPORT_OPTIONS.find((opt) => opt.value === selectedFormat) && (
                             <div className="flex items-center">
-                              {
-                                EXPORT_OPTIONS.find(
-                                  (opt) => opt.value === selectedFormat
-                                )?.icon
-                              }
-                              {
-                                EXPORT_OPTIONS.find(
-                                  (opt) => opt.value === selectedFormat
-                                )?.label
-                              }
+                              {EXPORT_OPTIONS.find((opt) => opt.value === selectedFormat)?.icon}
+                              {EXPORT_OPTIONS.find((opt) => opt.value === selectedFormat)?.label}
                             </div>
                           )}
                       </SelectValue>
