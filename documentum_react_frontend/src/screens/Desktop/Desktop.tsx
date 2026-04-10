@@ -3,7 +3,7 @@ import { TopBar } from "components/ui/TopBar";
 import { LeftSidebar } from "components/ui/LeftSidebar";
 import { RightSidebar } from "components/ui/RightSidebar";
 import { CentralEditor } from "components/ui/CentralEditor";
-import type { MapItem } from "@/types/MapItem";
+import useSelectionStore from "@/store/selectionStore";
 
 export const Desktop: React.FC = () => {
   const [isLeftSidebarExpanded, setIsLeftSidebarExpanded] = useState(true);
@@ -12,11 +12,12 @@ export const Desktop: React.FC = () => {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previousLeftSidebarState, setPreviousLeftSidebarState] = useState(true);
   const [previousRightSidebarState, setPreviousRightSidebarState] = useState(true);
-  const [mapItems, setMapItems] = useState<MapItem[]>([]);
-  const [selectedMapItemId, setSelectedMapItemId] = useState<number | null>(null);
 
   const [visibleDockEditor, setVisibleDockEditor] = useState<"question" | "exercice" | null>(null);
   const [dockEditorHeight, setDockEditorHeight] = useState(250);
+
+  // 🎯 Source de vérité unique pour la rubrique active
+  const selectedRubriqueId = useSelectionStore((s) => s.selectedRubriqueId);
 
   const togglePreviewMode = () => {
     if (!isPreviewMode) {
@@ -38,12 +39,6 @@ export const Desktop: React.FC = () => {
     }
   };
 
-  const handleToggleExpandMapNode = (itemId: number, expand: boolean) => {
-    setMapItems((prev) =>
-      prev.map((item) => (item.id === itemId ? { ...item, expanded: expand } : item)),
-    );
-  };
-
   const handleResizeDockEditorHeight = (newHeight: number) => {
     setDockEditorHeight(newHeight);
   };
@@ -56,21 +51,14 @@ export const Desktop: React.FC = () => {
     setVisibleDockEditor((prev) => (prev === "exercice" ? null : "exercice"));
   };
 
-  const selectedMapItem = mapItems.find((item) => item.id === selectedMapItemId);
-
-  const selectedRubriqueId = selectedMapItem?.rubriqueId ?? null;
-
   return (
     <div className="bg-white flex flex-col h-screen w-full">
       <TopBar currentScreen="desktop" />
       <div className="flex flex-row flex-1 min-h-0 relative overflow-hidden">
         <LeftSidebar
-          selectedMapItemId={selectedMapItemId}
-          setSelectedMapItemId={setSelectedMapItemId}
           isExpanded={isLeftSidebarExpanded}
           onToggle={() => !isPreviewMode && setIsLeftSidebarExpanded(!isLeftSidebarExpanded)}
           className="z-40"
-          onToggleExpand={handleToggleExpandMapNode}
         />
         <div
           className="flex-1 z-0 flex flex-col min-h-0 h-full"

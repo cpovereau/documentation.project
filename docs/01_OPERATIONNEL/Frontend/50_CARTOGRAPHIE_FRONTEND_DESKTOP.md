@@ -48,35 +48,35 @@
 - **États locaux critiques** :
   - Affichage sidebars (expansion/flottant)
   - Mode aperçu (`isPreviewMode`)
-  - Sélection mapItem (`selectedMapItemId`)
   - État dock Editor (question/exercice)
   - Hauteur dock Editor
-  - Liste des MapItems (stockage local d’un tableau de MapItem)
-- **Propriétaire réel** : tous ces états sont locaux à Desktop et passés en props descendantes.
-- **Rôle fonctionnel** : gestion d’affichage/layout et de la navigation UI (jamais la donnée métier brute ni sa persistance).
-- **Dépendances principales** :  
-  Aucun context Zustand ou React directement importé/utilisé ici ; toute la centralisation/réactivité se fait en local.
+- **Store Zustand** :
+  - `useSelectionStore` → `selectedRubriqueId` : passé en prop `rubriqueId` à `CentralEditor` ✅ (Lot 1)
+- **Propriétaire réel** : états layout locaux à Desktop ; sélection rubrique centralisée dans `selectionStore`.
+- **Rôle fonctionnel** : orchestration du layout uniquement — aucune logique métier, aucun appel API.
 
 ---
 
 ## 5. DTO manipulés
 
 - **DTO consommés** :
-  - `MapItem[]` : type stocké localement (fiche de la map éditoriale)
-  - `selectedMapItemId: number | null`
-- **DTO produits** :
-  - Uniquement en local (états d’UI).
-- **Transformations locales appliquées** :
-  - Mise à jour de propriété `expanded` d’un item (dans `handleToggleExpandMapNode`)
-- **DTO polyvalents / mal alignés** :
-  - Impossible à évaluer sans voir les détails backend/DTOs métier.
+  - `selectedRubriqueId: number | null` — lu depuis `useSelectionStore`, passé à `CentralEditor`
+- **DTO produits** : aucun.
+- **Transformations locales** : aucune — Desktop ne transforme pas de données métier.
 
 ---
 
 ## 6. Écarts avec le backend canonique
 
-- Aucune logique d’appel backend ni transformation de données métier dans `Desktop.tsx` — toute divergence ou logique compensatoire doit être recherchée dans les sous-composants ou hooks associés.
-- Possibles confusions entre structure (arborescence de map) et contenu éditorial, mais non visible à ce niveau.
+Aucun appel backend direct dans `Desktop.tsx`.
+
+### ~~Bug A — `mapItems` toujours vide → `selectedRubriqueId` toujours null~~ ✅ Résolu Lot 1
+
+État `mapItems` et calcul local `selectedRubriqueId` supprimés. Desktop lit désormais `selectedRubriqueId` directement depuis `useSelectionStore` et le passe en prop à `CentralEditor`. `CentralEditor` reçoit le vrai identifiant rubrique.
+
+### ~~Bug B — `handleToggleExpandMapNode` jamais invoqué~~ ✅ Résolu Lot 1
+
+Handler mort supprimé. `LeftSidebar` gère son expansion localement via `toggleMapExpand`.
 
 ---
 
@@ -92,7 +92,15 @@
 
 ## 8. Verdict architectural
 
-- 🟢 Conforme — orchestrateur d’UI uniquement, sans responsabilité métier ni dépendance directe au backend.
+🟢 **Conforme — orchestrateur UI pur, chaîne de sélection fonctionnelle**
+
+1. ✅ `selectedRubriqueId` lu depuis `useSelectionStore` → `CentralEditor` alimenté correctement (Lot 1)
+2. ✅ Handlers morts (`handleToggleExpandMapNode`, état `mapItems`) supprimés (Lot 1)
+3. ✅ Aucun état mort résiduel confirmé à l’audit Lot 4 (2026-04-10)
+
+Desktop est un orchestrateur de layout sans logique métier ni appel API direct. Son rôle est bien délimité.
+
+> Mise à jour 2026-04-10 — Lot 4 (audit confirmé propre)
 
 ---
 

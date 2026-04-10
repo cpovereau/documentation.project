@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { ProjectDTO } from "@/types/ProjectDTO";
+import { PUBLISH_FORMATS } from "@/api/maps";
 import { Button } from "components/ui/button";
 import { ScrollArea, ScrollBar } from "components/ui/scroll-area";
 import { Separator } from "components/ui/separator";
@@ -10,11 +11,6 @@ import {
   Copy,
   Trash,
   Upload,
-  FileText,
-  Globe,
-  GraduationCap,
-  FileDown,
-  Settings2,
 } from "lucide-react";
 import { Card, CardContent } from "components/ui/card";
 import {
@@ -24,7 +20,6 @@ import {
   SelectContent,
   SelectItem,
 } from "components/ui/select";
-import { toast } from "sonner";
 
 export interface ProjectModuleProps {
   isExpanded: boolean;
@@ -38,29 +33,10 @@ export interface ProjectModuleProps {
   onClone: (projectId: number) => void;
   onDelete: (projectId: number) => void;
   onPublish: (projectId: number) => void;
+  onExport: (format: string) => Promise<void>;
   showExportCard: boolean;
   setShowExportCard: (visible: boolean) => void;
 }
-
-const EXPORT_OPTIONS = [
-  { value: "PDF", label: "PDF", icon: <FileText className="w-4 h-4 mr-2" /> },
-  { value: "Web", label: "Web Help", icon: <Globe className="w-4 h-4 mr-2" /> },
-  {
-    value: "Moodle",
-    label: "Moodle",
-    icon: <GraduationCap className="w-4 h-4 mr-2" />,
-  },
-  {
-    value: "Fiche",
-    label: "Fiche Pratique",
-    icon: <FileDown className="w-4 h-4 mr-2" />,
-  },
-  {
-    value: "Personnalise",
-    label: "Export personnalisé (XSLT)",
-    icon: <Settings2 className="w-4 h-4 mr-2" />,
-  },
-];
 
 export const ProjectModule: React.FC<ProjectModuleProps> = ({
   isExpanded,
@@ -74,20 +50,22 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
   onClone,
   onDelete,
   onPublish,
+  onExport,
   showExportCard,
   setShowExportCard,
 }) => {
   const [selectedFormat, setSelectedFormat] = useState<string>("");
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const handleExport = async () => {
     if (!selectedFormat || !selectedProjectId) return;
+    setIsPublishing(true);
     try {
-      console.log(`Export du projet ${selectedProjectId} au format ${selectedFormat}`);
-      toast.success(`Export lancé au format ${selectedFormat}`);
-      setShowExportCard(false); // ⬅️ fermeture automatique après succès
-    } catch (error) {
-      console.error("Error during project export:", error);
-      toast.error("Erreur lors de la publication");
+      await onExport(selectedFormat);
+      setShowExportCard(false);
+      setSelectedFormat("");
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -230,21 +208,17 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
                     <SelectTrigger>
                       <SelectValue placeholder="Sélectionner un format de sortie">
                         {selectedFormat &&
-                          EXPORT_OPTIONS.find((opt) => opt.value === selectedFormat) && (
-                            <div className="flex items-center">
-                              {EXPORT_OPTIONS.find((opt) => opt.value === selectedFormat)?.icon}
-                              {EXPORT_OPTIONS.find((opt) => opt.value === selectedFormat)?.label}
-                            </div>
+                          PUBLISH_FORMATS.find((opt) => opt.value === selectedFormat) && (
+                            <span>
+                              {PUBLISH_FORMATS.find((opt) => opt.value === selectedFormat)?.label}
+                            </span>
                           )}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {EXPORT_OPTIONS.map(({ value, label, icon }) => (
+                      {PUBLISH_FORMATS.map(({ value, label }) => (
                         <SelectItem key={value} value={value}>
-                          <div className="flex items-center">
-                            {icon}
-                            {label}
-                          </div>
+                          {label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -252,9 +226,9 @@ export const ProjectModule: React.FC<ProjectModuleProps> = ({
                   <Button
                     className="ht-11 mt-3 w-full"
                     onClick={handleExport}
-                    disabled={!selectedFormat}
+                    disabled={!selectedFormat || isPublishing}
                   >
-                    Publier
+                    {isPublishing ? "Publication en cours…" : "Publier"}
                   </Button>
                   <Button
                     variant="ghost"

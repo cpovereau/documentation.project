@@ -10,9 +10,18 @@ export function useEditorShortcuts(
   inputSourceRef: RefObject<string | null>
 ) {
   useEffect(() => {
-    if (!editor || rubriqueId === null || !editor.view?.dom) return;
+    if (!editor || rubriqueId === null) return;
 
-    const dom = editor.view.dom;
+    // editor.view est un getter TipTap qui throw si la vue n'est pas encore
+    // attachée au DOM (ex : transition rubriqueId → re-création de l'éditeur).
+    // L'optional chaining ?. ne protège pas contre les erreurs levées.
+    let dom: HTMLElement;
+    try {
+      dom = editor.view.dom;
+    } catch {
+      return;
+    }
+    if (!dom) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (inputSourceRef.current === "voice") return;

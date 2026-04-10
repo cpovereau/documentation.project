@@ -26,8 +26,13 @@
 - Aucun hook métier dédié (logique intégrée)
 
 **Stores Zustand :**
-- `useProjectStore` : `selectedProjectId`, `setSelectedProjectId`
-- `useXmlBufferStore` : `setXml`, `getXml`, `getStatus` (vérification modifications non sauvegardées)
+- `useProjectStore` : `selectedProjectId` (via `useSelectedVersion()`), `setSelectedProjectId` (accès direct setter)
+- `useXmlBufferStore` : `setXml`, `getXml`, `getStatus`
+- `useSelectionStore` : `selectedMapItemId`, `selectedRubriqueId`, `setSelection`, `clearSelection` ✅ (Lot 1)
+
+**Hooks délégués :**
+- `useSelectedVersion()` : source unique de `selectedProjectId`
+- `useNewRubriqueXml()` : génération XML template rubrique — encapsule `useSelectedProduct` + payload DITA ✅ (Lot 4)
 
 **DTO manipulés :**
 - `ProjectDTO` : lecture (liste projets, chargement projet)
@@ -35,15 +40,18 @@
 - `MapItem` : transformation UI (dérivé de `MapRubriqueDTO` via `mapRubriquesToMapItems`)
 - `ProjectMap` : lecture (maps associées à un projet)
 
-**Services API :**
-- `api.get('/api/projets/{id}/')` : chargement projet
-- `api.get('/api/projets/{id}/structure/')` : structure map active
-- `api.post('/api/maps/{mapId}/create-rubrique/')` : création rubrique + rattachement map
-- `listMapRubriques(mapId)` : liste rubriques d’une map
-- `api.post('/api/map-rubriques/{id}/indent/')` : indentation
-- `api.post('/api/map-rubriques/{id}/outdent/')` : désindentation
-- `api.post('/api/maps/{mapId}/reorder/')` : réorganisation drag & drop
-- `prepareNewRubriqueXml()` : génération XML initial
+**Services API (état réel au 2026-04-10, Lots 1–5) :**
+- `api.get(‘/api/projets/{id}/’)` : chargement projet ✅
+- `api.get(‘/api/projets/{id}/structure/’)` : structure map active ✅
+- `api.delete(‘/api/projets/{id}/’)` : suppression projet ✅ (Lot 3)
+- `api.post(‘/api/maps/{id}/structure/create/’)` : création rubrique + rattachement map ✅ (Sprint 4)
+- `listMapRubriques(mapId)` → `GET /api/maps/{id}/structure/` ✅ (migré Lot 2)
+- `api.patch(‘/api/rubriques/{id}/’, { titre })` : renommage rubrique ✅ (Lot 3)
+- `publishMap(mapId, format)` → `POST /api/publier-map/{map_id}/` ✅ (Lot 5)
+- `api.post(‘/api/maps/{id}/structure/{mr_id}/indent/’)` : indentation ✅ (Sprint 4)
+- `api.post(‘/api/maps/{id}/structure/{mr_id}/outdent/’)` : désindentation ✅ (Sprint 4)
+- `api.post(‘/api/maps/{id}/structure/reorder/’)` : réorganisation drag & drop ✅ (Sprint 4)
+- `generateRubriqueXml()` via `useNewRubriqueXml` hook : génération XML initial — externalisé hors de LeftSidebar ✅ (Lot 4)
 
 ### 3. Flux métier principaux
 
@@ -62,27 +70,32 @@
 - Déclencheur : clic "Ajouter rubrique" → `handleAddMapItem()`
 - Étapes :
   1. Calcul parent : `getInsertionParentId()` (logique métier)
-  2. Génération XML : `prepareNewRubriqueXml()` (template DITA)
-  3. Création backend : `POST /api/maps/{mapId}/create-rubrique/` (rubrique + rattachement)
-  4. Rechargement : `listMapRubriques(mapId)` → `setMapRubriques`
-  5. Sélection différée : `setPendingSelectId(createdId)`
-- Effet : `useEffect` sur `mapRubriques` + `pendingSelectId` sélectionne la nouvelle rubrique
+  2. Génération XML : `prepareNewRubriqueXml()` (template DITA) — ⚠️ logique contenu dans composant structure
+  3. Création backend : `POST /api/maps/{id}/structure/create/` ✅ (route canonique, migré Sprint 4)
+  4. Rechargement : `listMapRubriques(mapId)` → `GET /api/maps/{id}/structure/` → `setMapRubriques` ✅ (Lot 2)
+  5. Sélection différée : `setPendingSelectId(createdId)` → `selectionStore.setSelection()` (Lot 1)
 
 **Flux 3 : Sélection d’une rubrique**
 - Déclencheur : clic rubrique → `handleSelectMapItem(id)`
-- Vérification : `hasUnsavedChanges` (garde-fou)
-- Si OK : `setSelectedMapItemId(id)` → propagation à `Desktop` → `CentralEditor`
+- Vérification : `hasUnsavedChanges` (garde-fou — actif depuis Lot 1)
+- Si OK : `selectMapItem(id)` → `selectionStore.setSelection({ mapItemId, rubriqueId })` → Desktop lit `selectedRubriqueId` depuis store → `CentralEditor` reçoit `rubriqueId` réel ✅ (Lot 1)
 - Effet : `useEffect` initialise le buffer XML si absent
 
 **Flux 4 : Réorganisation (drag & drop)**
 - Déclencheur : drag & drop dans `MapModule` → `handleReorder(orderedIds)`
-- Backend : `POST /api/maps/{mapId}/reorder/` avec `ordered_ids`
-- Rechargement : `listMapRubriques(mapId)` → `setMapRubriques`
+- Backend : `POST /api/maps/{id}/structure/reorder/` avec `{ orderedIds }` ✅ (Sprint 4)
+- Rechargement : `listMapRubriques(mapId)` → `GET /api/maps/{id}/structure/` ✅ (Lot 2)
 
 **Flux 5 : Indentation / Désindentation**
 - Déclencheur : boutons indenter/désindenter → `handleIndent/Outdent(mapRubriqueId)`
-- Backend : `POST /api/map-rubriques/{id}/indent|outdent/`
-- Rechargement : `listMapRubriques(mapId)`
+- Backend : `POST /api/maps/{id}/structure/{mr_id}/indent|outdent/` ✅ (Sprint 4)
+- Rechargement : `listMapRubriques(mapId)` → `GET /api/maps/{id}/structure/` ✅ (Lot 2)
+
+**Flux 6 : Publication**
+- Déclencheur : bouton "Publier" (ProjectModule) → `onPublish(projectId)` → `setShowExportCard(true)` ; choix format → bouton "Publier" → `onExport(format)`
+- Logique (LeftSidebar.handleExport) : détermine map cible depuis `projectMaps` via règle `is_master`, puis appelle `publishMap(mapId, format)` ✅ (Lot 5)
+- Backend : `POST /api/publier-map/{map_id}/` — payload `{ format }` — réponse `{ status, message, map?, rubriques_count?, format? }`
+- Feedback : toast succès (`result.message`) ou toast erreur (message backend ou générique)
 
 ### 4. Contrats de données (DTO)
 
@@ -121,12 +134,18 @@
 
 ### 6. Points de vigilance / dette potentielle
 
-- Double source de vérité : `selectedProjectId` via `useSelectedVersion` et `useProjectStore` (debug présent)
-- Cache projets : gestion locale non synchronisée avec backend
-- Transformation MapRubriqueDTO → MapItem : logique dans `mapMappers.ts`, dépendance implicite
-- Gestion d’erreurs : certains appels API sans gestion explicite
-- État local : `mapItems` dérivé de `mapRubriques`, risque de désynchronisation
-- Clonage projets : logique frontend uniquement (non persisté backend)
+- ~~**Bug BLOQUANT** : `selectedMapItemId` local toujours null~~ → ✅ Résolu Lot 1
+- ~~**Bug BLOQUANT** : `Desktop.mapItems` jamais alimenté~~ → ✅ Résolu Lot 1
+- ~~Route `listMapRubriques` legacy~~ → ✅ Résolu Lot 2
+- ~~Rename rubrique local~~ → ✅ Résolu Lot 3
+- ~~Suppression projet locale~~ → ✅ Résolu Lot 3
+- ~~Publication non implémentée~~ → ✅ Résolu Lot 5
+- ~~Double lecture `selectedProjectId`~~ → ✅ Vérifié Lot 4 — pas de double lecture (fausse alerte)
+- ~~`getProjectDetailsValidated` préfixe manquant~~ → ✅ Vérifié Lot 4 — route correcte (fausse alerte)
+- ~~`prepareNewRubriqueXml` dans LeftSidebar~~ → ✅ Extrait dans `useNewRubriqueXml` hook (Lot 4)
+- ~~Log debug production~~ → ✅ Supprimé Lot 4
+- Delete/clone rubrique : hors scope v1 (toast)
+- Clone projet : hors scope v1 (toast)
 
 ---
 
@@ -490,11 +509,12 @@ Desktop
 
 - `useProjectStore` : `selectedProjectId` (consommé par `LeftSidebar`, `Desktop`)
 - `useXmlBufferStore` : buffer XML rubriques (consommé par `LeftSidebar`, `CentralEditor`)
+- `useSelectionStore` : sélection map courante — `selectedMapItemId` + `selectedRubriqueId` (écrit par `LeftSidebar`, lu par `Desktop` → `CentralEditor`)
 
 ## Points d’intégration critiques
 
-1. Sélection rubrique : `LeftSidebar` → `Desktop` → `CentralEditor` (via `rubriqueId`)
-2. Protection modifications : `CentralEditor` (statut buffer) → `LeftSidebar` (garde-fou)
+1. Sélection rubrique : `LeftSidebar` → `selectionStore` → `Desktop` → `CentralEditor` (via `rubriqueId`) — ✅ câblé Lot 1
+2. Protection modifications : `CentralEditor` (statut buffer `xmlBufferStore`) → `LeftSidebar` (garde-fou via `selectedRubriqueId` du `selectionStore`) — ✅ actif Lot 1
 3. Buffer XML : `LeftSidebar` (initialisation) ↔ `CentralEditor` (lecture/écriture)
 
 ---

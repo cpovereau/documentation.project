@@ -1,5 +1,7 @@
 # Cartographie Frontend — `LeftSidebar`
 
+> **Dernière mise à jour** : 2026-04-10 — Réalignement post-Sprint 4 backend + audit complet exécution
+
 ---
 
 ## 1. Rôle fonctionnel réel
@@ -10,78 +12,82 @@ Responsabilités observées :
 - Chargement et affichage de la liste des projets (état local `projects`)
 - Chargement et affichage de la structure d'une map (rubriques) via `mapRubriques` → transformation en `mapItems` pour l'UI
 - Gestion de la sélection projet/map/rubrique
-- Protection contre la perte de modifications non sauvegardées (vérification via `useXmlBufferStore.getStatus()`)
+- Protection contre la perte de modifications non sauvegardées (vérification via `useXmlBufferStore.getStatus()`) — **⚠️ garde cassé, voir §6**
 - Initialisation du buffer XML pour chaque rubrique de la map (XML vide si absent)
-- Création de rubriques dans la map (endpoint `/api/maps/{mapId}/create-rubrique/`)
-- Opérations structurelles : indentation, désindentation, réordonnancement (endpoints appelés mais non implémentés backend)
+- Création de rubriques dans la map (endpoint canonique `/api/maps/{mapId}/structure/create/`)
+- Opérations structurelles : indentation, désindentation, réordonnancement (routes canoniques Sprint 4)
 - Délégation de l'affichage visuel à `ProjectModule` et `MapModule`
 
-**Écart éventuel** : Aucun écart identifié entre le rôle observé et le rôle théorique attendu.
+**Mélange de responsabilités constaté** :
+- Génération XML template (`prepareNewRubriqueXml`) dans le composant de structure → logique de contenu dans LeftSidebar
+- Initialisation buffer XML pour nouvelles rubriques → frontière structure/contenu
 
 ---
 
 ## 2. Flux métier pris en charge
 
-| Flux | Déclencheur UI | Hook / Contexte | DTO | Endpoint actuel | Endpoint cible |
-|------|----------------|-----------------|-----|-----------------|----------------|
-| Chargement structure projet | `useEffect` sur `selectedProjectId` | `useSelectedVersion`, `useProjectStore` | `MapRubriqueDTO[]` | `GET /api/projets/{id}/structure/` | `GET /api/projets/{id}/structure/` |
-| Ouverture projet | `handleSelect`, `openProject` | `useProjectStore` | `ProjectDTO` | `GET /api/projets/{id}/` | `GET /api/projets/{id}/` |
-| Ouverture map | `openMap` | État local | `MapRubriqueDTO[]` | `GET /api/maps/{id}/rubriques/` (via `listMapRubriques`) | `GET /api/maps/{id}/structure/` |
-| Création rubrique | `handleAddMapItem` | `useSelectedProduct`, `useSelectedVersion` | `MapRubriqueDTO` | `POST /api/maps/{mapId}/create-rubrique/` | `POST /api/maps/{id}/structure/create/` |
-| Indentation rubrique | `handleIndent` | État local | - | `POST /api/map-rubriques/{id}/indent/` | `POST /api/maps/{id}/structure/{mapRubriqueId}/indent` |
-| Désindentation rubrique | `handleOutdent` | État local | - | `POST /api/map-rubriques/{id}/outdent/` | `POST /api/maps/{id}/structure/{mapRubriqueId}/outdent` |
-| Réordonnancement | `handleReorder` | État local | - | `POST /api/maps/{mapId}/reorder/` | `POST /api/maps/{id}/structure/reorder/` |
-| Sélection rubrique | `handleSelectMapItem` | Props `setSelectedMapItemId` | - | - | - |
+| Flux | Déclencheur UI | Hook / Contexte | DTO | Endpoint réel | Conforme canon ? |
+|------|----------------|-----------------|-----|---------------|-----------------|
+| Chargement structure projet | `useEffect` sur `selectedProjectId` | `useSelectedVersion`, `useProjectStore` | `MapRubriqueDTO[]` | `GET /api/projets/{id}/structure/` | ✅ |
+| Ouverture projet | `handleSelect`, `openProject` | `useProjectStore` | `ProjectDTO` | `GET /api/projets/{id}/` | ✅ |
+| Ouverture map | `openMap` | État local | `MapRubriqueDTO[]` | `GET /api/maps/{id}/structure/` (via `listMapRubriques`) | ✅ |
+| Création rubrique | `handleAddMapItem` | `useSelectedProduct`, `useSelectedVersion` | `MapRubriqueDTO` | `POST /api/maps/{id}/structure/create/` | ✅ |
+| Indentation rubrique | `handleIndent` | État local | — | `POST /api/maps/{id}/structure/{mr_id}/indent/` | ✅ |
+| Désindentation rubrique | `handleOutdent` | État local | — | `POST /api/maps/{id}/structure/{mr_id}/outdent/` | ✅ |
+| Réordonnancement | `handleReorder` | État local | — | `POST /api/maps/{id}/structure/reorder/` | ✅ |
+| Sélection rubrique | `handleSelectMapItem` | `useSelectionStore` | — | Aucun | ✅ |
+| Renommage rubrique | `handleRenameSave` | `mapRubriques` (dérive `rubriqueId`) | `{ titre }` | `PATCH /api/rubriques/{id}/` puis rechargement structure | ✅ Lot 3 |
+| Suppression rubrique | `handleDeleteMapItem` | — | — | **Hors scope v1** — backend bloque DELETE si en map, pas d'endpoint détachement | ⚠️ toast |
+| Clonage rubrique | `handleCloneMapItem` | — | — | **Hors scope v1** — pas d'endpoint clone rubrique | ⚠️ toast |
+| Suppression projet | `handleDelete` | `useProjectStore` | — | `DELETE /api/projets/{id}/` + reset état map | ✅ Lot 3 |
+| Clonage projet | `handleClone` | — | — | **Hors scope v1** — pas d'endpoint clone projet | ⚠️ toast |
 
 ---
 
 ## 3. Appels backend effectués
 
 ### 3.1. `GET /api/projets/{projectId}/`
-- **Responsabilité métier réelle** : Chargement d'un projet (fallback si absent du cache local)
-- **Conformité avec le référentiel backend** : 🟢 Conforme
-- **Usage** : Ligne 338, dans `openProject()` en fallback
+- **Responsabilité** : Chargement d'un projet (fallback si absent du cache local)
+- **Conformité** : ✅ Conforme
+- **Usage** : dans `openProject()` fallback
 
 ### 3.2. `GET /api/projets/{projectId}/structure/`
-- **Responsabilité métier réelle** : Chargement de la structure documentaire complète (projet + map master + structure MapRubrique)
-- **Conformité avec le référentiel backend** : 🟢 Conforme
-- **Usage** : Ligne 455, dans `useEffect` synchronisé avec `selectedProjectId`
+- **Responsabilité** : Chargement de la structure documentaire complète
+- **Conformité** : ✅ Conforme
 - **Réponse attendue** : `{ projet, map: { id }, structure: MapRubriqueDTO[] }`
+- **Usage** : `useEffect` synchronisé sur `selectedProjectId`
 
-### 3.3. `GET /api/maps/{mapId}/rubriques/` (via `listMapRubriques()`)
-- **Responsabilité métier réelle** : Chargement de la structure d'une map spécifique
-- **Conformité avec le référentiel backend** : 🟡 Toléré temporairement
-- **Usage** : Lignes 301, 381, 409, 421, 438
-- **Note** : Endpoint cible canonique : `GET /api/maps/{id}/structure/`
+### 3.3. `GET /api/maps/{mapId}/structure/` (via `listMapRubriques()`)
+- **Responsabilité** : Rechargement de la structure d'une map après opération
+- **Conformité** : ✅ **Conforme** — migré Lot 2 (2026-04-10)
+- **Usage** : `openMap`, `handleAddMapItem`, `handleIndent`, `handleOutdent`, `handleReorder`
+- **Note** : `listMapRubriques()` dans `src/api/maps.ts` cible `/structure/`. Aucun appel à `/rubriques/` ne subsiste. DTO inchangé (`MapRubriqueDTO` correspond exactement à `MapRubriqueStructureSerializer`).
 
-### 3.4. `POST /api/maps/{mapId}/create-rubrique/`
-- **Responsabilité métier réelle** : Création atomique d'une rubrique + rattachement à la map
-- **Conformité avec le référentiel backend** : 🟡 Toléré temporairement
-- **Usage** : Ligne 292, dans `handleAddMapItem()`
+### 3.4. `POST /api/maps/{mapId}/structure/create/`
+- **Responsabilité** : Création atomique d'une rubrique + rattachement à la map
+- **Conformité** : ✅ Conforme (migré Sprint 4)
 - **Payload** : `{ titre, contenu_xml, parent }`
-- **Note** : Endpoint cible canonique : `POST /api/maps/{id}/structure/create/`
 
-### 3.5. `POST /api/map-rubriques/{mapRubriqueId}/indent/`
-- **Responsabilité métier réelle** : Indentation d'une rubrique dans la structure
-- **Conformité avec le référentiel backend** : 🔴 À supprimer ou refactorer
-- **Usage** : Ligne 408, dans `handleIndent()`
-- **Problème** : Endpoint non implémenté dans le backend (404 attendu)
-- **Note** : Endpoint cible canonique : `POST /api/maps/{id}/structure/{mapRubriqueId}/indent`
+### 3.5. `POST /api/maps/{mapId}/structure/{mapRubriqueId}/indent/`
+- **Conformité** : ✅ Conforme (migré Sprint 4)
 
-### 3.6. `POST /api/map-rubriques/{mapRubriqueId}/outdent/`
-- **Responsabilité métier réelle** : Désindentation d'une rubrique dans la structure
-- **Conformité avec le référentiel backend** : 🔴 À supprimer ou refactorer
-- **Usage** : Ligne 419, dans `handleOutdent()`
-- **Problème** : Endpoint non implémenté dans le backend (404 attendu)
-- **Note** : Endpoint cible canonique : `POST /api/maps/{id}/structure/{mapRubriqueId}/outdent`
+### 3.6. `POST /api/maps/{mapId}/structure/{mapRubriqueId}/outdent/`
+- **Conformité** : ✅ Conforme (migré Sprint 4)
 
-### 3.7. `POST /api/maps/{mapId}/reorder/`
-- **Responsabilité métier réelle** : Réordonnancement de la structure documentaire
-- **Conformité avec le référentiel backend** : 🟡 Toléré temporairement
-- **Usage** : Ligne 434, dans `handleReorder()`
-- **Payload** : `{ ordered_ids: number[] }`
-- **Problème** : Endpoint non implémenté dans le backend (404 attendu)
-- **Note** : Endpoint cible canonique : `POST /api/maps/{id}/structure/reorder/`
+### 3.7. `POST /api/maps/{mapId}/structure/reorder/`
+- **Conformité** : ✅ Conforme (migré Sprint 4)
+- **Payload** : `{ orderedIds }` — confirmé conforme (`MapStructureReorderSerializer` backend attend bien `orderedIds` en camelCase)
+
+### 3.8. `PATCH /api/rubriques/{rubriqueId}/`
+- **Responsabilité** : Renommage d'une rubrique (mise à jour du titre)
+- **Conformité** : ✅ Conforme — migré Lot 3 (2026-04-10)
+- **Payload** : `{ titre: newTitle }` — PATCH partiel, `RubriqueViewSet.update()` supporte `partial=True`
+- **Usage** : `handleRenameSave` — dérive `rubriqueId` depuis `mapRubriques.find(r => r.id === mapRubriqueId)`, puis rechargement structure via `listMapRubriques(currentMapId)`
+
+### 3.9. `DELETE /api/projets/{projetId}/`
+- **Responsabilité** : Suppression définitive d'un projet
+- **Conformité** : ✅ Conforme — migré Lot 3 (2026-04-10)
+- **Usage** : `handleDelete` — suppression backend, puis `setProjects(filter)`, reset map/sélection si le projet supprimé était actif
 
 ---
 
@@ -90,145 +96,149 @@ Responsabilités observées :
 ### 4.1. Stores Zustand
 
 #### `useProjectStore`
-- **Propriétaire réel** : Store global Zustand (`src/store/projectStore.ts`)
-- **Rôle fonctionnel** : Gestion de l'état global du projet sélectionné
-- **Dépendances principales** :
-  - `selectedProjectId` : lu via `useSelectedVersion()` (ligne 80) et directement (ligne 87)
-  - `setSelectedProjectId` : utilisé pour changer le projet (lignes 82, 194, 201, 360)
-- **Observation** : Double lecture de `selectedProjectId` (via hook et directement) avec logs de debug (lignes 89-91)
+- `selectedProjectId` : lu via `useSelectedVersion()` ET directement via `useProjectStore()` (double lecture — logs debug présents en production, lignes 89-91)
+- `setSelectedProjectId` : utilisé pour changer le projet
 
 #### `useXmlBufferStore`
-- **Propriétaire réel** : Store global Zustand (`src/store/xmlBufferStore.ts`)
-- **Rôle fonctionnel** : Buffer XML par rubrique + statut (saved/dirty/error)
-- **Dépendances principales** :
-  - `setXml` : initialisation XML vide pour nouvelles rubriques (lignes 137-145)
-  - `getXml` : vérification existence XML (ligne 134)
-  - `getStatus` : vérification modifications non sauvegardées (lignes 227-228, 161, 215, 327, 373, 397)
-- **Usage critique** : Protection contre perte de modifications (blocage changement projet/map/rubrique si `status === "dirty"`)
+- `setXml` / `getXml` : initialisation XML vide pour nouvelles rubriques
+- `getStatus` : vérification modifications non sauvegardées via `selectedRubriqueId` du `selectionStore` ✅ (actif depuis Lot 1)
 
-### 4.2. Hooks métier
+### 4.2. Bugs d'état résolus (Lot 1 — 2026-04-10)
 
-#### `useSelectedProduct`
-- **Propriétaire réel** : Hook personnalisé (`src/hooks/useSelectedProduct.ts`)
-- **Rôle fonctionnel** : Produit sélectionné (pour génération XML template)
-- **Dépendances principales** : `useProductStore` (store Zustand)
-- **Usage** : Ligne 81, utilisé dans `handleAddMapItem()` pour générer le XML (ligne 288)
+**~~Bug A — `selectedMapItemId` local toujours null~~** → ✅ **Résolu**
+- Suppression de l'état local `useState<number | null>(null)`
+- `selectedMapItemId` et `selectedRubriqueId` proviennent désormais de `useSelectionStore`
+- `hasUnsavedChanges` est réellement actif
+- Ancienne conséquence résolue :
+  - `selectedRubriqueId` dans LeftSidebar = toujours `null`
+  - `hasUnsavedChanges` = toujours `false` → garde-fou inactif
+  - `mapRubriquesToMapItems` reçoit `selectedMapItemId=null` → pas d'expansion automatique du chemin
+  - `MapModule` reçoit `selectedMapItemId={null}` → aucun item surligné visuellement
 
-#### `useSelectedVersion`
-- **Propriétaire réel** : Hook personnalisé (`src/hooks/useSelectedVersion.ts`)
-- **Rôle fonctionnel** : Version active du projet sélectionné + `selectedProjectId`
-- **Dépendances principales** : `useProjectStore`
-- **Usage** : Ligne 80, fournit `selectedProjectId` (dérivé du store)
+**Bug B — `Desktop.mapItems` jamais alimenté**
+- Desktop déclare `const [mapItems, setMapItems] = useState<MapItem[]>([])` mais `setMapItems` n'est jamais appelé (aucun callback ne remonte les mapItems de LeftSidebar vers Desktop)
+- Conséquence : `selectedRubriqueId` dans Desktop = toujours `null` → `CentralEditor` reçoit `rubriqueId={null}` → l'éditeur ne charge jamais aucune rubrique
+
+**Bug C — `handleToggleExpandMapNode` dans Desktop jamais invoqué**
+- Desktop passe `onToggleExpand={handleToggleExpandMapNode}` à LeftSidebar
+- LeftSidebar passe `onToggleExpand={toggleMapExpand}` (locale) à MapModule — pas la prop Desktop
+- `handleToggleExpandMapNode` de Desktop ne sera jamais appelé
 
 ### 4.3. États locaux critiques
 
-- `projects` : Cache local des projets chargés (ligne 94)
-- `mapRubriques` : Structure documentaire brute (MapRubriqueDTO[]) (ligne 67)
-- `mapItems` : Structure transformée pour l'UI (MapItem[]) (ligne 64)
-- `currentMapId` : Map active (ligne 68)
-- `selectedMapItemId` : Rubrique sélectionnée (ligne 69, mais aussi en props ligne 30)
-- `pendingSelectId` : Sélection différée après création rubrique (ligne 78)
+- `projects` : Cache local des projets chargés (non synchronisé avec backend)
+- `mapRubriques` : Structure documentaire brute (source de vérité réelle dans LeftSidebar)
+- `mapItems` : Structure transformée pour l'UI (dérivée de `mapRubriques`)
+- `currentMapId` : Map active
+- `selectedMapItemId` : **Toujours null** (voir Bug A)
+- `pendingSelectId` : Sélection différée après création rubrique
 
 ---
 
 ## 5. DTO manipulés
 
-### 5.1. DTO consommés
+### DTO consommés
 
-#### `ProjectDTO`
-- **Source** : `GET /api/projets/{id}/` ou `GET /api/projets/{id}/structure/`
-- **Structure** : `{ id, nom, description?, maps: ProjectMap[] }`
-- **Usage** : Cache local `projects`, chargement projet
-- **Polyvalence** : Utilisé pour navigation et affichage liste
+| DTO | Source | Usage |
+|-----|--------|-------|
+| `ProjectDTO` | `GET /api/projets/{id}/` ou `/structure/` | Cache local `projects`, chargement projet |
+| `MapRubriqueDTO` | `GET /api/maps/{id}/rubriques/` ou `/structure/` | Stocké dans `mapRubriques`, transformé en `MapItem[]` |
+| `ProjectMap` | Inclus dans `ProjectDTO.maps` | Liste des maps d'un projet |
 
-#### `MapRubriqueDTO`
-- **Source** : `GET /api/maps/{id}/rubriques/` ou `GET /api/projets/{id}/structure/`
-- **Structure** : `{ id, ordre, parent, rubrique: { id, titre, revision_numero, is_active, is_archived } }`
-- **Usage** : Stocké dans `mapRubriques`, transformé en `MapItem[]` via `mapRubriquesToMapItems()`
-- **Polyvalence** : Structure documentaire (pas de contenu XML)
+### DTO produits
 
-#### `ProjectMap`
-- **Source** : Inclus dans `ProjectDTO.maps`
-- **Structure** : `{ id, nom, is_master }`
-- **Usage** : Liste des maps d'un projet (ligne 363)
-
-### 5.2. DTO produits
-
-#### `MapItem`
-- **Source** : Transformation de `MapRubriqueDTO[]` via `mapRubriquesToMapItems()`
-- **Structure** : `{ id, rubriqueId, title, isMaster, level, expanded?, active?, versionOrigine?, isRoot?, parentId }`
-- **Usage** : UI uniquement (affichage hiérarchique dans `MapModule`)
-- **Transformation** : Ajout de métadonnées UI (level, expanded, isRoot) + titre dérivé
-
-### 5.3. Transformations locales appliquées
-
-- `MapRubriqueDTO[]` → `MapItem[]` : Transformation hiérarchique avec calcul des niveaux et expansion automatique (lignes 108-124, via `mapRubriquesToMapItems()`)
-- Initialisation XML vide : Création de template XML DITA minimal pour nouvelles rubriques (lignes 128-148)
-
-### 5.4. DTO surchargés ou mal alignés
-
-- Aucun DTO explicitement surchargé identifié
-- `MapItem` est un DTO UI pur (non envoyé au backend)
+| DTO | Source | Usage |
+|-----|--------|-------|
+| `MapItem` | Transformation de `MapRubriqueDTO[]` via `mapRubriquesToMapItems()` | UI uniquement |
 
 ---
 
 ## 6. Écarts avec le backend canonique
 
-### 6.1. Appels hors contrat
+### 6.1. Routes — état au 2026-04-10 (mis à jour Lot 3)
 
-1. `POST /api/map-rubriques/{id}/indent/` : Endpoint non implémenté backend (404 attendu)
-2. `POST /api/map-rubriques/{id}/outdent/` : Endpoint non implémenté backend (404 attendu)
-3. `POST /api/maps/{mapId}/reorder/` : Endpoint non implémenté backend (404 attendu)
+Tous les appels backend sont désormais conformes au canon :
 
-### 6.2. Logiques métier frontend compensatoires
+| Endpoint | Statut |
+|----------|--------|
+| `GET /api/projets/{id}/structure/` | ✅ Conforme |
+| `GET /api/projets/{id}/` | ✅ Conforme |
+| `GET /api/maps/{id}/structure/` | ✅ Conforme (migré Lot 2) |
+| `POST /api/maps/{id}/structure/create/` | ✅ Conforme |
+| `POST /api/maps/{id}/structure/{mr_id}/indent/` | ✅ Conforme |
+| `POST /api/maps/{id}/structure/{mr_id}/outdent/` | ✅ Conforme |
+| `POST /api/maps/{id}/structure/reorder/` | ✅ Conforme |
+| `PATCH /api/rubriques/{id}/` | ✅ Conforme (migré Lot 3) |
+| `DELETE /api/projets/{id}/` | ✅ Conforme (migré Lot 3) |
 
-- Calcul du parent d'insertion : `getInsertionParentId()` (ligne 278) détermine le parent logique avant création
-- Sélection différée : `pendingSelectId` (lignes 78, 97-105, 305) pour sélectionner une rubrique après création (attente du rebuild de `mapItems`)
-- Rechargement complet après modification structurelle : Après chaque opération (indent/outdent/reorder/create), rechargement complet via `listMapRubriques()` (lignes 301, 409, 421, 438)
+### 6.2. Opérations hors scope v1
 
-### 6.3. Confusions entre structure et contenu
+| Opération | Comportement actuel | Raison hors scope |
+|-----------|--------------------|-|
+| Suppression rubrique | toast d'erreur | Backend bloque `DELETE /api/rubriques/{id}/` si rubrique encore en map ; pas d'endpoint `DELETE /api/maps/{id}/structure/{mr_id}/` |
+| Clonage rubrique | toast d'erreur | Pas d'endpoint clone rubrique |
+| Clonage projet | toast d'erreur | Pas d'endpoint clone projet (clone disponible sur version uniquement) |
+| Publication/Export | toast d'erreur | Non implémenté — à traiter en Lot 5 |
 
-- Initialisation XML dans le composant structure : Le composant initialise le buffer XML (lignes 128-148), responsabilité à la frontière entre structure et contenu
-- Génération XML template : `prepareNewRubriqueXml()` appelé dans `handleAddMapItem()` (ligne 284), logique de contenu dans un composant structure
+### 6.3. Bugs structurels résolus
+
+| Bug | Résolution |
+|-----|------------|
+| ~~`selectedMapItemId` local = null~~ | ✅ Résolu Lot 1 — `useSelectionStore` |
+| ~~`hasUnsavedChanges` = false permanent~~ | ✅ Résolu Lot 1 |
+| Double lecture `selectedProjectId` | ✅ Vérifié Lot 4 — pas de double lecture : `useSelectedVersion()` fournit la valeur, `useProjectStore` fournit uniquement le setter. Architecture correcte. |
+| `getProjectDetailsValidated` sans préfixe `/api/` | ✅ Vérifié Lot 4 — la route backend est intentionnellement sans `/api/` (`path("projets/<pk>/details/")` à la racine). Le code frontend est correct. C10 était une fausse alerte. |
+| Log debug `console.log("Fichier Word sélectionné :", file)` | ✅ Supprimé Lot 4 |
+
+### 6.4. Mélange de responsabilités
+
+- ~~Génération XML template dans `handleAddMapItem`~~ → ✅ **Extrait Lot 4** : `useNewRubriqueXml` hook dédié (`src/hooks/useNewRubriqueXml.ts`). LeftSidebar appelle `generateRubriqueXml("Nouvelle rubrique")`, sans connaître `selectedProduct` ni la construction du payload DITA.
+- Initialisation buffer XML dans `useEffect` : frontière structure/contenu — documentation uniquement, comportement intentionnel conservé.
 
 ---
 
 ## 7. Risques et impacts
 
-### 7.1. Impact si le backend est corrigé ou réaligné
+### Priorité bloquante
+- ~~Bug sélection (A+B)~~ → ✅ Résolu Lot 1
+- ~~Garde-fou inactif~~ → ✅ Résolu Lot 1
+- ~~Route legacy `listMapRubriques`~~ → ✅ Résolu Lot 2
 
-- Endpoints indent/outdent/reorder : Échec immédiat si non implémentés (404). Impact : fonctionnalités inutilisables.
-- Migration vers endpoints canoniques : Refactoring nécessaire si changement de routes (`/api/maps/{id}/structure/*`). Impact : modifications locales, tests à refaire.
-- Suppression de `/api/maps/{id}/rubriques/` : Remplacement par `/api/maps/{id}/structure/`. Impact : modification de `listMapRubriques()` dans `src/api/maps.ts`.
+### Priorité critique
+- ~~Rename/delete/clone rubrique locaux~~ → ✅ Rename migré Lot 3 ; delete/clone = toast hors scope v1
 
-### 7.2. Sensibilité du composant
+### Priorité importante
+- ~~Suppression projet locale~~ → ✅ Résolu Lot 3
+- Clone projet = toast hors scope v1
+- Publication non implémentée → Lot 5
 
-- Central : Point d'entrée navigation documentaire, utilisé par `Desktop.tsx`
-- Critique : Blocage navigation si endpoints manquants
-- Périphérique : Délègue l'affichage à `ProjectModule` et `MapModule`
-
-### 7.3. Dépendances en cascade
-
-- `CentralEditor` : Dépend de `selectedMapItemId` (via props) pour charger le contenu
-- `RightSidebar` : Peut dépendre de la sélection pour afficher les métadonnées
-- `ProjectModule` / `MapModule` : Dépendent des données fournies par `LeftSidebar`
-- `useXmlBufferStore` : Utilisé par `CentralEditor` pour la sauvegarde, initialisé ici
+### Priorité mineure
+- Double lecture `selectedProjectId` + logs debug → Lot 4
+- `getProjectDetailsValidated` préfixe manquant → Lot 4
 
 ---
 
 ## 8. Verdict architectural
 
-🔴 À réaligner impérativement
+🟢 **Conforme pour tous les flux disponibles en v1 — opérations sans endpoint backend documentées hors scope**
 
-**Justification** :
-1. Trois endpoints critiques non implémentés backend (indent/outdent/reorder) → fonctionnalités cassées
-2. Endpoints utilisés non conformes au référentiel canonique (`/api/maps/{id}/rubriques/` vs `/api/maps/{id}/structure/`)
-3. Logique de contenu (génération XML) mélangée avec logique de structure
-4. Dépendances critiques : composant central, impact en cascade sur l'application
+**Résolus (Lots 1–3) :**
+1. ✅ Chaîne de sélection LeftSidebar → `selectionStore` → Desktop → CentralEditor (Lot 1)
+2. ✅ Garde-fou `hasUnsavedChanges` actif (Lot 1)
+3. ✅ Rechargement structure via `/api/maps/{id}/structure/` (Lot 2)
+4. ✅ Tous les flux structurels (create, indent, outdent, reorder) en routes canoniques
+5. ✅ Renommage rubrique → `PATCH /api/rubriques/{id}/` + rechargement structure (Lot 3)
+6. ✅ Suppression projet → `DELETE /api/projets/{id}/` + reset état (Lot 3)
+7. ✅ Clone projet/rubrique, delete rubrique → toast hors scope v1, fake IDs supprimés (Lot 3)
 
-**Priorité** : Haute — Le composant est central et plusieurs fonctionnalités sont actuellement non fonctionnelles.
+**Résolu (Lots 4) :**
+8. ✅ `prepareNewRubriqueXml` extrait vers `useNewRubriqueXml` hook — LeftSidebar ne connaît plus `selectedProduct` ni le payload DITA (Lot 4)
+9. ✅ C10 et C11 vérifiés non-bugs (Lot 4)
+10. ✅ Log debug `console.log` supprimé (Lot 4)
 
----
+**Restant :**
+- Initialisation buffer XML dans `useEffect` : frontière structure/contenu — comportement intentionnel, non bloquant
 
-> **Fin de la cartographie `LeftSidebar`**
+> **Fin de la cartographie `LeftSidebar` — Mise à jour 2026-04-10 (Lots 1–4)**
 
+> **Fin de la cartographie `LeftSidebar` — Mise à jour 2026-04-10**

@@ -15,16 +15,16 @@
 | Flux | Déclencheur UI | Hook / Contexte | DTO | Endpoint actuel | Endpoint cible |
 |------|----------------|----------------|-----|-----------------|---------------|
 | Sélection de projet | Clic sur un projet dans la liste | `onSelect(projectId)` → `handleSelect` dans LeftSidebar | `ProjectDTO` | `GET /api/projets/{id}/` (via `openProject`) | `GET /api/projets/{id}/` |
-| Création de projet | Bouton "Créer" (FilePlus) | `onAdd()` → `handleAdd` → `CreateProjectDialog` | `ProjectCreateZ` | `POST /projet/create/` | `POST /api/projets/` (canonique) |
+| Création de projet | Bouton "Créer" (FilePlus) | `onAdd()` → `handleAdd` → `CreateProjectDialog` | `ProjectCreateZ` | `POST /api/projets/` | `POST /api/projets/` ✅ migré Sprint 4 |
 | Chargement de projet | Bouton "Charger" (Download) | `onLoad()` → `handleLoad` → `LoadProjectDialog` | `ProjectDTO[]` | `GET /api/projets/?archived=false` | `GET /api/projets/?archived=false` |
 | Clonage de projet | Bouton "Cloner" (Copy) | `onClone(projectId)` → `handleClone` dans LeftSidebar | `ProjectDTO` | ❌ **Aucun appel backend** (clone local uniquement) | `POST /api/versions/{id}/clone/` (VersionProjet) |
 | Suppression de projet | Bouton "Supprimer" (Trash) | `onDelete(projectId)` → `handleDelete` dans LeftSidebar | - | ❌ **Aucun appel backend** (suppression locale uniquement) | `DELETE /api/projets/{id}/` |
-| Publication/Export | Bouton "Publier" (Upload) | `onPublish(projectId)` → `handlePublish` → affiche `showExportCard` | - | ❌ **Aucun appel backend** (console.log uniquement dans `handleExport`) | `POST /api/publier-map/{map_id}/` (publication de map, pas de projet) |
+| Publication/Export | Bouton "Publier" (Upload) → choix format → "Publier" | `onPublish(projectId)` → affiche `showExportCard` ; `onExport(format)` → `handleExport` dans LeftSidebar | `{ format }` | `POST /api/publier-map/{map_id}/` | ✅ Lot 5 |
 
-> ⚠️ **Observations critiques** :
-> - Le flux de publication/export est **non implémenté** : `handleExport` dans ProjectModule ne fait qu'un `console.log` et un toast de succès simulé.
-> - Le clonage et la suppression sont **simulés localement** dans LeftSidebar sans persistance backend.
-> - La création utilise l'endpoint non canonique `/projet/create/` au lieu de `/api/projets/`.
+> **Règle de sélection de la map à publier (LeftSidebar.handleExport) :**
+> 1. map avec `is_master === true` → publiée en priorité
+> 2. si pas de master et map unique → publiée automatiquement
+> 3. si plusieurs maps sans master → blocage explicite, toast d'erreur
 
 ---
 
@@ -41,10 +41,10 @@ Tous les appels sont **indirects**, déclenchés par les callbacks passés en pr
 | `GET /api/projets/{id}/` | Récupération d'un projet (via `openProject` dans LeftSidebar) | 🟢 Conforme |
 | `GET /api/projets/{id}/structure/` | Récupération de la structure d'un projet (via `useEffect` dans LeftSidebar) | 🟢 Conforme |
 | `GET /api/projets/?archived=false` | Liste des projets non archivés (via `LoadProjectDialog`) | 🟢 Conforme |
-| `POST /projet/create/` | Création de projet (via `CreateProjectDialog`) | 🔴 **Non conforme** : devrait être `POST /api/projets/` |
-| `POST /api/publier-map/{map_id}/` | Publication d'une map (endpoint existant mais non utilisé) | 🟢 Conforme (mais non utilisé) |
+| `POST /api/projets/` | Création de projet (via `CreateProjectDialog`) | ✅ **Conforme** — migré Sprint 4 |
+| `POST /api/publier-map/{map_id}/` | Publication d'une map — payload `{ format }` | ✅ Conforme — connecté Lot 5 |
 
-> 💡 **Note** : L'endpoint de publication existe pour les maps (`/api/publier-map/{map_id}/`), mais le composant tente de publier un **projet**, ce qui est conceptuellement différent selon le référentiel backend.
+> **Note** : L'entrée UI part du projet sélectionné, mais le backend publie une **map**. `LeftSidebar.handleExport` résout cette ambiguïté en déterminant la map cible depuis `projectMaps` (règle `is_master`). `ProjectModule` délègue l'appel backend via `onExport(format)`, il ne fait aucun appel direct.
 
 ---
 
@@ -69,7 +69,8 @@ Tous les appels sont **indirects**, déclenchés par les callbacks passés en pr
 
 | État | Type | Rôle fonctionnel |
 |------|------|------------------|
-| `selectedFormat` | `string` | Format d'export sélectionné dans le formulaire (PDF, Web, Moodle, Fiche, Personnalise) |
+| `selectedFormat` | `string` | Format d'export sélectionné — valeurs alignées sur `PUBLISH_FORMATS` de `src/api/maps.ts` : `pdf`, `html5`, `xhtml`, `scorm`, `markdown`, `eclipsehelp` |
+| `isPublishing` | `boolean` | Désactivation du bouton "Publier" pendant l'appel backend |
 
 > ⚠️ **Observation** : Le composant ne gère **aucun état métier critique**. Il est entièrement contrôlé par son parent.
 
@@ -101,17 +102,17 @@ Tous les appels sont **indirects**, déclenchés par les callbacks passés en pr
 
 | Écart | Détail | Impact |
 |-------|--------|--------|
-| Création via endpoint non canonique | `CreateProjectDialog` utilise `POST /projet/create/` au lieu de `POST /api/projets/` | 🟡 Toléré temporairement (endpoint fonctionnel mais non standard) |
-| Publication non implémentée | `handleExport` ne fait qu'un `console.log`, aucun appel à `/api/publier-map/{map_id}/` | 🔴 **Blocant** : fonctionnalité de publication non opérationnelle |
-| Clonage local sans backend | `handleClone` dans LeftSidebar clone localement sans appel backend | 🔴 **Blocant** : pas de persistance, perte de données au rechargement |
-| Suppression locale sans backend | `handleDelete` dans LeftSidebar supprime localement sans appel backend | 🔴 **Blocant** : pas de persistance, perte de données au rechargement |
+| ~~Création via endpoint non canonique~~ | ✅ **Résolu Sprint 4** : `CreateProjectDialog` utilise désormais `POST /api/projets/` via `createProjectValidated()` | — |
+| ~~Publication non implémentée~~ | ✅ **Résolu Lot 5** : `handleExport` dans LeftSidebar appelle `POST /api/publier-map/{map_id}/`, `ProjectModule` délègue via `onExport(format)` | — |
+| Clonage projet | toast hors scope v1 (Lot 3) — pas d'endpoint backend disponible | ⚠️ Documenté |
+| ~~Suppression locale sans backend~~ | ✅ **Résolu Lot 3** : `DELETE /api/projets/{id}/` | — |
 
 ### 6.2. Logiques métier frontend compensatoires
 
 | Logique compensatoire | Justification observée | Risque |
 |----------------------|------------------------|--------|
-| Clone local avec génération d'ID | `const newId = Math.max(...projects.map((x) => x.id)) + 1` | 🔴 **Risque de collision** si plusieurs utilisateurs créent des projets simultanément |
-| Suppression locale sans validation | Suppression immédiate de l'état local sans confirmation backend | 🔴 **Risque de perte de données** si l'opération échoue côté backend |
+| ~~Clone local avec génération d'ID~~ | ✅ Supprimé Lot 3 — `handleClone` affiche un toast hors scope v1, aucun fake ID | — |
+| ~~Suppression locale sans validation~~ | ✅ Supprimé Lot 3 — `handleDelete` appelle `DELETE /api/projets/{id}/` | — |
 
 ### 6.3. Confusions entre structure et contenu
 
@@ -119,9 +120,9 @@ Tous les appels sont **indirects**, déclenchés par les callbacks passés en pr
 
 ### 6.4. Concept projet vs map
 
-| Problème | Détail |
-|----------|--------|
-| Publication de projet vs map | Le composant propose de "publier un projet", mais l'endpoint backend existant (`/api/publier-map/{map_id}/`) publie une **map**, pas un projet. Un projet peut contenir plusieurs maps. L'intention métier n'est pas claire. | 🔴 **Ambiguïté conceptuelle** |
+| Concept | Clarification |
+|---------|---------------|
+| Publication de projet vs map | ✅ **Résolu Lot 5** — L'IHM reste déclenchée depuis le module Projet, mais `LeftSidebar.handleExport` détermine la map cible (règle `is_master`) et appelle `POST /api/publier-map/{map_id}/`. L'ambiguïté conceptuelle est documentée et résolue explicitement dans le code. |
 
 ---
 
@@ -154,24 +155,17 @@ Tous les appels sont **indirects**, déclenchés par les callbacks passés en pr
 
 ## 8. Verdict architectural
 
-### 🟡 Conforme sous contrainte
+### 🟢 Conforme — tous les flux disponibles branchés sur le backend
 
-**Justification** :
+**Résolu (Lots 3 & 5) :**
+1. ✅ Publication/export : `POST /api/publier-map/{map_id}/` — IHM existante branchée, règle `is_master` explicite (Lot 5)
+2. ✅ Suppression projet : `DELETE /api/projets/{id}/` (Lot 3)
+3. ✅ Clonage projet : toast hors scope v1 — pas d'endpoint backend (Lot 3)
+4. ✅ Formats publication : alignés sur `PUBLISH_FORMATS` du backend (`pdf`, `html5`, `xhtml`, `scorm`, `markdown`, `eclipsehelp`)
+5. ✅ Ambiguïté projet vs map : résolue et documentée dans `handleExport`
 
-- ✅ Le composant respecte l'architecture frontend (composant présentationnel, logique dans le parent)
-- ✅ Les appels backend indirects sont conformes (sauf `/projet/create/` qui est toléré)
-- ⚠️ **Mais** : plusieurs fonctionnalités sont **non implémentées** ou **simulées localement** :
-  - Publication/export : non implémenté (console.log uniquement)
-  - Clonage : simulé localement sans backend
-  - Suppression : simulée localement sans backend
-- ⚠️ **Ambiguïté conceptuelle** : publication de "projet" vs "map" non résolue
-
-**Actions requises pour passer à 🟢 Conforme** :
-
-1. Implémenter l'appel backend pour la publication (clarifier projet vs map)
-2. Implémenter le clonage via backend (`POST /api/versions/{id}/clone/` si applicable, ou endpoint dédié)
-3. Implémenter la suppression via backend (`DELETE /api/projets/{id}/`)
-4. Migrer la création vers l'endpoint canonique (`POST /api/projets/`)
+**Restant :**
+- Clone projet : hors scope v1 (pas d'endpoint backend disponible)
 
 ---
 

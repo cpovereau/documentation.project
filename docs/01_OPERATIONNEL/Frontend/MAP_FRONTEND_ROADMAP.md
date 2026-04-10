@@ -64,6 +64,8 @@ Les routes legacy (`POST /api/rubriques/` + `POST /api/maps/{id}/rubriques/`) on
 
 ### ✅ 3️⃣ Persistance backend de la structure — terminé (Sprint 4)
 
+> ✅ Lot 2 terminé (2026-04-10) : `listMapRubriques()` cible désormais `GET /api/maps/{id}/structure/`. Le rechargement après toute opération structurelle est entièrement canonique.
+
 Les routes canoniques de persistance structurelle sont en place et appelées par le frontend :
 
 | Opération | Route canonique |
@@ -79,16 +81,12 @@ Le rechargement systématique après chaque opération est à la charge du front
 
 ---
 
-### 4️⃣ Rechargement systématique de la Map
+### ✅ 4️⃣ Rechargement systématique de la Map — terminé
 
-**Objectif** : éviter toute divergence frontend / backend.
+Rechargement présent après chaque opération structurelle (create, indent, outdent, reorder).
+Rechargement via `GET /api/maps/{id}/structure/` (canonique) depuis Lot 2.
 
-Règle à acter :
-> Toute modification structurelle (create, move, indent, reorder) ⇒ reload depuis l’API.
-
-Conséquences :
-- Le state local devient un cache temporaire.
-- Le backend devient l’unique source de vérité.
+La sélection différée après création (`pendingSelectId`) utilise `setSelection()` du `selectionStore` depuis Lot 1 — CentralEditor reçoit le `rubriqueId` réel après chaque rechargement.
 
 ---
 
@@ -126,6 +124,7 @@ Conséquences :
 
 ---
 
-📌 **Prochaine étape immédiate conseillée** :
-> Implémenter côté frontend le **rechargement systématique de la structure** après chaque opération structurelle (create, indent, outdent, reorder), puis traiter la **projection `level → parent/ordre`** pour le drag & drop cross-niveau.
+📌 **Prochaine étape conseillée** :
+> Traiter le **Lot 4** : supprimer la double lecture `selectedProjectId` et les logs debug production ; corriger le préfixe manquant dans `getProjectDetailsValidated` ; isoler `prepareNewRubriqueXml` hors de LeftSidebar.
+> Puis traiter la **projection `level → parent/ordre`** pour le drag & drop cross-niveau.
 

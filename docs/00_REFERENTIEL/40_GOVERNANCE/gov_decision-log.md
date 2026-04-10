@@ -247,7 +247,8 @@ Le backend a été réaligné pour :
 - elles devront être supprimées après migration frontend
 
 **Statut**
-Active — à réévaluer après migration du frontend vers /structure/*
+~~Active — à réévaluer après migration du frontend vers /structure/*~~
+**Clôturée – 2026-04-10** : migration frontend effectuée (Sprint 4 Phase A) + routes legacy supprimées (Sprint 4 Phase B). Voir décision 2026-04-10 – Stratégie 2 phases.
 
 ---
 
@@ -271,7 +272,64 @@ Mieux vaut une interdiction explicite qu’une création silencieusement incompl
 - la migration future devra déplacer l’orchestration dans ProjetViewSet.create()
 
 **Statut**
-Active — temporaire
+~~Active — temporaire~~
+**Clôturée – 2026-04-10** : service `create_project()` implémenté et `ProjetViewSet.create()` pleinement opérationnel (Sprint 2). Route `/projet/create/` supprimée (Sprint 4 Phase B). Voir décision 2026-04-10 – Service create_project().
+
+---
+
+## 2026-04-10 – Service create_project() comme point d'entrée unique
+
+**Sujet**
+Centralisation de la création de projet dans un service atomique.
+
+**Contexte**
+`ProjetViewSet.create()` créait le Projet sans garantir les objets dérivés (VersionProjet, Map master, Rubrique racine, MapRubrique racine). La route legacy `/projet/create/` assurait les invariants mais n'était pas canonique DRF.
+
+**Décision**
+- Extraction de toute la logique de création dans `services.create_project(*, data, user)`.
+- `ProjetViewSet.create()` délègue entièrement à ce service.
+- La vue ne contient plus aucune logique métier de création.
+
+**Justification**
+- Atomicité garantie par `@transaction.atomic`.
+- Invariants explicites et testables indépendamment de la couche HTTP.
+- Suppression du code dupliqué entre route legacy et route canonique.
+
+**Conséquences**
+- `ProjetSerializer.create()` est mort — supprimé (Sprint 5).
+- Tout futur clone ou variante de création projet **doit** passer par `create_project()`.
+- La réponse canonique `{projet, map}` est la seule forme contractuelle du frontend.
+
+**Statut**
+Active
+
+---
+
+## 2026-04-10 – Stratégie 2 phases pour la suppression des routes legacy
+
+**Sujet**
+Ordre de migration : d'abord le frontend, ensuite le backend.
+
+**Contexte**
+Après l'ajout des routes canoniques (Sprint 1–2), les routes legacy coexistent. Supprimer le backend en premier crée des régressions frontend immédiates. Migrer le frontend en premier sans supprimer le backend laisse du code mort à risque.
+
+**Décision**
+Adopter une stratégie systématique en 2 phases pour toute suppression de route legacy :
+- **Phase A** : migrer les appels frontend vers la route canonique, sans toucher le backend.
+- **Phase B** : supprimer les handlers et routes backend legacy, uniquement après validation de la Phase A.
+
+**Justification**
+- Zéro régression frontend à chaque étape.
+- Rollback simple si un appel est manqué (route encore présente).
+- Séparation claire des responsabilités de migration.
+
+**Conséquences**
+- Toute future refonte de route applique ce pattern Phase A / Phase B.
+- Les tests backend vérifient explicitement l'absence de `NoReverseMatch` sur les routes supprimées.
+- Les tests frontend (ou leurs substituts d'intégration) valident les nouvelles routes avant Phase B.
+
+**Statut**
+Active
 
 ---
 

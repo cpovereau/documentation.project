@@ -229,7 +229,12 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   useEffect(() => {
     if (!editor || !isRecording) return;
 
-    const dom = editor.view.dom;
+    let dom: HTMLElement;
+    try {
+      dom = editor.view.dom;
+    } catch {
+      return;
+    }
 
     const handleManualInteraction = () => {
       stop(); // stop dictation
@@ -271,8 +276,13 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
 
   // Compteur de mots
   useEffect(() => {
-    const dom = editor?.view.dom;
-    if (!dom) return;
+    if (!editor) return;
+    let dom: HTMLElement;
+    try {
+      dom = editor.view.dom;
+    } catch {
+      return;
+    }
 
     const handleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
