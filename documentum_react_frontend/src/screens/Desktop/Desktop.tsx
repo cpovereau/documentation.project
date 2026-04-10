@@ -5,66 +5,17 @@ import { RightSidebar } from "components/ui/RightSidebar";
 import { CentralEditor } from "components/ui/CentralEditor";
 import type { MapItem } from "@/types/MapItem";
 
-export const initialMapItems: MapItem[] = [
-  {
-    id: 1,
-    title: "Vue principale",
-    isMaster: true,
-    level: 0,
-    expanded: true,
-    versionOrigine: "1.0.0",
-  },
-  {
-    id: 2,
-    title: "Introduction",
-    isMaster: false,
-    level: 1,
-    expanded: true,
-    versionOrigine: "1.0.0",
-  },
-  {
-    id: 3,
-    title: "Fonctionnalités générales",
-    isMaster: false,
-    level: 1,
-    expanded: true,
-    versionOrigine: "1.1.0",
-  },
-  {
-    id: 4,
-    title: "Connexion",
-    isMaster: false,
-    level: 2,
-    expanded: true,
-    versionOrigine: "1.1.0",
-  },
-  {
-    id: 5,
-    title: "Paramétrage",
-    isMaster: false,
-    level: 2,
-    expanded: true,
-    versionOrigine: "1.2.0",
-  },
-];
-
 export const Desktop: React.FC = () => {
   const [isLeftSidebarExpanded, setIsLeftSidebarExpanded] = useState(true);
   const [isRightSidebarExpanded, setIsRightSidebarExpanded] = useState(true);
   const [isRightSidebarFloating, setIsRightSidebarFloating] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const [previousLeftSidebarState, setPreviousLeftSidebarState] =
-    useState(true);
-  const [previousRightSidebarState, setPreviousRightSidebarState] =
-    useState(true);
-  const [mapItems, setMapItems] = useState<MapItem[]>(initialMapItems);
-  const [selectedMapItemId, setSelectedMapItemId] = useState<number | null>(
-    null
-  );
+  const [previousLeftSidebarState, setPreviousLeftSidebarState] = useState(true);
+  const [previousRightSidebarState, setPreviousRightSidebarState] = useState(true);
+  const [mapItems, setMapItems] = useState<MapItem[]>([]);
+  const [selectedMapItemId, setSelectedMapItemId] = useState<number | null>(null);
 
-  const [visibleDockEditor, setVisibleDockEditor] = useState<
-    "question" | "exercice" | null
-  >(null);
+  const [visibleDockEditor, setVisibleDockEditor] = useState<"question" | "exercice" | null>(null);
   const [dockEditorHeight, setDockEditorHeight] = useState(250);
 
   const togglePreviewMode = () => {
@@ -89,9 +40,7 @@ export const Desktop: React.FC = () => {
 
   const handleToggleExpandMapNode = (itemId: number, expand: boolean) => {
     setMapItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId ? { ...item, expanded: expand } : item
-      )
+      prev.map((item) => (item.id === itemId ? { ...item, expanded: expand } : item)),
     );
   };
 
@@ -107,6 +56,10 @@ export const Desktop: React.FC = () => {
     setVisibleDockEditor((prev) => (prev === "exercice" ? null : "exercice"));
   };
 
+  const selectedMapItem = mapItems.find((item) => item.id === selectedMapItemId);
+
+  const selectedRubriqueId = selectedMapItem?.rubriqueId ?? null;
+
   return (
     <div className="bg-white flex flex-col h-screen w-full">
       <TopBar currentScreen="desktop" />
@@ -115,9 +68,7 @@ export const Desktop: React.FC = () => {
           selectedMapItemId={selectedMapItemId}
           setSelectedMapItemId={setSelectedMapItemId}
           isExpanded={isLeftSidebarExpanded}
-          onToggle={() =>
-            !isPreviewMode && setIsLeftSidebarExpanded(!isLeftSidebarExpanded)
-          }
+          onToggle={() => !isPreviewMode && setIsLeftSidebarExpanded(!isLeftSidebarExpanded)}
           className="z-40"
           onToggleExpand={handleToggleExpandMapNode}
         />
@@ -125,10 +76,7 @@ export const Desktop: React.FC = () => {
           className="flex-1 z-0 flex flex-col min-h-0 h-full"
           style={{
             marginLeft: isLeftSidebarExpanded ? "351px" : "6px",
-            marginRight:
-              isRightSidebarExpanded && !isRightSidebarFloating
-                ? "254px"
-                : "6px",
+            marginRight: isRightSidebarExpanded && !isRightSidebarFloating ? "254px" : "6px",
           }}
         >
           <CentralEditor
@@ -143,7 +91,7 @@ export const Desktop: React.FC = () => {
             onToggleExerciceEditor={toggleExerciceEditor}
             dockEditorHeight={dockEditorHeight}
             onResizeDockEditorHeight={handleResizeDockEditorHeight}
-            selectedMapItemId={selectedMapItemId}
+            rubriqueId={selectedRubriqueId}
           />
         </div>
         <RightSidebar

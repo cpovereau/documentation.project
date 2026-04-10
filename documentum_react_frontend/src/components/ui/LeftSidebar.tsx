@@ -27,7 +27,7 @@ interface LeftSidebarProps {
   onToggle: () => void;
   className?: string;
   onToggleExpand: (itemId: number, expand: boolean) => void;
-  rubriqueId: number | null;
+  selectedMapItemId: number | null;
   setSelectedMapItemId: React.Dispatch<React.SetStateAction<number | null>>;
 }
 
@@ -42,7 +42,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   onToggle,
   className,
   onToggleExpand,
-  rubriqueId,
   setSelectedMapItemId,
 }) => {
   // État local pour gérer l'expansion des projets et des maps
@@ -264,8 +263,22 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     }
 
     try {
+      const nodesForInsertion = mapRubriques.map((mr) => ({
+        id: mr.id,
+        parentId: mr.parent,
+      }));
+
+      const rootNode = nodesForInsertion.find((n) => n.parentId === null);
+
+      if (!rootNode) {
+        throw new Error("Aucune racine documentaire trouvée.");
+      }
+
       // 1️⃣ Détermination du parent logique (métier)
-      const parentId = getInsertionParentId(mapRubriques, selectedMapItemId);
+      const computedParentId = getInsertionParentId(nodesForInsertion, selectedMapItemId);
+
+      // 🔒 Sécurité métier : jamais null pour une rubrique
+      const parentId = computedParentId ?? rootNode.id;
 
       // 2️⃣ Génération du XML (source de vérité du contenu)
       const xml = await prepareNewRubriqueXml({
@@ -276,7 +289,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       });
 
       // 3️⃣ Création atomique backend (rubrique + rattachement map)
-      const created = await api.post(`/api/maps/${currentMapId}/create-rubrique/`, {
+      const created = await api.post(`/api/maps/${currentMapId}/structure/create/`, {
         titre: "Nouvelle rubrique",
         contenu_xml: xml,
         parent: parentId, // déjà number | null
@@ -290,6 +303,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
       // 5️⃣ Sélection différée (déclenche rebuild + expansion dérivée)
       setPendingSelectId(createdMapRubriqueId);
+
+      console.log("MAP RUBRIQUES FROM API", refreshed);
 
       toast.success("Rubrique créée.");
     } catch (e) {
@@ -390,7 +405,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const handleIndent = async (mapRubriqueId: number) => {
     try {
       assertMapId(currentMapId);
-      await api.post(`/api/map-rubriques/${mapRubriqueId}/indent/`);
+      await api.post(`/api/maps/${currentMapId}/structure/${mapRubriqueId}/indent/`);
       setMapRubriques(await listMapRubriques(currentMapId));
     } catch {
       toast.error("Indentation impossible.");
@@ -401,7 +416,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     try {
       assertMapId(currentMapId);
 
-      await api.post(`/api/map-rubriques/${mapRubriqueId}/outdent/`);
+      await api.post(`/api/maps/${currentMapId}/structure/${mapRubriqueId}/outdent/`);
 
       const refreshed = await listMapRubriques(currentMapId);
       setMapRubriques(refreshed);
@@ -416,8 +431,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     try {
       assertMapId(currentMapId);
 
-      await api.post(`/api/maps/${currentMapId}/reorder/`, {
-        ordered_ids: orderedMapRubriqueIds,
+      await api.post(`/api/maps/${currentMapId}/structure/reorder/`, {
+        orderedIds: orderedMapRubriqueIds,
       });
 
       const refreshed = await listMapRubriques(currentMapId);
@@ -442,6 +457,11 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       setMapRubriques(res.data.structure);
     })();
   }, [selectedProjectId]);
+
+  // Ouvre le dialogue de chargement de map
+  function openLoadMapDialog() {
+    setLoadMapOpen(true);
+  }
 
   return (
     <>
@@ -520,12 +540,14 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                     onRenameSave={handleRenameSave}
                     onAdd={handleAddMapItem}
                     onImportWord={() => setImportWordOpen(true)}
+                    onLoadMapDialog={openLoadMapDialog}
                     onClone={handleCloneMapItem}
                     onDelete={handleDeleteMapItem}
                     onLoad={handleLoadMap}
                     onIndent={handleIndent}
                     onOutdent={handleOutdent}
                     onReorder={handleReorder}
+                    onToggleExpand={toggleMapExpand}
                   />
                 </div>
               )}

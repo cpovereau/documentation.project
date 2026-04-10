@@ -22,7 +22,7 @@ media/
 staticfiles/
 
 # Migrations (optionnel selon votre usage)
-**/migrations/**
+# **/migrations/**
 
 # Ruff / Mypy / cache outils
 .ruff_cache/
@@ -68,3 +68,36 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+
+# =========================
+#     PLAYWRIGHT / E2E
+# =========================
+
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
+
+
+# =========================
+#     DOCUMENTUM SPECIFIQUE
+# =========================
+
+# Médias importés localement (si non maîtrisés)
+medias/
+uploads/
+
+# Exports DITA / PDF / SCORM
+exports/
+output/
+dita_output/
+
+# Fichiers temporaires XML
+*.tmp.xml
+
+# Audit / dépendances générées
+deps_installed.json
+deps_licences.json
+deps_vulnerabilities.json

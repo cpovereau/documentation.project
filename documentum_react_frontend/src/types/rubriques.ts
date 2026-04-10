@@ -15,5 +15,3 @@ export async function prepareNewRubriqueXml(payload: RubriqueInitPayload): Promi
   const response = await api.post("/dita-template/", payload);
   return response.data.xml;
 } // Le backend renvoie { xml: "..." }
-
-// Autres fonctions liées aux rubriques à ajouter ici...

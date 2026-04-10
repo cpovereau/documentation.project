@@ -8,8 +8,26 @@ import type { MapRubrique } from "@/api/mapRubriques"
  */
 export interface MapNode {
   id: number
-  parent: number | null
+  parentId: number | null
 }
+
+/**
+ * Règle métier : la racine n'est pas une rubrique éditable.
+ */
+export function isStructuralOnlyNode<T extends MapNode>(
+  node: T
+): boolean {
+  return node.parentId === null
+}
+
+/**
+ * Indique si un nœud est la racine. 
+ */
+
+export function isRootMapItem(item: { parentId: number | null }): boolean {
+  return item.parentId === null
+}
+
 
 /**
  * Retourne la MapRubrique racine d'une map.
@@ -18,7 +36,7 @@ export interface MapNode {
 export function getRootMapRubrique<T extends MapNode>(
   nodes: T[]
 ): T {
-  const roots = nodes.filter((n) => n.parent === null)
+  const roots = nodes.filter((n) => n.parentId === null)
 
   if (roots.length === 0) {
     throw new Error("Aucune racine documentaire trouvée pour la map.")
@@ -29,6 +47,26 @@ export function getRootMapRubrique<T extends MapNode>(
   }
 
   return roots[0]
+}
+
+/**
+ * Indique si un nœud peut être sélectionné, renommé, indenté, ou lui attacher un buffer d'éditeur.
+ * Règle : seuls les nœuds non-structurels peuvent l'être.
+ */
+export function canSelectNode<T extends MapNode>(node: T): boolean {
+  return !isStructuralOnlyNode(node)
+}
+
+export function canRenameNode<T extends MapNode>(node: T): boolean {
+  return !isStructuralOnlyNode(node)
+}
+
+export function canIndentNode<T extends MapNode>(node: T): boolean {
+  return !isStructuralOnlyNode(node)
+}
+
+export function canAttachEditorBuffer<T extends MapNode>(node: T): boolean {
+  return !isStructuralOnlyNode(node)
 }
 
 /**
@@ -70,11 +108,11 @@ export function getPathToNode<T extends MapNode>(
   while (current) {
     path.unshift(current.id)
 
-    if (current.parent === null) {
+    if (current.parentId === null) {
       break
     }
 
-    current = byId.get(current.parent)
+    current = byId.get(current.parentId)
   }
 
   return path.length ? path : null

@@ -99,7 +99,7 @@ api.interceptors.response.use(
 export async function createProjectValidated(
   payload: ProjectCreateZ
 ): Promise<CreateProjectResponseZ> {
-  const res = await api.post("/projet/create/", payload);
+  const res = await api.post("/api/projets/", payload);
 
   console.group("[FLOW][CreateProject]");
   console.log("payload sent", payload);

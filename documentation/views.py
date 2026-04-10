@@ -1,5 +1,4 @@
 # documentation/views.py
-import pprint
 import csv
 import io
 import os
@@ -17,7 +16,6 @@ from rest_framework.decorators import (
     action,
     parser_classes,
 )
-from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.renderers import JSONRenderer
@@ -36,7 +34,6 @@ from .models import (
     ProfilPublication,
     InterfaceUtilisateur,
     Rubrique,
-    VersionProjet,
     Media,
 )
 from .utils import get_active_version, clone_version, generate_dita_template
@@ -47,9 +44,8 @@ import requests
 import logging
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
-from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
-from django.db import transaction, connection
+from django.db import transaction
 from django.db.models import QuerySet
 from rest_framework.authtoken.models import Token
 from django.core.files.storage import default_storage
@@ -61,6 +57,7 @@ from .serializers import (
     ProduitSerializer,
     MapSerializer,
     MapRubriqueSerializer,
+    MapStructureReorderSerializer,
     FonctionnaliteSerializer,
     VersionProjetSerializer,
     AudienceSerializer,
@@ -74,14 +71,30 @@ from .serializers import (
     MapRubriqueCreateSerializer,
     RubriqueSerializer,
     CreateRubriqueInMapSerializer,
+    MapStructureAttachSerializer,
     UserSerializer,
     MediaSerializer,
 )
 from .services import (
     add_rubrique_to_map,
+    create_project,
     create_rubrique_in_map,
+    indent_map_rubrique,
+    outdent_map_rubrique,
+    reorder_map_rubriques,
 )
 from django.utils.timezone import now
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def healthcheck(request):
+    """
+    GET /health/
+    Retourne {"status": "ok"} si l'application répond normalement.
+    Aucune dépendance externe — vérifie uniquement que le process est vivant.
+    """
+    return Response({"status": "ok"}, status=status.HTTP_200_OK)
 
 
 # Middleware CSRF pour les vues API
@@ -105,11 +118,6 @@ def custom_404(request):
 
 def custom_500(request):
     return render(request, "500.html", status=500)
-
-
-# Visualisation des requêtes SQL dans la console
-def debug_queries():
-    pprint.pprint(connection.queries)
 
 
 class ArchivableModelViewSet(viewsets.ModelViewSet):
@@ -256,6 +264,27 @@ class ProjetViewSet(viewsets.ModelViewSet):
     serializer_class = ProjetSerializer
     permission_classes = [IsAuthenticated]
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        result = create_project(data=serializer.validated_data, user=request.user)
+        projet = result["projet"]
+
+        # Rechargement pour sérialisation complète (relations versions, maps)
+        projet = (
+            Projet.objects.prefetch_related("versions", "maps")
+            .select_related("gamme", "auteur")
+            .get(pk=projet.pk)
+        )
+        return Response(
+            {
+                "projet": ProjetSerializer(projet).data,
+                "map": MapSerializer(result["map"]).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
@@ -307,53 +336,6 @@ class VersionProjetViewSet(viewsets.ModelViewSet):
             )
 
 
-# Viewset pour ajouter une rubrique à une map
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def add_rubrique_to_map_view(request):
-    """
-    Body attendu:
-    {
-      "map": 123,
-      "rubrique": 456,
-      "parent": null,
-      "ordre": null
-    }
-    """
-    map_id = request.data.get("map")
-    rubrique_id = request.data.get("rubrique")
-    parent_id = request.data.get("parent")
-    ordre = request.data.get("ordre")
-
-    fields = {}
-    if map_id is None:
-        fields["map"] = ["Champ requis."]
-    if rubrique_id is None:
-        fields["rubrique"] = ["Champ requis."]
-    if fields:
-        return Response({"error": "Erreur de validation", "fields": fields}, status=400)
-
-    try:
-        mr = add_rubrique_to_map(
-            map_id=int(map_id),
-            rubrique_id=int(rubrique_id),
-            parent_id=int(parent_id) if parent_id is not None else None,
-            ordre=int(ordre) if ordre is not None else None,
-        )
-        return Response(MapRubriqueSerializer(mr).data, status=status.HTTP_201_CREATED)
-
-    except ValidationError as e:
-        # Harmonisation de votre format d’erreur “frontend-friendly”
-        detail = getattr(e, "detail", None)
-        if isinstance(detail, dict):
-            return Response({"error": "Erreur métier", "fields": detail}, status=400)
-        return Response({"error": "Erreur métier", "detail": str(e)}, status=400)
-
-    except Exception as e:
-        logger.exception("[MapRubrique] Erreur inattendue")
-        return Response({"error": "Erreur interne", "detail": str(e)}, status=500)
-
-
 # Vue pour obtenir la structure documentaire complète d’un projet
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -398,34 +380,6 @@ def projet_structure_view(request, projet_id: int):
     return Response(data, status=status.HTTP_200_OK)
 
 
-# Viewset pour obtenir la structure documentaire d’une map
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def map_rubriques_view(request, map_id: int):
-    """
-    Retourne la structure documentaire (MapRubrique) d’une map donnée
-    """
-    try:
-        map_obj = Map.objects.get(pk=map_id)
-    except Map.DoesNotExist:
-        return Response(
-            {"error": "Map introuvable."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    structure_qs = (
-        MapRubrique.objects.filter(map=map_obj)
-        .select_related("rubrique", "parent")
-        .order_by("ordre")
-    )
-
-    serializer = MapRubriqueStructureSerializer(structure_qs, many=True)
-
-    logger.info(f"[MapStructure] Chargement structure map_id={map_id}")
-
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-
 # ViewSet pour les maps
 class MapViewSet(viewsets.ModelViewSet):
     queryset = Map.objects.all()
@@ -438,7 +392,7 @@ class MapViewSet(viewsets.ModelViewSet):
 
         if request.method == "GET":
             qs = MapRubrique.objects.filter(map=map_obj).order_by("ordre")
-            serializer = MapRubriqueSerializer(qs, many=True)
+            serializer = MapRubriqueStructureSerializer(qs, many=True)
             return Response(serializer.data)
 
         if request.method == "POST":
@@ -451,42 +405,93 @@ class MapViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_201_CREATED,
             )
 
-    @action(detail=True, methods=["post"], url_path="create-rubrique")
-    def create_rubrique(self, request, pk=None):
+    @action(detail=True, methods=["get"], url_path="structure")
+    def structure(self, request, pk=None):
+        map_obj = self.get_object()
+
+        structure_qs = (
+            MapRubrique.objects.filter(map=map_obj)
+            .select_related("rubrique", "parent")
+            .order_by("ordre")
+        )
+
+        serializer = MapRubriqueStructureSerializer(structure_qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"], url_path="structure/create")
+    def structure_create(self, request, pk=None):
         serializer = CreateRubriqueInMapSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(
-                {"error": "Erreur de validation", "fields": serializer.errors},
-                status=400,
-            )
+        serializer.is_valid(raise_exception=True)
 
         data = serializer.validated_data
-        try:
-            mr = create_rubrique_in_map(
-                map_id=int(pk),
-                titre=data["titre"],
-                contenu_xml=data["contenu_xml"],
-                auteur=request.user,
-                parent_id=data.get("parent"),
-                insert_after_id=data.get("insert_after"),
-                insert_before_id=data.get("insert_before"),
-            )
-            return Response(
-                MapRubriqueSerializer(mr).data, status=status.HTTP_201_CREATED
-            )
+        mr = create_rubrique_in_map(
+            map_id=int(pk),
+            titre=data["titre"],
+            contenu_xml=data["contenu_xml"],
+            auteur=request.user,
+            parent_id=data.get("parent"),
+            insert_after_id=data.get("insert_after"),
+            insert_before_id=data.get("insert_before"),
+        )
 
-        except ValidationError as e:
-            detail = getattr(e, "detail", None)
-            if isinstance(detail, dict):
-                return Response(
-                    {"error": "Erreur métier", "fields": detail}, status=400
-                )
-            return Response({"error": "Erreur métier", "detail": str(e)}, status=400)
+        return Response(MapRubriqueSerializer(mr).data, status=status.HTTP_201_CREATED)
 
-        except Exception as e:
-            logger.exception("[MapRubrique] Erreur inattendue create-rubrique")
-            return Response({"error": "Erreur interne", "detail": str(e)}, status=500)
+    @action(detail=True, methods=["post"], url_path="structure/reorder")
+    def structure_reorder(self, request, pk=None):
+        serializer = MapStructureReorderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
+        data = serializer.validated_data
+        reorder_map_rubriques(
+            map_id=int(pk),
+            parent_id=data.get("parentId"),
+            ordered_ids=data["orderedIds"],
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path=r"structure/(?P<map_rubrique_id>\d+)/indent",
+    )
+    def structure_indent(self, request, pk=None, map_rubrique_id=None):
+        indent_map_rubrique(
+            map_id=int(pk),
+            map_rubrique_id=int(map_rubrique_id),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path=r"structure/(?P<map_rubrique_id>\d+)/outdent",
+    )
+    def structure_outdent(self, request, pk=None, map_rubrique_id=None):
+        outdent_map_rubrique(
+            map_id=int(pk),
+            map_rubrique_id=int(map_rubrique_id),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"], url_path="structure/attach")
+    def structure_attach(self, request, pk=None):
+        """
+        POST /api/maps/{id}/structure/attach/
+        Attache une rubrique existante à la map via le service add_rubrique_to_map.
+        Endpoint canonique — remplace à terme POST /api/map-rubriques/.
+        """
+        serializer = MapStructureAttachSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        data = serializer.validated_data
+        mr = add_rubrique_to_map(
+            map_id=int(pk),
+            rubrique_id=data["rubrique_id"],
+            parent_id=data.get("parent_id"),
+            ordre=data.get("ordre"),
+        )
+        return Response(MapRubriqueSerializer(mr).data, status=status.HTTP_201_CREATED)
 
 # ViewSet pour les rubriques
 class RubriqueViewSet(viewsets.ModelViewSet):
@@ -500,217 +505,65 @@ class RubriqueViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        if not serializer.is_valid():
-            logger.warning("[Rubrique] Données invalides à la création")
-            return Response(
-                {"error": "Erreur de validation", "fields": serializer.errors},
-                status=400,
+        serializer.is_valid(raise_exception=True)
+
+        projet = serializer.validated_data.get("projet")
+        version_projet = VersionProjet.objects.filter(
+            projet=projet, is_active=True
+        ).first()
+
+        if not version_projet:
+            raise ValidationError(
+                {"version_projet": ["Aucune version active pour ce projet."]}
             )
 
-        try:
-            projet = serializer.validated_data.get("projet")
-            version_projet = VersionProjet.objects.filter(
-                projet=projet, is_active=True
-            ).first()
-
-            if not version_projet:
-                logger.warning(
-                    f"[Rubrique] Création échouée : pas de version active pour {projet}"
-                )
-                return Response(
-                    {"error": "Aucune version active pour ce projet."}, status=400
-                )
-
-            rubrique = serializer.save(version_projet=version_projet)
-            logger.info(
-                f"[Rubrique] '{rubrique.titre}' créée pour '{rubrique.projet.nom}' par {request.user.username}"
-            )
-            return Response(self.get_serializer(rubrique).data, status=201)
-        except Exception as e:
-            logger.exception("Erreur lors de la création d'une rubrique")
-            return Response({"error": "Erreur interne", "detail": str(e)}, status=500)
+        rubrique = serializer.save(version_projet=version_projet)
+        logger.info(
+            f"[Rubrique] '{rubrique.titre}' créée pour '{rubrique.projet.nom}' par {request.user.username}"
+        )
+        return Response(self.get_serializer(rubrique).data, status=201)
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(
             instance, data=request.data, partial=kwargs.get("partial", False)
         )
-        if not serializer.is_valid():
-            logger.warning("[Rubrique] Données invalides à la mise à jour")
-            return Response(
-                {"error": "Erreur de validation", "fields": serializer.errors},
-                status=400,
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            rubrique = Rubrique.objects.select_for_update().get(pk=instance.pk)
+
+            projet = serializer.validated_data.get("projet", rubrique.projet)
+            version_projet = serializer.validated_data.get(
+                "version_projet", rubrique.version_projet
             )
 
-        try:
-            with transaction.atomic():
-                rubrique = Rubrique.objects.select_for_update().get(pk=instance.pk)
-
-                projet = serializer.validated_data.get("projet", rubrique.projet)
-                version_projet = serializer.validated_data.get(
-                    "version_projet", rubrique.version_projet
+            if version_projet and version_projet.projet != projet:
+                raise ValidationError(
+                    {"version_projet": ["La version ne correspond pas au projet."]}
                 )
 
-                if version_projet and version_projet.projet != projet:
-                    logger.warning("[Rubrique] Conflit version/projet")
-                    return Response(
-                        {"error": "La version ne correspond pas au projet."}, status=400
-                    )
-
-                rubrique = serializer.save()
-                logger.info(
-                    f"[Rubrique] '{rubrique.titre}' mise à jour par {request.user.username}"
-                )
-                return Response(self.get_serializer(rubrique).data, status=200)
-        except Exception as e:
-            logger.exception("Erreur lors de la mise à jour d'une rubrique")
-            return Response({"error": "Erreur interne", "detail": str(e)}, status=500)
-
-
-# Classe pour la création de projet
-class CreateProjectAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    @transaction.atomic
-    def post(self, request, *args, **kwargs):
-        serializer = ProjetSerializer(
-            data=request.data,
-            context={"request": request},
-        )
-        logger.info("[FLOW][CreateProject][START]", extra={"user": request.user.id})
-        logger.error("[DEBUG][CreateProject] POST called", extra={"data": request.data})
-
-        if not serializer.is_valid():
-            logger.warning("[Projet] Données invalides à la création")
-            return Response(
-                {"error": "Erreur de validation", "fields": serializer.errors},
-                status=400,
-            )
-
-        try:
-            # 1️⃣ Création du projet
-            projet = serializer.save()
+            rubrique = serializer.save()
             logger.info(
-                f"[Projet] Projet '{projet.nom}' créé par {request.user.username}"
+                f"[Rubrique] '{rubrique.titre}' mise à jour par {request.user.username}"
             )
-            logger.info(
-                "[FLOW][CreateProject] Project created",
-                extra={
-                    "project_id": projet.id,
-                },
-            )
+            return Response(self.get_serializer(rubrique).data, status=200)
 
-            # 2️⃣ Création de la version initiale (obligatoire métier)
-            VersionProjet.objects.create(
-                projet=projet,
-                version_numero="1.0.0",
-                date_lancement=now(),
-                notes_version="Version initiale",
-                is_active=True,
-            )
-            logger.info(
-                f"[Version] Version initiale '1.0.0' créée pour le projet '{projet.nom}'"
-            )
-            logger.info(
-                "[FLOW][CreateProject] Version created",
-                extra={
-                    "project_id": projet.id,
-                    "version_numero": "1.0.0",
-                },
-            )
-
-            # 3️⃣ Création de la map master par défaut
-            map_serializer = MapSerializer(
-                data={
-                    "nom": "Carte par défaut",
-                    "projet": projet.id,
-                    "is_master": True,
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if MapRubrique.objects.filter(rubrique=instance).exists():
+            raise ValidationError(
+                {
+                    "rubrique": [
+                        "Impossible de supprimer cette rubrique : "
+                        "elle est encore utilisée dans une structure documentaire."
+                    ]
                 }
             )
-
-            if not map_serializer.is_valid():
-                logger.warning(
-                    f"[Map] Échec création map par défaut pour projet '{projet.nom}'"
-                )
-                raise ValidationError(map_serializer.errors)
-
-            map_instance = map_serializer.save()
-            logger.info(f"[Map] Carte par défaut créée pour le projet '{projet.nom}'")
-            logger.info(
-                "[FLOW][CreateProject] Map created",
-                extra={
-                    "project_id": projet.id,
-                    "map_id": map_instance.id,
-                },
-            )
-
-            # 3️⃣bis Création d'une rubrique technique minimale (ancrage UX)
-            rubrique = Rubrique.objects.create(
-                projet=projet,
-                titre="Racine documentaire",
-                auteur=request.user,
-                is_active=True,
-            )
-            logger.info(
-                "[FLOW][CreateProject] Default rubrique created",
-                extra={
-                    "project_id": projet.id,
-                    "rubrique_id": rubrique.id,
-                },
-            )
-
-            # 3️⃣ter Liaison Map ↔ Rubrique
-            MapRubrique.objects.create(
-                map=map_instance,
-                rubrique=rubrique,
-                parent=None,
-                ordre=1,
-            )
-            logger.info(
-                "[FLOW][CreateProject] MapRubrique created",
-                extra={
-                    "project_id": projet.id,
-                    "map_id": map_instance.id,
-                    "rubrique_id": rubrique.id,
-                },
-            )
-
-            # 4️⃣ RECHARGEMENT EXPLICITE du projet (contrat API)
-            projet = (
-                Projet.objects.prefetch_related("versions", "maps")
-                .select_related("gamme", "auteur")
-                .get(pk=projet.pk)
-            )
-            logger.info(
-                "[FLOW][CreateProject] RESPONSE payload",
-                extra={
-                    "has_versions": projet.versions.exists(),
-                    "project_id": projet.id,
-                    "versions_count": projet.versions.count(),
-                    "has_maps": projet.maps.exists(),
-                    "maps_count": projet.maps.count(),
-                },
-            )
-
-            # 5️⃣ Réponse complète et déterministe
-            return Response(
-                {
-                    "projet": ProjetSerializer(projet).data,
-                    "map": MapSerializer(map_instance).data,
-                },
-                status=201,
-            )
-
-        except ValidationError as e:
-            logger.warning("[Projet] Erreur métier lors de la création")
-            raise e  # géré par custom_exception_handler
-
-        except Exception as e:
-            logger.exception("[Projet] Erreur inattendue lors de la création du projet")
-            return Response(
-                {"error": "Erreur interne", "detail": str(e)},
-                status=500,
-            )
+        logger.info(
+            f"[Rubrique] '{instance.titre}' supprimée par {request.user.username}"
+        )
+        return super().destroy(request, *args, **kwargs)
 
 
 # Vue pour la consultation des projets
@@ -719,20 +572,6 @@ def get_project_details(request, pk):
     projet = get_object_or_404(Projet.objects.select_related("gamme"), pk=pk)
     serializer = ProjetSerializer(projet)
     return Response(serializer.data)
-
-
-# Classe pour la gestion des maps
-class CreateMapView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = MapSerializer(data=request.data)
-        if serializer.is_valid():
-            map_instance = serializer.save()
-            return Response(
-                MapSerializer(map_instance).data, status=status.HTTP_201_CREATED
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # Vue pour publier les formats de publication
@@ -913,8 +752,7 @@ def import_fonctionnalites(request):
                     {"line": idx + 1, "status": "error", "message": str(e), "row": row}
                 )
 
-        print("Import terminé, lignes traitées :", len(results))
-        print("Résultats import :", results)
+        logger.info("[ImportFCT] Import terminé : %s lignes traitées", len(results))
         return Response({"import_result": results}, status=201)
 
     except Exception as e:
@@ -949,10 +787,6 @@ def check_media_names(request):
     prefix = f"{produit.abreviation}-{fonctionnalite.code}-{interface.code}"
     medias = Media.objects.filter(nom_fichier__startswith=prefix)
     noms_existants = sorted([m.nom_fichier for m in medias])
-
-    print("[DEBUG] Abréviation produit :", produit.abreviation)
-    print("[DEBUG] Code fonctionnalité :", fonctionnalite.code)
-    print("[DEBUG] Code interface :", interface.code)
 
     return Response({"prefix": prefix, "existing": noms_existants})
 

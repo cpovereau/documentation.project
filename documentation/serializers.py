@@ -1,20 +1,21 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
+
 from .models import (
-    Projet,
+    Audience,
+    Fonctionnalite,
     Gamme,
-    Produit,
-    Rubrique,
-    TypeRubrique,
+    InterfaceUtilisateur,
     Map,
     MapRubrique,
-    VersionProjet,
-    Fonctionnalite,
-    Tag,
-    ProfilPublication,
-    InterfaceUtilisateur,
-    Audience,
     Media,
+    Produit,
+    ProfilPublication,
+    Projet,
+    Rubrique,
+    Tag,
+    TypeRubrique,
+    VersionProjet,
 )
 
 
@@ -115,13 +116,6 @@ class ProjetSerializer(serializers.ModelSerializer):
             "auteur",
         ]
         extra_kwargs = {"auteur": {"read_only": True}}
-
-    def create(self, validated_data):
-        # Créer le projet
-        auteur = self.context["request"].user
-        projet = Projet.objects.create(**validated_data, auteur=auteur)
-
-        return projet
 
 
 class FonctionnaliteSerializer(serializers.ModelSerializer):
@@ -298,7 +292,22 @@ class CreateRubriqueInMapSerializer(serializers.Serializer):
     insert_before = serializers.IntegerField(required=False, allow_null=True)
 
 
+class MapStructureReorderSerializer(serializers.Serializer):
+    parentId = serializers.IntegerField(required=False, allow_null=True)
+    orderedIds = serializers.ListField(
+        child=serializers.IntegerField(),
+        allow_empty=False,
+    )
+
+
 class MediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Media
         fields = "__all__"
+
+
+class MapStructureAttachSerializer(serializers.Serializer):
+    """Payload pour POST /api/maps/{id}/structure/attach/"""
+    rubrique_id = serializers.IntegerField()
+    parent_id = serializers.IntegerField(required=False, allow_null=True)
+    ordre = serializers.IntegerField(required=False, allow_null=True)

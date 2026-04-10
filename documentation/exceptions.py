@@ -7,18 +7,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 def custom_exception_handler(exc, context):
-    # Appelle l'exception handler standard
+    # Appelle l'exception handler standard DRF
     response = exception_handler(exc, context)
 
-    # Log personnalisé
     view = context.get('view', None)
-    if view:
-        logger.error(f"[{view.__class__.__name__}] Exception: {str(exc)}")
+    view_name = view.__class__.__name__ if view else "unknown"
 
     if response is not None:
+        # Exception attendue (gérée par DRF) : warning pour 4xx, error pour 5xx
+        if response.status_code < 500:
+            logger.warning(f"[{view_name}] {exc.__class__.__name__}: {str(exc)}")
+        else:
+            logger.error(f"[{view_name}] {exc.__class__.__name__}: {str(exc)}")
         return response
 
-    # Fallback générique
+    # Exception non gérée : log complet avec traceback
+    logger.error(f"[{view_name}] Unhandled exception: {str(exc)}", exc_info=True)
     return Response({
         "error": "Une erreur interne est survenue.",
         "detail": str(exc)

@@ -12,6 +12,7 @@ import {
   useSensors,
   DragEndEvent,
 } from "@dnd-kit/core";
+import { isStructuralOnlyNode } from "@/lib/mapStructure";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { MapItem } from "@/types/MapItem";
 
@@ -32,11 +33,14 @@ export interface MapModuleProps {
   onClone: (itemId: number) => void;
   onDelete: (itemId: number) => void;
   onLoad: () => void;
+  onLoadMapDialog: () => void;
 
   onIndent: (itemId: number) => void;
   onOutdent: (itemId: number) => void;
 
   onReorder: (orderedIds: number[]) => void;
+
+  onToggleExpand: (itemId: number, expand?: boolean) => void;
 }
 
 function getVisibleItems(items: MapItem[]): MapItem[] {
@@ -45,7 +49,7 @@ function getVisibleItems(items: MapItem[]): MapItem[] {
   for (const item of items) {
     if (hideLevel !== null) {
       if (item.level > hideLevel) continue;
-      else hideLevel = null;
+      hideLevel = null;
     }
     result.push(item);
     if (item.expanded === false) hideLevel = item.level;
@@ -58,7 +62,6 @@ export const MapModule: React.FC<MapModuleProps> = ({
   onToggle,
   mapItems,
   selectedMapItemId,
-  onLoadMapDialog,
   onSelect,
   onRename,
   editingItemId,
@@ -68,9 +71,11 @@ export const MapModule: React.FC<MapModuleProps> = ({
   onClone,
   onDelete,
   onLoad,
+  onLoadMapDialog,
   onIndent,
   onOutdent,
   onReorder,
+  onToggleExpand,
 }) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -84,6 +89,7 @@ export const MapModule: React.FC<MapModuleProps> = ({
 
     if (oldIndex === -1 || newIndex === -1) return;
 
+    // ⚠️ reorder sur visibles uniquement (ok pour l’instant)
     const reordered = arrayMove(visibleItems, oldIndex, newIndex);
     const orderedIds = reordered.map((i) => i.id);
 
@@ -92,7 +98,7 @@ export const MapModule: React.FC<MapModuleProps> = ({
 
   const visibleItems = getVisibleItems(mapItems);
   const selectedItem = mapItems.find((i) => i.id === selectedMapItemId);
-  const isRootSelected = selectedItem?.isRoot === true;
+  const isRootSelected = selectedItem ? isStructuralOnlyNode(selectedItem) : false;
   const hasSelection = selectedMapItemId !== null;
 
   return (
@@ -113,20 +119,18 @@ export const MapModule: React.FC<MapModuleProps> = ({
           title={isExpanded ? "Réduire la section" : "Déplier la section"}
         >
           <ChevronDown
-            className={`transition-transform duration-200 w-8 h-8 ${
-              isExpanded ? "rotate-0" : "-rotate-90"
-            }`}
+            className={`transition-transform duration-200 w-8 h-8 ${isExpanded ? "rotate-0" : "-rotate-90"}`}
           />
         </Button>
         <div className="absolute w-[134px] h-[26px] top-[11px] left-[47px] font-bold text-black text-[32px] leading-normal">
           Map
         </div>
       </div>
+
       {/* --- BARRE OUTILS --- */}
       {isExpanded && (
         <>
           <div className="flex items-center justify-between gap-2 bg-[#d9d9d94c] rounded-[15px] mt-2 mx-[5px] py-1 px-1">
-            {/* ➕ Créer une rubrique */}
             <Button
               variant="ghost"
               className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
@@ -136,7 +140,6 @@ export const MapModule: React.FC<MapModuleProps> = ({
               <FilePlus className="w-8 h-8 transition group-hover:scale-110" strokeWidth={2.5} />
             </Button>
 
-            {/* 📂 Charger une map */}
             <Button
               variant="ghost"
               className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
@@ -149,7 +152,6 @@ export const MapModule: React.FC<MapModuleProps> = ({
               />
             </Button>
 
-            {/* 📄 Import Word */}
             <Button
               variant="ghost"
               className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
@@ -163,7 +165,6 @@ export const MapModule: React.FC<MapModuleProps> = ({
               />
             </Button>
 
-            {/* ⬇️ Charger une rubrique */}
             <Button
               variant="ghost"
               className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
@@ -173,7 +174,6 @@ export const MapModule: React.FC<MapModuleProps> = ({
               <Download className="w-8 h-8 transition group-hover:scale-110" strokeWidth={2.5} />
             </Button>
 
-            {/* 📄 Dupliquer */}
             <Button
               variant="ghost"
               className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-blue-100/70 hover:text-blue-700 group"
@@ -190,7 +190,6 @@ export const MapModule: React.FC<MapModuleProps> = ({
               <Copy className="w-8 h-8 transition group-hover:scale-110" strokeWidth={2.5} />
             </Button>
 
-            {/* 🗑️ Supprimer */}
             <Button
               variant="ghost"
               className="w-12 h-12 p-0 flex items-center justify-center rounded-xl transition hover:bg-red-100/70 hover:text-red-700 group"
@@ -223,15 +222,22 @@ export const MapModule: React.FC<MapModuleProps> = ({
                   <div>
                     {visibleItems.map((item) => {
                       const origIdx = mapItems.findIndex((x) => x.id === item.id);
+                      const isStructural = isStructuralOnlyNode(item);
+
                       return (
                         <MapItemComponent
                           key={item.id}
                           item={item}
                           idx={origIdx}
                           selectedMapItemId={selectedMapItemId}
-                          onSelect={onSelect}
-                          onRename={onRename}
-                          editing={editingItemId === item.id}
+                          onToggleExpand={onToggleExpand}
+                          onSelect={(id) => {
+                            if (!isStructural) onSelect(id);
+                          }}
+                          onRename={(id) => {
+                            if (!isStructural) onRename(id);
+                          }}
+                          editing={!isStructural && editingItemId === item.id}
                           onRenameSave={onRenameSave}
                           mapItems={mapItems}
                           onIndent={onIndent}
@@ -242,6 +248,7 @@ export const MapModule: React.FC<MapModuleProps> = ({
                   </div>
                 </SortableContext>
               </DndContext>
+
               <ScrollBar
                 orientation="vertical"
                 className="w-2.5 bg-[#d9d9d9] rounded-[15px] shadow-[inset_0px_4px_4px_#00000040] blur-[2px]"

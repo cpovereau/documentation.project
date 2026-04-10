@@ -2,6 +2,7 @@ import React from "react";
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MapItem as MapItemType } from "@/types/MapItem";
+import { isStructuralOnlyNode } from "@/lib/mapStructure";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -20,11 +21,13 @@ interface MapItemProps {
 }
 
 function canIndent(item: MapItemType, idx: number, items: MapItemType[]) {
+  if (isStructuralOnlyNode(item)) return false;
   if (idx === 0) return false;
   return items[idx - 1].level >= item.level;
 }
 
 function canOutdent(item: MapItemType) {
+  if (isStructuralOnlyNode(item)) return false;
   return item.level > 1;
 }
 
@@ -55,6 +58,8 @@ export const MapItem: React.FC<MapItemProps> = ({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({ id: item.id });
 
+  const isStructural = isStructuralOnlyNode(item);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -68,13 +73,17 @@ export const MapItem: React.FC<MapItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
+      {...(!isStructural ? attributes : {})}
+      {...(!isStructural ? listeners : {})}
       className={cn(
         "relative flex items-center h-[28px] px-1 rounded group transition cursor-pointer",
         selectedMapItemId === item.id ? "bg-blue-100 font-bold" : "hover:bg-gray-100",
       )}
-      onClick={() => onSelect(item.id)}
+      onClick={() => {
+        if (!isStructural) {
+          onSelect(item.id);
+        }
+      }}
     >
       {hasChildren(mapItems, idx) && item.expanded !== false && (
         <span className="mr-1 text-gray-600">
@@ -88,7 +97,7 @@ export const MapItem: React.FC<MapItemProps> = ({
       )}
 
       {/* ✅ Titre cliquable avec renommage */}
-      {editing ? (
+      {editing && !isStructural ? (
         <input
           autoFocus
           defaultValue={item.title}
@@ -104,6 +113,7 @@ export const MapItem: React.FC<MapItemProps> = ({
       ) : (
         <div
           onDoubleClick={(e) => {
+            if (isStructural) return;
             e.stopPropagation();
             onRename(item.id);
           }}

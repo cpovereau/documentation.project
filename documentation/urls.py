@@ -17,12 +17,8 @@ from .views import (
     get_csrf_token,
     login_view,
     logout_view,
-    CreateProjectAPIView,
     get_project_details,
-    CreateMapView,
     MapViewSet,
-    add_rubrique_to_map_view,
-    map_rubriques_view,
     get_type_sortie_choices,
     import_fonctionnalites,
     MediaViewSet,
@@ -30,6 +26,7 @@ from .views import (
     upload_media,
     generate_dita,
     check_orthographe_view,
+    healthcheck,
 )
 from .utils import publier_map, get_formats_publication
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -50,23 +47,20 @@ router.register(r"interfaces", InterfaceUtilisateurViewSet)
 router.register(r"media-items", MediaViewSet)
 
 urlpatterns = [
+    path("health/", healthcheck, name="healthcheck"),
     path("csrf/", get_csrf_token, name="csrf"),
     path("login/", login_view, name="login"),
     path("logout/", logout_view, name="logout"),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("projet/create/", CreateProjectAPIView.as_view(), name="create_project_api"),
     path("projets/<int:pk>/details/", get_project_details, name="project_details"),
     path("api/", include(router.urls)),
-    path("api/maps/", CreateMapView.as_view(), name="create_map"),
-    path("api/map-rubriques/", add_rubrique_to_map_view, name="add_rubrique_to_map"),
     path("api/publier-map/<int:map_id>/", publier_map, name="publier_map"),
     path(
         "api/projets/<int:projet_id>/structure/",
         projet_structure_view,
         name="projet_structure",
     ),
-    path("api/maps/<int:map_id>/rubriques/", map_rubriques_view, name="map_rubriques"),
     path(
         "api/formats-publication/", get_formats_publication, name="formats_publication"
     ),

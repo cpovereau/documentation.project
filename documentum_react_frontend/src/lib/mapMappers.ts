@@ -73,8 +73,6 @@ export function mapRubriquesToMapItems<T extends MapRubriqueLike>(
   // Déterminer la racine (parent === null)
   const roots = rubriques.filter(r => r.parent === null)
   if (roots.length !== 1) {
-    // On reste strict : ta logique métier impose 1 racine
-    // Si tu préfères ne pas throw en prod, on peut fallback.
     throw new Error(
       roots.length === 0
         ? "Aucune racine documentaire trouvée pour la map."
@@ -84,9 +82,14 @@ export function mapRubriquesToMapItems<T extends MapRubriqueLike>(
   const rootId = roots[0].id
 
   // Chemin à ouvrir automatiquement (root -> ... -> selected)
+  const nodesForPath = rubriques.map(r => ({
+    id: r.id,
+    parentId: r.parent,
+  }));
+
   const openPath = selectedMapItemId
-    ? getPathToNode(rubriques, selectedMapItemId)
-    : null
+    ? getPathToNode(nodesForPath, selectedMapItemId)
+    : null;
 
   const result: MapItem[] = []
 
@@ -94,12 +97,15 @@ export function mapRubriquesToMapItems<T extends MapRubriqueLike>(
   function walk(nodeId: number, level: number) {
     const mr = byId.get(nodeId)
     if (!mr) return
+    const isRoot = mr.parent === null
 
     result.push({
-      id: mr.id,                         // MapRubrique.id
-      rubriqueId: mr.rubrique.id,        // Rubrique.id (backend)
-      title: mr.rubrique_detail?.titre ?? `Rubrique #${mr.rubrique}`,
-      isMaster: false,                   // ou mr.is_master si tu l'as à ce niveau (souvent non)
+      id: mr.id,                         
+      rubriqueId: mr.rubrique.id,        
+      title: isRoot
+        ? "Structure documentaire"
+        : mr.rubrique_detail?.titre ?? mr.rubrique.titre,
+      isMaster: false,                   
       level,
       expanded: openPath ? openPath.includes(mr.id) : true,
       active: true,
