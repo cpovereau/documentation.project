@@ -27,7 +27,7 @@ class CRUDOperationsTests(TestCase):
         }
         response = self.client.post("/api/projets/", payload, format="json")
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data["nom"], "Nouveau Projet")
+        self.assertEqual(response.data["projet"]["nom"], "Nouveau Projet")
 
     def test_read_project(self):
         # Test de lecture d'un projet
