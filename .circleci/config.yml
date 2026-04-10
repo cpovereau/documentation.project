@@ -5,12 +5,10 @@ jobs:
     docker:
       - image: cimg/python:3.11
       - image: cimg/postgres:16.4
-        name: postgres
         environment:
           POSTGRES_DB: documentationocealia
           POSTGRES_USER: gitadmin
           POSTGRES_PASSWORD: Ocealia31520
-          POSTGRES_HOST_AUTH_METHOD: trust
     steps:
       - checkout
       - run:
@@ -20,17 +18,24 @@ jobs:
             find . -name "__pycache__" -delete
             rm -rf .pytest_cache
       - run:
+          name: Debug DB port
+          command: |
+            for i in $(seq 1 30); do
+              nc -z localhost 5432 && echo "Postgres port is open" && exit 0
+              echo "Postgres not ready yet..."
+              sleep 2
+            done
+            echo "Postgres port never opened"
+            exit 1
+      - run:
           name: Wait for DB
           command: |
-            dockerize -wait tcp://localhost:5432 -timeout 60s
+            dockerize -wait tcp://localhost:5432 -timeout 120s
       - run:
           name: Install dependencies
           command: |
             python -m pip install --upgrade pip
             pip install -r requirements.txt
-      - run:
-          name: Set PYTHONPATH
-          command: export PYTHONPATH="$PYTHONPATH:$(pwd)"
       - run:
           name: Run Migrations
           command: |
