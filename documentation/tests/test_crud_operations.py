@@ -1,7 +1,8 @@
-from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from rest_framework.test import APIClient
-from documentation.models import Projet
+
+from documentation.models import Gamme, Projet
 
 User = get_user_model()
 
@@ -15,13 +16,14 @@ class CRUDOperationsTests(TestCase):
         )
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
+        self.gamme = Gamme.objects.create(nom="Hebergement")
 
     def test_create_project(self):
         # Test de création d'un projet
         payload = {
             "nom": "Nouveau Projet",
             "description": "Description de test",
-            "gamme": "Hebergement",  # Remplacez avec un champ valide si nécessaire
+            "gamme_id": self.gamme.id,
         }
         response = self.client.post("/api/projets/", payload, format="json")
         self.assertEqual(response.status_code, 201)
@@ -30,7 +32,7 @@ class CRUDOperationsTests(TestCase):
     def test_read_project(self):
         # Test de lecture d'un projet
         project = Projet.objects.create(
-            nom="Projet existant", description="Description existante", gamme="Usager"
+            nom="Projet existant", description="Description existante", gamme=self.gamme
         )
         response = self.client.get(f"/api/projets/{project.id}/")
         self.assertEqual(response.status_code, 200)
@@ -41,9 +43,13 @@ class CRUDOperationsTests(TestCase):
         project = Projet.objects.create(
             nom="Projet à mettre à jour",
             description="Ancienne description",
-            gamme="Planning",
+            gamme=self.gamme,
         )
-        payload = {"nom": "Projet mis à jour", "description": "Nouvelle description"}
+        payload = {
+            "nom": "Projet mis à jour",
+            "description": "Nouvelle description",
+            "gamme_id": self.gamme.id,
+        }
         response = self.client.put(
             f"/api/projets/{project.id}/", payload, format="json"
         )
@@ -53,7 +59,7 @@ class CRUDOperationsTests(TestCase):
     def test_delete_project(self):
         # Test de suppression d'un projet
         project = Projet.objects.create(
-            nom="Projet à supprimer", description="Description", gamme="Hebergement"
+            nom="Projet à supprimer", description="Description", gamme=self.gamme
         )
         response = self.client.delete(f"/api/projets/{project.id}/")
         self.assertEqual(response.status_code, 204)

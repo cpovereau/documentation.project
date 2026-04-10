@@ -1,12 +1,17 @@
+from django.contrib.auth.models import Group, User
 from django.test import TestCase
-from django.contrib.auth.models import User, Group
 from rest_framework.authtoken.models import Token
+
+from documentation.models import Gamme
 
 
 class CRUDPermissionTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         print("Setup des données de test...")
+
+        # Création de la gamme de test
+        cls.gamme = Gamme.objects.create(nom="Hebergement")
 
         # Création des groupes
         groups = [
@@ -43,15 +48,15 @@ class CRUDPermissionTests(TestCase):
         # Connexion de l’utilisateur admin_user et récupération du token
         user = User.objects.get(username="admin_user")
         token = Token.objects.get(user=user)
-        print(f"Token récupéré pour l'utilisateur {user.username}: {token.key}")
+        print(f"Token récupéré pour l’utilisateur {user.username}: {token.key}")
 
-        # En-têtes avec le token d'authentification
+        # En-têtes avec le token d’authentification
         headers = {"HTTP_AUTHORIZATION": f"Token {token.key}"}
 
         # Effectuer la requête POST avec le token
         response = self.client.post(
             "/api/projets/",
-            {"nom": "Test Projet", "description": "Projet de test"},
+            {"nom": "Test Projet", "description": "Projet de test", "gamme_id": self.gamme.id},
             **headers,
         )
         print(f"Requête POST exécutée. Statut de la réponse: {response.status_code}")
