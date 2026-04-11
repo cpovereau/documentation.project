@@ -80,7 +80,7 @@ Ce document **ne décrit pas** :
 | Méthode | Route | Vue | Rôle |
 |--------|------|-----|------|
 | GET | `/api/rubriques/{id}/` | `RubriqueViewSet.retrieve` | Lecture contenu |
-| PUT | `/api/rubriques/{id}/` | `RubriqueViewSet.update` | Mise à jour contenu XML |
+| PATCH | `/api/rubriques/{id}/` | `RubriqueViewSet.update` | Mise à jour partielle contenu XML (seul `contenu_xml` envoyé) |
 | DELETE | `/api/rubriques/{id}/` | `RubriqueViewSet.destroy` | Suppression protégée |
 
 ---

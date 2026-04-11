@@ -618,6 +618,33 @@ def check_orthographe_view(request):
         )
 
 
+# Vue de validation XML structurelle
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def validate_xml_view(request):
+    import xml.etree.ElementTree as ET
+
+    xml_string = request.data.get("xml", "")
+    if not xml_string or not xml_string.strip():
+        return Response(
+            {"error": "Contenu XML manquant."}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        ET.fromstring(xml_string)
+        return Response({"valid": True, "errors": []})
+    except ET.ParseError as e:
+        position = getattr(e, "position", None)
+        line = position[0] if position else None
+        col = position[1] if position else None
+        return Response(
+            {
+                "valid": False,
+                "errors": [{"line": line, "column": col, "message": str(e)}],
+            }
+        )
+
+
 # Vue pour la connexion
 @csrf_exempt
 @api_view(["POST"])

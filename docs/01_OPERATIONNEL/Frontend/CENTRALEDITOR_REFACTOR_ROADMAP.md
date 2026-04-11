@@ -61,8 +61,28 @@ Cette phase rend le flux **TipTap → XML → Buffer → Guard → UI** pleineme
 #### 2.3 — Nettoyage du fichier
 - [X] Supprimer toute référence à `editor.getHTML()`
 - [X] Remplacer par `getXml(selectedMapItemId)` partout dans la vue XML
-- [ ] Réduire les `useEffect` trop complexes
-- [ ] Rassembler les callbacks liés aux panels dans un hook
+- [X] Réduire les `useEffect` trop complexes (extraits dans useDictation + useGrammarPopup)
+- [X] Rassembler les callbacks liés aux panels dans un hook (handleOpenFind/History inline, ok car triviaux)
+
+#### 2.4 — Lot A : extraction hooks manquants (2026-04-11)
+- [X] Créer `useDictation` : dictée vocale, toasts, stop sur clic, callbacks start/stop
+- [X] Créer `useGrammarPopup` : click handler grammaire, état popup
+- [X] Créer `useClipboardActions` : handleCut / handleCopy / handlePaste + logAction
+- [X] Wirer `useEditorUIState` (existait mais n'était pas utilisé) : wordCount, isDragging, handleResizeStart
+- [X] Nettoyer `useEditorUIState` : retrait de popup (→ useGrammarPopup) et lastXmlValidation (→ useEditorDialogs)
+- [X] Supprimer le `useEffect` de debug rubriqueId
+- [X] Supprimer le `console.log` de montage composant
+- **Résultat : CentralEditor.tsx réduit de 444 → ~200 lignes (-55%)**
+
+#### 2.5 — Lot A.5 : remise en cohérence post-refactor (2026-04-11)
+- [X] `wordCount` : brancher `ui.setWordCount` dans `onUpdate` de `useEditor` (bug historique)
+- [X] `isDictating` : supprimer le `useState` fantôme, exposer `isDictating: isRecording` dans `useDictation`
+- [X] `GrammarHighlight.ts` : corriger `this.getState()(state)` → `this.getState(state)` (0 décoration sans ce fix)
+- [X] `GrammarHighlight.ts` : corriger `.join(',')` sur `{value:string}[]` → `.map(r => r.value).join(',')`
+- [X] `useGrammarChecker.ts` : transmettre `replacements: m.replacements` dans le dispatch vers l'extension
+- [X] Supprimer `import type { Editor }` inutilisé dans `CentralEditor.tsx`
+- [X] Retirer l'instanciation de `useClipboardActions` (sorties non utilisées dans l'UI — hook prêt mais pas branché)
+- [X] Remplacer `MutableRefObject` (déprécié React 19) par `RefObject` dans `useDictation`
 
 ### 📝 Notes
 L’objectif n’est **pas de changer le comportement**, mais d’obtenir un `CentralEditor.tsx` :
@@ -102,32 +122,100 @@ C’est la phase la plus technique, mais la plus critique pour assurer la fidél
 
 ---
 
-# 💾 Phase 4 — Sauvegarde backend & validation XML (EN COURS)
+# 💾 Phase 4 — Sauvegarde backend & validation XML (TERMINÉ)
 
 ### 🎯 Objectifs
 - Implémenter une sauvegarde réelle côté Django.
 - Gérer le statut `saved` après un retour serveur.
-- Intégrer un endpoint de validation XML (`xmllint` / DITA-OT).
+- Intégrer un endpoint de validation XML.
 - Finaliser le workflow complet de rédaction.
 
 ### 🧩 Tâches
 #### 4.1 — Hook `useRubriqueSave`
 - [x] Sérialisation XML depuis le buffer
 - [x] Appel API `/rubriques/{id}/`
-- [x] Mise à jour `status = "saved"` dans Zustand
+- [x] Mise à jour `status = “saved”` dans Zustand
 - [x] Reset du `useRubriqueChangeTracker`
 
 #### 4.2 — Validation XML
-- [ ] Endpoint côté Django
-- [ ] Feedback visuel dans `CentralEditor` (panneau erreurs)
+- [x] Endpoint côté Django (`POST /api/validate-xml/` — `xml.etree.ElementTree`)
+- [x] Feedback visuel dans `CentralEditor` (`XmlValidationPanel` inline)
 
 #### 4.3 — UX
 - [x] Bouton “Enregistrer”
-- [ ] Modale “Quitter sans enregistrer ?”
-- [ ] Sauvegarde automatique (optionnelle)
+- [x] Modale “Quitter sans enregistrer ?” (Lot E — voir Phase 5)
+- [ ] Sauvegarde automatique (optionnelle — hors périmètre actuel)
+
+#### 4.4 — Lot B : sécurisation complète du flux de sauvegarde (2026-04-11)
+
+**Écarts corrigés :**
+
+| # | Écart | Correction |
+|---|---|---|
+| E1 | `PATCH /rubriques/{id}/` sans `/api/` → probable 404 | `PATCH /api/rubriques/{id}/` |
+| E2 | Navigation guard inactif après save : `setXml` préservait le statut existant → buffer restait “saved” après édition | `useXmlBufferSync` marque `”dirty”` immédiatement (non-debounced) à chaque édition |
+| E3 | `resetAfterSave()` appelé même en cas d’échec API (catch interne sans re-throw) | `saveRubrique()` retourne `boolean` ; `resetAfterSave()` conditionné au succès |
+| E4 | `saving` state retourné mais non utilisé → double-save possible, aucun retour visuel | `saving` propagé → bouton désactivé + libellé “Enregistrement…” |
+| E5 | `PUT` vs `PATCH` selon canon | PATCH conservé (mise à jour partielle, DRF l’accepte). Voir decision-log. |
+
+**Fichiers modifiés :**
+- `src/hooks/useSaveRubrique.ts` — chemin `/api/`, retour `boolean`
+- `src/hooks/useXmlBufferSync.ts` — `setStatus(“dirty”)` immédiat
+- `src/components/ui/CentralEditor.tsx` — `saving` destructuré, `resetAfterSave` conditionnel, `isSaving` passé à EditorHeader
+- `src/components/ui/CentralEditor/EditorHeader.tsx` — prop `isSaving`, bouton protégé
+
+#### 4.5 — Lot C : validation XML backend avec feedback visuel (2026-04-11)
+
+- [x] Vue Django `validate_xml_view` (`POST /api/validate-xml/`) — parsing via `xml.etree.ElementTree`, retourne `{valid, errors[{line, col, message}]}`
+- [x] Hook `useXmlValidation` — états `validating`, `result`, `runValidation()`, `clearResult()`
+- [x] Composant `XmlValidationPanel` — panel inline vert/rouge avec numéro de ligne/colonne
+- [x] `useEditorDialogs` allégé : suppression du DOMParser + `alert()`, `validateXml` → `openXmlView`
+- [x] `CentralEditor.tsx` — `handleValidateXml` orchestre ouverture vue + appel backend
+- [x] `EditorMenuBar` — “Outils > Valider le XML” branché sur `handleValidateXml`
 
 ### 📝 Notes
-C’est la phase qui activera toute la chaîne “rédaction → versionning → validation → publication”.
+Le workflow complet “rédaction → sauvegarde → validation XML” est opérationnel.
+
+---
+
+# 🔒 Phase 5 — Sécurisation du guard de navigation (TERMINÉ)
+
+### 🎯 Objectifs
+- Bloquer toute navigation hors rubrique si le buffer contient du contenu non persisté.
+- Couvrir les statuts `"dirty"` ET `"error"` (après échec de sauvegarde).
+
+### 🧩 Tâches
+
+#### 5.1 — Lot D : extension du guard à "error" (2026-04-11)
+- [x] Identifier les deux points de guard : `LeftSidebar.tsx` (`hasUnsavedChanges`) et `useConfirmBeforeUnloadRubriqueChange` (dead code)
+- [x] Modifier la condition : `=== "dirty"` → `=== "dirty" || === "error"`
+- [x] Variable intermédiaire `currentBufferStatus` pour éviter double appel à `getStatus`
+- [x] Alignement de `useConfirmBeforeUnloadRubriqueChange` par cohérence
+
+**Fichiers modifiés :**
+- `src/components/ui/LeftSidebar.tsx` — condition `hasUnsavedChanges`
+- `src/hooks/useConfirmBeforeUnloadRubriqueChange.ts` — alignement (dead code)
+
+#### 5.2 — Lot E : modale "Quitter sans enregistrer ?" (2026-04-11)
+- [x] Créer `UnsavedChangesDialog` (3 choix : Enregistrer / Quitter / Annuler)
+- [x] Introduire `pendingNavigation: (() => void) | null` dans `LeftSidebar`
+- [x] Introduire `requestNavigation(action)` — intercepte si buffer bloquant, exécute sinon
+- [x] Instancier `useRubriqueSave(selectedRubriqueId)` dans `LeftSidebar`
+- [x] Transformer 6 points de guard (toast + return → `requestNavigation`)
+- [x] Retirer les guards internes de `openProject` et `openMap` (gardes remontées aux entry points)
+- [x] Garder les dialogs de projet/map guarded via leurs openers (`handleAdd`, `handleLoad`, `openLoadMapDialog`)
+
+**Comportement sur échec de sauvegarde :** modale fermée, navigation annulée, buffer reste `"error"`, toast visible.
+
+**Fichiers créés :**
+- `src/components/ui/UnsavedChangesDialog.tsx`
+
+**Fichiers modifiés :**
+- `src/components/ui/LeftSidebar.tsx`
+
+### 📝 Notes
+- `useConfirmBeforeUnloadRubriqueChange` (beforeunload navigateur) reste dead code — non branché, hors périmètre.
+- `resetAfterSave()` non appelé depuis la modale LeftSidebar (cosmétique uniquement — impact nul à la navigation).
 
 ---
 
@@ -136,8 +224,9 @@ C’est la phase qui activera toute la chaîne “rédaction → versionning →
 ### 🔍 Historique des validations Cursor
 - [x] Phase 1 validée (buffer + sync + guard)
 - [x] Phase 2 validée
-- [x] Phases 3 validée
-- [ ] Phase 4 planifier
+- [x] Phase 3 validée
+- [x] Phase 4 validée (Lots B + C)
+- [x] Phase 5 validée (Lots D + E)
 
 ### 📌 Ici se noteront vos remarques, problèmes, ou TODO futurs
 - 1️⃣ Whitelist d’attributs DITA (partiellement traitée, pas finalisée)

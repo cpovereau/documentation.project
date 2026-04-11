@@ -18,6 +18,7 @@ export function useGrammarChecker(editor: Editor | null) {
           from: m.offset,
           to: m.offset + m.length,
           message: m.message,
+          replacements: m.replacements ?? [],
         }));
 
         editor.view.dispatch(

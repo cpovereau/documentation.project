@@ -17,6 +17,7 @@ interface EditorHeaderProps {
   visibleDockEditor: "question" | "exercice" | null;
   setVisibleDockEditor: React.Dispatch<React.SetStateAction<"question" | "exercice" | null>>;
   hasChanges: boolean;
+  isSaving: boolean;
   onSaveRubrique: () => void;
 }
 
@@ -33,6 +34,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
   visibleDockEditor,
   setVisibleDockEditor,
   hasChanges,
+  isSaving,
   onSaveRubrique,
 }) => (
   <header className="flex items-center justify-between px-6 py-3 bg-[#fcfcfc] border-b border-[#e1e1e2]">
@@ -41,6 +43,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
       dialogs={dialogs}
       batchMode={batchMode}
       setBatchMode={setBatchMode}
+      onValidateXml={onValidateXml}
     />
     <div className="flex items-center gap-2">
       {isXmlView ? (
@@ -82,12 +85,12 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
       </Button>
       <Button
         className={`h-11 px-5 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 ${
-          hasChanges ? "bg-[#15803d] hover:bg-[#166534]" : "bg-gray-400 cursor-not-allowed"
+          hasChanges && !isSaving ? "bg-[#15803d] hover:bg-[#166534]" : "bg-gray-400 cursor-not-allowed"
         }`}
         onClick={onSaveRubrique}
-        disabled={!hasChanges}
+        disabled={!hasChanges || isSaving}
       >
-        Enregistrer
+        {isSaving ? "Enregistrement…" : "Enregistrer"}
       </Button>
     </div>
   </header>

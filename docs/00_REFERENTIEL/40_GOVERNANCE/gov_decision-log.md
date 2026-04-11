@@ -333,6 +333,96 @@ Active
 
 ---
 
+## 2026-04-11 – PATCH vs PUT pour la sauvegarde de rubrique
+
+**Sujet**
+Méthode HTTP utilisée pour `useRubriqueSave`
+
+**Contexte**
+La cartographie backend canonique (`10_CARTOGRAPHIE_BACKEND_CANONIQUE_EXPOSE.md`) liste `PUT /api/rubriques/{id}/` pour la mise à jour de contenu. Le hook `useRubriqueSave` utilise `PATCH`.
+
+**Décision**
+Conserver `PATCH /api/rubriques/{id}/` pour la sauvegarde de rubrique depuis le CentralEditor.
+
+**Justification**
+- DRF `ModelViewSet` expose les deux méthodes sur la même action `update`
+- `PATCH` est sémantiquement correct : seul `contenu_xml` est envoyé (mise à jour partielle)
+- `PATCH` était déjà utilisé pour le renommage (Lot 3) et fonctionne en production
+- Le référentiel peut être mis à jour pour refléter `PATCH` comme méthode officielle sur ce endpoint
+
+**Conséquences**
+- La cartographie backend (`10_CARTOGRAPHIE_BACKEND_CANONIQUE_EXPOSE.md`) doit être mise à jour : `PUT` → `PATCH` pour `RubriqueViewSet.update`
+- Toute future route de contenu rubrique doit utiliser `PATCH` pour les mises à jour partielles
+
+**Statut**
+Active
+
+---
+
+## 2026-04-11 – Guard de navigation étendu à "error"
+
+**Sujet**
+Condition de blocage du guard de navigation rubrique
+
+**Contexte**
+Le guard dans `LeftSidebar` ne bloquait la navigation que sur `status === "dirty"`. Après un échec de sauvegarde, le buffer passe à `"error"` — la navigation restait alors autorisée, exposant à une perte de contenu silencieuse.
+
+**Décision**
+La condition `hasUnsavedChanges` couvre désormais les deux statuts bloquants :
+- `"dirty"` — modification non sauvegardée
+- `"error"` — tentative de sauvegarde échouée
+
+**Justification**
+- Un buffer `"error"` contient du contenu non persisté : la navigation sans avertissement serait une perte silencieuse.
+- Diff minimal : une seule ligne modifiée dans `LeftSidebar.tsx`, alignement dans `useConfirmBeforeUnloadRubriqueChange.ts`.
+- Aucune modification sémantique des statuts ni du store.
+
+**Conséquences**
+- Navigation bloquée si `status === "dirty"` ou `status === "error"`
+- Navigation autorisée uniquement si `status === "saved"`
+- `useConfirmBeforeUnloadRubriqueChange` aligné par cohérence (actuellement dead code — non branché)
+
+**Statut**
+Active
+
+---
+
+## 2026-04-11 – Modale de navigation "Quitter sans enregistrer ?"
+
+**Sujet**
+UX de sortie lors d'une tentative de navigation avec buffer non sauvegardé
+
+**Contexte**
+Le guard de navigation (Lot D) bloquait sèchement toute navigation si le buffer était `"dirty"` ou `"error"`, sans proposer d'action à l'utilisateur. UX inacceptable en production.
+
+**Décision**
+Introduction d'une modale `UnsavedChangesDialog` avec 3 choix :
+1. **Enregistrer** → save API → si succès : navigation ; si échec : modale fermée, navigation annulée, toast d'erreur visible
+2. **Quitter sans enregistrer** → navigation immédiate, buffer non persisté
+3. **Annuler** → retour à l'édition sans changement
+
+Architecture adoptée :
+- `pendingNavigation: (() => void) | null` — callback de navigation différée dans `LeftSidebar`
+- `requestNavigation(action)` — helper qui intercepte et stocke l'action si buffer bloquant
+- Guard au niveau des **points d'entrée UI** (handlers), pas dans les fonctions métier (`openProject`, `openMap`)
+- `useRubriqueSave(selectedRubriqueId)` instancié dans `LeftSidebar` — appel API indépendant du CentralEditor
+
+**Justification**
+- Aucune logique métier dans les composants
+- Diff minimal : seul `LeftSidebar.tsx` modifié (+ création `UnsavedChangesDialog.tsx`)
+- Réutilisation du hook de sauvegarde existant — pas de duplication
+- Pas de falsification du buffer pour contourner le guard
+
+**Conséquences**
+- Sur échec de sauvegarde : modale fermée, navigation bloquée, buffer reste `"error"`
+- `useRubriqueChangeTracker.resetAfterSave()` n'est pas appelé depuis LeftSidebar (hors périmètre) — cosmétique uniquement, sans impact sur la sécurité du contenu
+- `useConfirmBeforeUnloadRubriqueChange` reste dead code (beforeunload navigateur non branché — hors périmètre)
+
+**Statut**
+Active
+
+---
+
 ## Règle de clôture
 
 Toute décision listée ici :

@@ -14,6 +14,7 @@ interface EditorMenuBarProps {
   dialogs: ReturnType<typeof useEditorDialogs>;
   batchMode: boolean;
   setBatchMode: React.Dispatch<React.SetStateAction<boolean>>;
+  onValidateXml: () => void;
 }
 
 const EditorMenuBar: React.FC<EditorMenuBarProps> = ({
@@ -21,6 +22,7 @@ const EditorMenuBar: React.FC<EditorMenuBarProps> = ({
   dialogs,
   batchMode,
   setBatchMode,
+  onValidateXml,
 }) => (
   <NavigationMenu>
     <NavigationMenuList>
@@ -103,7 +105,7 @@ const EditorMenuBar: React.FC<EditorMenuBarProps> = ({
           <div className="flex flex-col p-3 w-48">
             <button
               className="px-3 py-1 text-left hover:bg-gray-100 rounded"
-              onClick={() => dialogs.validateXml()}
+              onClick={onValidateXml}
             >
               Valider le XML
             </button>

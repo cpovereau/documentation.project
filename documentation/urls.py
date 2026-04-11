@@ -26,6 +26,7 @@ from .views import (
     upload_media,
     generate_dita,
     check_orthographe_view,
+    validate_xml_view,
     healthcheck,
 )
 from .utils import publier_map, get_formats_publication
@@ -72,6 +73,7 @@ urlpatterns = [
     path("import/media/", upload_media, name="upload_media"),
     path("api/dita-template/", generate_dita, name="generate_dita_template"),
     path("api/orthographe/", check_orthographe_view, name="check_orthographe"),
+    path("api/validate-xml/", validate_xml_view, name="validate_xml"),
 ]
 
 # Custom error handlers

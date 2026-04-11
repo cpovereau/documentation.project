@@ -1,11 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { toast } from "sonner";
-import { useSpeechToText } from "hooks/useSpeechToText";
+
 import { Card } from "components/ui/card";
-import { Checkbox } from "components/ui/checkbox"; // À intégrer dans la barre d'outils plus tard
 import PopupSuggestion from "components/ui/PopupSuggestion";
-import type { PopupProps } from "types/PopupSuggestion";
-import type { Editor } from "@tiptap/react";
 import { GripVertical } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import useXmlBufferStore from "@/store/xmlBufferStore";
@@ -16,18 +12,22 @@ import { ExerciceEditor } from "./ExerciceEditor";
 import { useFindReplaceTipTap } from "@/hooks/useFindReplaceTipTap";
 import { useRubriqueChangeTracker } from "@/hooks/useRubriqueChangeTracker";
 import { useDitaLoader } from "@/hooks/useDitaLoader";
-import { useSpeechCommands } from "@/hooks/useSpeechCommands";
 import { useEditorShortcuts } from "@/hooks/useEditorShortcuts";
 import { useGrammarChecker } from "@/hooks/useGrammarChecker";
 import { useEditorHistoryTracker } from "@/hooks/useEditorHistoryTracker";
 import { useXmlBufferSync } from "@/hooks/useXmlBufferSync";
 import { useRubriqueSave } from "@/hooks/useSaveRubrique";
+import { useXmlValidation } from "@/hooks/useXmlValidation";
 import EditorHeader from "components/ui/CentralEditor/EditorHeader";
 import EditorToolbar from "components/ui/CentralEditor/EditorToolbar";
 import BlockTypeMenu from "components/ui/CentralEditor/BlockTypeMenu";
 import HistoryPanel from "components/ui/CentralEditor/EditorPanels/HistoryPanel";
 import FindReplacePanel from "./CentralEditor/EditorPanels/FindReplacePanel";
+import XmlValidationPanel from "./CentralEditor/EditorPanels/XmlValidationPanel";
 import useEditorDialogs from "components/ui/CentralEditor/hooks/useEditorDialogs";
+import useEditorUIState from "components/ui/CentralEditor/hooks/useEditorUIState";
+import { useDictation } from "components/ui/CentralEditor/hooks/useDictation";
+import { useGrammarPopup } from "components/ui/CentralEditor/hooks/useGrammarPopup";
 
 // Props du composant
 interface CentralEditorProps {
@@ -60,263 +60,104 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
   onResizeDockEditorHeight,
   rubriqueId,
 }) => {
-  console.log("🧩 CentralEditor monté");
-
-  // États pour la gestion de l'éditeur
-  const [wordCount, setWordCount] = useState(0);
+  // États locaux liés directement au JSX
   const [findValue, setFindValue] = useState("");
   const [replaceValue, setReplaceValue] = useState("");
   const [batchMode, setBatchMode] = useState(false);
 
-  // Référence pour l'éditeur central
   const centralEditorRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
 
-  // Fonctions pour redimensionner la barre de séparation horizontale
-  const handleResizeStart = (e: React.MouseEvent) => {
-    const startY = e.clientY;
+  // États UI locaux (wordCount, isDragging, resize dock)
+  const { ui, handleResizeStartWrapper } = useEditorUIState();
+  const handleResizeStart = handleResizeStartWrapper(onResizeDockEditorHeight, dockEditorHeight);
 
-    const startHeight = dockEditorHeight;
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      const delta = moveEvent.clientY - startY;
-      const newHeight = Math.max(150, startHeight - delta);
-      onResizeDockEditorHeight(newHeight);
-    };
-
-    const onMouseUp = () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-      document.body.style.userSelect = "";
-      setIsDragging(false);
-    };
-
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-    document.body.style.userSelect = "none";
-    setIsDragging(true);
-  };
-
-  // Debug rubriqueId
-  useEffect(() => {
-    console.log("🧭 rubriqueId dans CentralEditor :", rubriqueId);
-  }, [rubriqueId]);
-
-  // 🔁 On récupère le XML initial depuis le buffer pour la rubrique sélectionnée
+  // Buffer XML global
   const getXml = useXmlBufferStore((state) => state.getXml);
   const xml = rubriqueId ? getXml(rubriqueId) : null;
 
-  const dialogs = useEditorDialogs({
-    getXml,
-    rubriqueId,
-    toast,
-  });
+  // Gestion des dialogues (find, history, xmlView)
+  const dialogs = useEditorDialogs();
 
-  // L’éditeur ne dépend plus du contenu XML
+  // Instance TipTap — recréée uniquement au changement de rubrique
   const editor = useEditor(
     {
       extensions: getAllExtensions(),
-      content: "<p></p>", // contenu placeholder, le vrai XML sera injecté par useDitaLoader
+      content: "<p></p>",
       onUpdate({ editor }) {
-        checkGrammar(editor.getText());
+        const text = editor.getText();
+        checkGrammar(text);
+        ui.setWordCount(text.trim().split(/\s+/).filter(Boolean).length);
       },
     },
-    [rubriqueId], // on recrée seulement quand on change de rubrique
+    [rubriqueId],
   );
 
+  // Synchronisation TipTap ↔ buffer XML
   useXmlBufferSync(editor, rubriqueId);
 
-  // ✅ Injection automatique du contenu XML depuis le buffer au changement de rubrique
+  // Chargement XML → TipTap au changement de rubrique
   const { isLoading } = useDitaLoader({ editor, rubriqueId });
   const { hasChanges, resetAfterSave } = useRubriqueChangeTracker(editor, rubriqueId);
 
+  // Reset du tracker après chargement
   useEffect(() => {
     if (!isLoading && editor) {
       resetAfterSave();
     }
   }, [isLoading, editor]);
 
-  // Sauvegarde de la rubrique
+  // Sauvegarde backend
   const { saveRubrique, saving } = useRubriqueSave(rubriqueId);
-
-  // Fonctions pour enregistrer une rubrique
   const onSaveRubrique = async () => {
-    await saveRubrique();
-    resetAfterSave();
+    const success = await saveRubrique();
+    // resetAfterSave uniquement en cas de succès confirmé par l'API
+    if (success) {
+      resetAfterSave();
+    }
   };
 
-  // Fonctions pour copier, coller, couper
-  function handleCut(editor: Editor | null) {
-    if (!editor) return;
-    const selectedText = editor.state.doc.textBetween(
-      editor.state.selection.from,
-      editor.state.selection.to,
-      "\n",
-    );
-    navigator.clipboard.writeText(selectedText);
-    editor.commands.deleteSelection();
-    logAction("Texte coupé", selectedText);
-  }
+  // Validation XML backend
+  const { validating, result: validationResult, runValidation, clearResult: clearValidation } = useXmlValidation();
+  const handleValidateXml = useCallback(async () => {
+    if (!rubriqueId) return;
+    const xmlString = getXml(rubriqueId);
+    if (!xmlString || !xmlString.trim()) return;
+    dialogs.openXmlView();
+    await runValidation(xmlString);
+  }, [rubriqueId, getXml, dialogs, runValidation]);
 
-  function handleCopy(editor: Editor | null) {
-    if (!editor) return;
-    const selectedText = editor.state.doc.textBetween(
-      editor.state.selection.from,
-      editor.state.selection.to,
-      "\n",
-    );
-    navigator.clipboard.writeText(selectedText);
-    logAction("Texte copié", selectedText);
-  }
+  const handleReturnToEdit = useCallback(() => {
+    dialogs.returnToEdit();
+    clearValidation();
+  }, [dialogs, clearValidation]);
 
-  function handlePaste(editor: Editor | null) {
-    if (!editor) return;
-    navigator.clipboard.readText().then((text) => {
-      editor.commands.insertContent(text);
-      logAction("Texte collé", text);
-    });
-  }
-
-  //Vérification de la grammaire
+  // Vérification grammaticale
   const { checkGrammar } = useGrammarChecker(editor);
 
-  // Recherche et remplacement de texte
+  // Recherche / remplacement
   const { find, replace, replaceAll } = useFindReplaceTipTap(editor);
 
-  // Gestion de l'historique de l'éditeur
+  // Historique des actions
   const { historyLog, logAction, clearHistory } = useEditorHistoryTracker();
 
-  // Gestion des commandes vocales
-  const { handleVoiceCommand } = useSpeechCommands(editor);
+  // Dictée vocale (toasts, stop sur clic, callbacks)
+  const {
+    isRecording,
+    isDictating,
+    inputSourceRef,
+    handleStartDictation,
+    handleStopDictation,
+  } = useDictation(editor);
 
-  // État de la dictée vocale
-  const [isDictating, setIsDictating] = useState(false);
-  const inputSourceRef = useRef<"keyboard" | "voice" | null>(null);
+  // Popup de suggestion grammaticale
+  const { popup, setPopup } = useGrammarPopup(editor);
 
-  const { start, stop, isRecording, isStopping, error } = useSpeechToText({
-    onResult: (text) => {
-      if (!editor) return;
-
-      inputSourceRef.current = "voice";
-
-      const { state, view } = editor;
-
-      const pos = state.selection.$from.pos;
-      const needsSpace = pos > 0 && !/\s$/.test(state.doc.textBetween(pos - 1, pos));
-
-      const tr = state.tr.insertText((needsSpace ? " " : "") + text, pos);
-      view.dispatch(tr);
-
-      setTimeout(() => {
-        inputSourceRef.current = null;
-      }, 100);
-    },
-
-    onCommand: handleVoiceCommand,
-  });
-
-  // Toast au lancement de la dictée vocale
-  useEffect(() => {
-    if (isRecording) {
-      toast.success("🎙️ Dictée en cours…", {
-        duration: 3000,
-        id: "dictate-start",
-      });
-    }
-  }, [isRecording]);
-
-  // Sortie de la dictée vocale en cas de click
-  useEffect(() => {
-    if (!editor || !isRecording) return;
-
-    let dom: HTMLElement;
-    try {
-      dom = editor.view.dom;
-    } catch {
-      return;
-    }
-
-    const handleManualInteraction = () => {
-      stop(); // stop dictation
-    };
-
-    dom.addEventListener("mousedown", handleManualInteraction);
-
-    return () => {
-      dom.removeEventListener("mousedown", handleManualInteraction);
-    };
-  }, [editor, isRecording, stop]);
-
-  // Toast en cas de sortie de dictée vocale
-  useEffect(() => {
-    if (isStopping && isRecording) {
-      toast.info("⏳ Arrêt de la dictée en cours…", { duration: 8000 });
-    }
-  }, [isStopping]);
-
-  // Gestion des raccourcis clavier de l'éditeur
+  // Raccourcis clavier
   useEditorShortcuts(editor, rubriqueId, isDictating, inputSourceRef);
 
-  // Callbacks mémorisés pour éviter les rerenders inutiles
-  const handleStartDictation = useCallback(() => {
-    start();
-  }, [start]);
-
-  const handleStopDictation = useCallback(() => {
-    stop();
-  }, [stop]);
-
-  const handleOpenFind = useCallback(() => {
-    dialogs.openDialog("find");
-  }, [dialogs]);
-
-  const handleOpenHistory = useCallback(() => {
-    dialogs.openDialog("history");
-  }, [dialogs]);
-
-  // Compteur de mots
-  useEffect(() => {
-    if (!editor) return;
-    let dom: HTMLElement;
-    try {
-      dom = editor.view.dom;
-    } catch {
-      return;
-    }
-
-    const handleClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-
-      if (target.classList.contains("grammar-error")) {
-        const message = target.getAttribute("data-message") || "";
-        const suggestions = (target.getAttribute("data-suggestions") || "").split(",");
-
-        const from = editor.view.posAtDOM(target, 0);
-        const textContent = target.textContent ?? "";
-        const to = from + textContent.length;
-
-        setPopup({
-          x: event.clientX,
-          y: event.clientY,
-          suggestions,
-          message,
-          from,
-          to,
-          onReplace: (text, from, to) => {
-            editor.commands.insertContentAt({ from, to }, text);
-            setPopup(null);
-          },
-        });
-      } else {
-        setPopup(null);
-      }
-    };
-
-    dom.addEventListener("click", handleClick);
-    return () => dom.removeEventListener("click", handleClick);
-  }, [editor]);
-
-  const [popup, setPopup] = useState<null | PopupProps>(null);
+  // Callbacks d'ouverture des panneaux
+  const handleOpenFind = useCallback(() => dialogs.openDialog("find"), [dialogs]);
+  const handleOpenHistory = useCallback(() => dialogs.openDialog("history"), [dialogs]);
 
   return (
     <Card
@@ -330,13 +171,14 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         batchMode={batchMode}
         setBatchMode={setBatchMode}
         isXmlView={dialogs.isDialogOpen("xmlView")}
-        onValidateXml={dialogs.validateXml}
-        onReturnToEdit={dialogs.returnToEdit}
+        onValidateXml={handleValidateXml}
+        onReturnToEdit={handleReturnToEdit}
         isPreviewMode={isPreviewMode}
         onPreviewToggle={onPreviewToggle}
         visibleDockEditor={visibleDockEditor}
         setVisibleDockEditor={setVisibleDockEditor}
         hasChanges={hasChanges}
+        isSaving={saving}
         onSaveRubrique={onSaveRubrique}
       />
       <EditorToolbar
@@ -359,9 +201,16 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
             </div>
           )}
           {dialogs.isDialogOpen("xmlView") && xml ? (
-            <pre className="bg-gray-100 rounded p-4 font-mono text-xs whitespace-pre-wrap">
-              {xml}
-            </pre>
+            <>
+              <XmlValidationPanel
+                result={validationResult}
+                validating={validating}
+                onClose={clearValidation}
+              />
+              <pre className="bg-gray-100 rounded p-4 font-mono text-xs whitespace-pre-wrap">
+                {xml}
+              </pre>
+            </>
           ) : (
             <EditorContent
               editor={editor}
@@ -384,7 +233,7 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
         </div>
         <footer className="flex h-10 items-center justify-between px-4 py-0 bg-[#fcfcfc] border-t border-[#e1e1e2]">
           <div className="font-text-base-font-medium text-[#1a1a1ab2] text-center whitespace-nowrap">
-            {wordCount} mot{wordCount > 1 ? "s" : ""}
+            {ui.wordCount} mot{ui.wordCount > 1 ? "s" : ""}
           </div>
           <GripVertical className="w-6 h-6" aria-label="Handler" />
         </footer>

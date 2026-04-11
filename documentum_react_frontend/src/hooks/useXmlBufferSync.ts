@@ -30,6 +30,9 @@ export function useXmlBufferSync(editor: Editor | null, rubriqueId: number | nul
       try {
         const json = editor.getJSON();
         const xml = tiptapToXml(json.content ?? []);
+        // Marquage dirty immédiat (non-debounced) pour que le guard de navigation
+        // soit actif dès la première frappe, même avant la sérialisation XML.
+        setStatus(rubriqueId, "dirty");
         debouncedSync(xml, rubriqueId);
       } catch (err) {
         console.error("[useXmlBufferSync] Erreur TipTap → XML", err);

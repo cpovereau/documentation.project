@@ -15,7 +15,11 @@ export const GrammarHighlight = Extension.create({
             Decoration.inline(error.from, error.to, {
               class: 'grammar-error',
               'data-message': error.message,
-              'data-suggestions': (error.replacements || []).join(','),
+              // replacements est un tableau de {value: string} côté LanguageTool
+              'data-suggestions': (error.replacements || [])
+                .map((r: any) => (typeof r === 'string' ? r : r.value ?? ''))
+                .filter(Boolean)
+                .join(','),
             })
           );
           return DecorationSet.create(tr.doc, decorations);
@@ -29,7 +33,8 @@ export const GrammarHighlight = Extension.create({
   props() {
     return {
       decorations(state: import('@tiptap/pm/state').EditorState) {
-        return this.getState()(state);
+        // this.getState(state) retourne le DecorationSet courant du plugin
+        return this.getState(state);
       },
     };
   },

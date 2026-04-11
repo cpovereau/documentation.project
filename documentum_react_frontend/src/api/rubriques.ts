@@ -64,6 +64,24 @@ export async function updateRubrique(
   id: number,
   payload: RubriqueUpdatePayload
 ): Promise<Rubrique> {
-  const { data } = await api.patch<Rubrique>(`/rubriques/${id}/`, payload)
+  const { data } = await api.patch<Rubrique>(`/api/rubriques/${id}/`, payload)
+  return data
+}
+
+/** ---- XML Validation ---- */
+
+export interface XmlValidationError {
+  line?: number | null
+  column?: number | null
+  message: string
+}
+
+export interface XmlValidationResult {
+  valid: boolean
+  errors: XmlValidationError[]
+}
+
+export async function validateXml(xml: string): Promise<XmlValidationResult> {
+  const { data } = await api.post<XmlValidationResult>("/api/validate-xml/", { xml })
   return data
 }

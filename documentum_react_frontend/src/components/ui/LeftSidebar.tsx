@@ -16,10 +16,12 @@ import useProjectStore from "@/store/projectStore";
 import useXmlBufferStore from "@/store/xmlBufferStore";
 import useSelectionStore from "@/store/selectionStore";
 import { toast } from "sonner";
+import { useRubriqueSave } from "@/hooks/useSaveRubrique";
 import { CreateProjectDialog } from "@/components/ui/CreateProjectDialog";
 import { LoadProjectDialog } from "@/components/ui/LoadProjectDialog";
 import { LoadMapDialog } from "components/ui/LoadMapDialog";
 import { ImportModal } from "components/ui/import-modal";
+import { UnsavedChangesDialog } from "@/components/ui/UnsavedChangesDialog";
 import { ArrowLeftCircle } from "lucide-react";
 
 interface LeftSidebarProps {
@@ -88,8 +90,39 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   // ─────────────────────────────────────────────────────────────
   // Garde-fou — utilise le selectedRubriqueId réel depuis le store
   // ─────────────────────────────────────────────────────────────
-  const hasUnsavedChanges =
-    selectedRubriqueId !== null && getStatus(selectedRubriqueId) === "dirty";
+  const currentBufferStatus = selectedRubriqueId === null ? null : getStatus(selectedRubriqueId);
+  const hasUnsavedChanges = currentBufferStatus === "dirty" || currentBufferStatus === "error";
+
+  // ─────────────────────────────────────────────────────────────
+  // Navigation gardée — modale de confirmation si buffer non sauvegardé
+  // ─────────────────────────────────────────────────────────────
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+  const { saveRubrique, saving: savingRubrique } = useRubriqueSave(selectedRubriqueId);
+
+  const requestNavigation = (action: () => void) => {
+    if (hasUnsavedChanges) {
+      setPendingNavigation(() => action);
+    } else {
+      action();
+    }
+  };
+
+  const handleSaveAndContinue = async () => {
+    const success = await saveRubrique();
+    const action = pendingNavigation;
+    setPendingNavigation(null);
+    if (success && action) action();
+  };
+
+  const handleDiscardAndContinue = () => {
+    const action = pendingNavigation;
+    setPendingNavigation(null);
+    action?.();
+  };
+
+  const handleCancelDialog = () => {
+    setPendingNavigation(null);
+  };
 
   // Sélection différée après création d'une rubrique
   useEffect(() => {
@@ -141,18 +174,14 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   // ─────────────────────────────────────────────────────────────
 
   const handleSelect = (projectId: number) => {
-    if (hasUnsavedChanges) {
-      toast.error("Enregistrez ou annulez vos modifications avant de changer de projet.");
-      return;
-    }
-    openProject(projectId);
+    requestNavigation(() => openProject(projectId));
   };
 
   const handleConfirmNewProject = (projectId: number) => {
     openProject(projectId);
   };
 
-  const handleAdd = () => setCreateOpen(true);
+  const handleAdd = () => requestNavigation(() => setCreateOpen(true));
 
   // Clone projet — hors scope v1 (pas d'endpoint backend disponible)
   const handleClone = (_id: number) => {
@@ -212,7 +241,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     }
   };
 
-  const handleLoad = () => setLoadOpen(true);
+  const handleLoad = () => requestNavigation(() => setLoadOpen(true));
 
   const handleConfirmLoadedProject = (project: ProjectDTO) => {
     setProjects((prev) => {
@@ -223,11 +252,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   };
 
   async function openProject(projectId: number) {
-    if (hasUnsavedChanges) {
-      toast.error("Enregistrez ou annulez vos modifications avant de changer de projet.");
-      return;
-    }
-
     let project = projects.find((p) => p.id === projectId);
 
     if (!project) {
@@ -261,10 +285,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   // ─────────────────────────────────────────────────────────────
 
   async function openMap(mapId: number) {
-    if (hasUnsavedChanges) {
-      toast.error("Enregistrez ou annulez vos modifications avant de changer de map.");
-      return;
-    }
     setCurrentMapId(mapId);
     clearSelection();
     try {
@@ -277,11 +297,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   }
 
   const handleSelectMapItem = (id: number) => {
-    if (hasUnsavedChanges) {
-      toast.error("Vous avez des modifications non sauvegardées dans la rubrique actuelle.");
-      return;
-    }
-    selectMapItem(id);
+    requestNavigation(() => selectMapItem(id));
   };
 
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
@@ -366,11 +382,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   };
 
   const handleLoadMap = () => {
-    if (hasUnsavedChanges) {
-      toast.error("Enregistrez ou annulez vos modifications avant de charger une map.");
-      return;
-    }
-    alert("Charger map");
+    requestNavigation(() => alert("Charger map"));
   };
 
   // Indentation / Désindentation
@@ -424,11 +436,18 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   }, [selectedProjectId]);
 
   function openLoadMapDialog() {
-    setLoadMapOpen(true);
+    requestNavigation(() => setLoadMapOpen(true));
   }
 
   return (
     <>
+      <UnsavedChangesDialog
+        open={pendingNavigation !== null}
+        saving={savingRubrique}
+        onSave={handleSaveAndContinue}
+        onDiscard={handleDiscardAndContinue}
+        onCancel={handleCancelDialog}
+      />
       <CreateProjectDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}

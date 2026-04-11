@@ -119,9 +119,16 @@ Rôle central :
 
 - `useFindReplaceTipTap`
 - `useGrammarChecker`
-- `useSpeechCommands`
-- `useSpeechToText`
 - `useEditorShortcuts`
+
+### 4.5 Hooks composites (Lot A — 2026-04-11)
+
+Ces hooks agrègent plusieurs hooks primitifs et `useEffect` précédemment inline dans `CentralEditor` :
+
+- `useDictation` → `useSpeechToText` + `useSpeechCommands` + 3 useEffects (toasts, stop sur clic) + callbacks start/stop
+- `useGrammarPopup` → état popup + useEffect click handler sur `grammar-error`
+- `useClipboardActions` → handleCut / handleCopy / handlePaste avec traçabilité `logAction`
+- `useEditorUIState` → wordCount, isDragging, handleResizeStartWrapper (désormais wired)
 
 ---
 

@@ -13,7 +13,7 @@ export function useConfirmBeforeUnloadRubriqueChange(
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       const current = currentRubriqueId != null ? getRubriqueState(currentRubriqueId) : null;
 
-      if (current?.status === "dirty") {
+      if (current?.status === "dirty" || current?.status === "error") {
         event.preventDefault();
         event.returnValue = ""; // pour certains navigateurs
         return "";
@@ -28,7 +28,7 @@ export function useConfirmBeforeUnloadRubriqueChange(
   const confirmManualChange = () => {
     const current = currentRubriqueId != null ? getRubriqueState(currentRubriqueId) : null;
 
-    if (current?.status === "dirty") {
+    if (current?.status === "dirty" || current?.status === "error") {
       toast.warning("Des modifications non sauvegardées seront perdues.");
       const confirmed = window.confirm("Des modifications sont en cours. Voulez-vous continuer sans enregistrer ?");
       if (confirmed) onConfirm();
