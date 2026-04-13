@@ -13,5 +13,5 @@ export async function toggleArchivableResource(
   isArchived: boolean
 ): Promise<void> {
   const action = isArchived ? "restore" : "archive";
-  await api.patch(`/${resource}/${id}/${action}/`);
+  await api.patch(`/api/${resource}/${id}/${action}/`);
 }

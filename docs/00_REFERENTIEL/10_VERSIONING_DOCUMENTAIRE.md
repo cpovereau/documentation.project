@@ -205,6 +205,83 @@ Les maps et ProductDocSync convergent lors de la publication.
 - une base saine pour ProductDocSync,
 - une évolution maîtrisée du CCMS Documentum.
 
-# TODO(versioning):
-# Le format de version est paramétrable (1.0.0, 1.0.0.0, etc.)
-# La valeur par défaut est temporairement figée à "1.0.0".
+---
+
+## 8. Implémentation technique (Chantier 6)
+
+### 8.1 Entités créées
+
+#### `RevisionRubrique`
+
+Snapshot immuable de chaque modification réelle du contenu XML d'une rubrique.
+
+| Champ | Type | Description |
+|---|---|---|
+| `rubrique` | FK Rubrique | Rubrique concernée |
+| `numero` | PositiveIntegerField | Séquentiel par rubrique (1, 2, 3…) |
+| `contenu_xml` | TextField | Copie immuable du XML au moment de la révision |
+| `hash_contenu` | CharField(64) | SHA-256 normalisé — base de détection de changement |
+| `auteur` | FK User | Auteur de la modification |
+| `date_creation` | DateTimeField | Horodatage auto |
+
+Contrainte : `unique_together = (rubrique, numero)`
+
+#### `SnapshotPublication`
+
+Jointure figée entre une `VersionProjet` publiée et les révisions exactes de chaque rubrique.
+
+| Champ | Type | Description |
+|---|---|---|
+| `version_projet` | FK VersionProjet | Version de projet publiée |
+| `rubrique` | FK Rubrique | Rubrique incluse |
+| `revision` | FK RevisionRubrique | Révision exacte publiée |
+
+Contrainte : `unique_together = (version_projet, rubrique)`
+
+Périmètre v1 : **map master uniquement** (limitation documentée, à étendre en v2).
+
+### 8.2 Utilitaire `compute_xml_hash`
+
+Fonction dans `utils.py`. Normalisation :
+1. Strip des espaces
+2. Parsing `ET.fromstring()` → re-sérialisation `ET.tostring(encoding='unicode')`
+3. Cas vide → `sha256(b"")` (rubriques racines)
+4. XML invalide → hash du texte brut (défense en profondeur, pas de blocage)
+
+Garantit : deux XML sémantiquement identiques (attributs réordonnés, espacements différents) produisent le même hash.
+
+### 8.3 Stratégie de version (D2 — validée MOA)
+
+- Format : semver, bump **mineur** automatique (`1.0.0 → 1.1.0`)
+- Pas de saisie manuelle en v1
+- Paramétrabilité reportée à une version ultérieure
+
+### 8.3b Limites de normalisation XML documentées (Lot 2)
+
+Propriétés garanties par `compute_xml_hash` :
+- Même chaîne → même hash (trivial)
+- Déclaration `<?xml ...?>` strippée → hash identique avec ou sans déclaration
+- Chaîne vide / null → `sha256(b"")` stable
+
+Limites (comportement Python 3.13 / ElementTree) :
+- **Whitespace text nodes** entre balises (`<root>  <child/>  </root>` ≠ `<root><child/></root>`) : hashes distincts. Non-significatif car TipTap sérialise de façon cohérente.
+- **Ordre des attributs** (`a="1" b="2"` ≠ `b="2" a="1"`) : hashes distincts. Non-significatif car TipTap produit un ordre constant.
+
+### 8.3c Point de concurrence (Lot 2)
+
+Mécanisme : `select_for_update(of=("self",))` sur la ligne `Rubrique` dans `create_revision_if_changed()`.
+
+Effet : deux transactions simultanées sur la même rubrique sont sérialisées. La seconde attend la fin de la première avant d'acquérir le verrou et de relire le hash courant.
+
+Garde-fou DB final : `unique_together(rubrique, numero)` sur `RevisionRubrique`.
+
+### 8.4 Champs dépréciés (D4 — validée MOA)
+
+À **ne pas utiliser** dans les nouveaux flux. Suppression planifiée dans un lot ultérieur.
+
+| Champ | Modèle | Remplacé par |
+|---|---|---|
+| `revision_numero` | `Rubrique` | `RevisionRubrique.numero` |
+| `version` | `Rubrique` | Sans objet (ambigu) |
+| `version_precedente` | `Rubrique` | `RevisionRubrique` (historique séquentiel) |
+| `version_numero` | `Projet` | `VersionProjet.version_numero` |

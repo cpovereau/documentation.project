@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import Projet, VersionProjet, Gamme, Produit, Rubrique, Map, Fonctionnalite, Audience, Media
+from .models import (
+    Projet, VersionProjet, Gamme, Produit, Rubrique, Map,
+    Fonctionnalite, Audience, Media,
+    RevisionRubrique, PublicationSnapshot,
+)
 
 @admin.register(Projet)
 class ProjetAdmin(admin.ModelAdmin):
@@ -53,3 +57,32 @@ class MediaAdmin(admin.ModelAdmin):
     list_display = ("nom_fichier", "type_media", "rubrique", "produit")
     list_filter = ("type_media",)
     search_fields = ("nom_fichier",)
+
+
+@admin.register(RevisionRubrique)
+class RevisionRubriqueAdmin(admin.ModelAdmin):
+    list_display = ("rubrique", "numero", "auteur", "date_creation", "hash_contenu")
+    list_filter = ("auteur",)
+    search_fields = ("rubrique__titre",)
+    ordering = ("rubrique", "numero")
+    readonly_fields = ("rubrique", "numero", "contenu_xml", "hash_contenu", "auteur", "date_creation")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(PublicationSnapshot)
+class PublicationSnapshotAdmin(admin.ModelAdmin):
+    list_display = ("version_projet", "rubrique", "revision")
+    list_filter = ("version_projet",)
+    search_fields = ("rubrique__titre", "version_projet__version_numero")
+    readonly_fields = ("version_projet", "rubrique", "revision")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

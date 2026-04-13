@@ -3,18 +3,14 @@ import { useEffect, useState } from "react";
 import api from "@/lib/apiClient";
 import { toast } from "sonner";
 import { toggleArchivableResource } from "@/lib/resources";
-
-export interface ArchivableItem {
-  id: number;
-  is_archived: boolean;
-  [key: string]: any;
-}
+export type { ArchivableItem } from "@/types/archivable";
+import type { ArchivableItem } from "@/types/archivable";
 
 /**
  * Hook générique pour gérer une liste d'éléments archivables (avec API REST DRF)
- * @param resource nom de la ressource en base (ex: "gammes", "produits")
- * @param enabled boolean pour activer ou non la requête auto
- * @param showArchived afficher les archivés ou non
+ * @param resource nom de la ressource API (ex: "gammes", "produits", "profils-publication")
+ * @param enabled booléen pour activer ou non le chargement automatique
+ * @param showArchived afficher les archivés (true) ou les actifs (false)
  */
 export function useArchivableList(
   resource: string,
@@ -27,20 +23,31 @@ export function useArchivableList(
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/${resource}/`, {
+      const res = await api.get(`/api/${resource}/`, {
         params: { archived: showArchived },
         withCredentials: true,
       });
-      const sortedData = res.data.sort((a: any, b: any) =>
-      a.nom?.localeCompare?.(b.nom, "fr", { sensitivity: "base" }) ?? 0
-    );
-      setItems(res.data);
+      // Tri alphabétique par nom (insensible à la casse, locale française)
+      const sortedData = [...res.data].sort((a: ArchivableItem, b: ArchivableItem) =>
+        a.nom?.localeCompare?.(b.nom, "fr", { sensitivity: "base" }) ?? 0
+      );
+      setItems(sortedData);
     } catch (err: any) {
-      console.error(`[${resource}] Erreur API :`, err);
+      console.error(`[${resource}] Erreur de chargement :`, err);
       toast.error(err.message || `Erreur chargement ${resource}.`);
     } finally {
       setLoading(false);
     }
+  };
+
+  const create = async (data: Record<string, any>) => {
+    await api.post(`/api/${resource}/`, data, { withCredentials: true });
+    await fetchItems();
+  };
+
+  const update = async (id: number, data: Record<string, any>) => {
+    await api.patch(`/api/${resource}/${id}/`, data, { withCredentials: true });
+    await fetchItems();
   };
 
   const toggleArchive = async (id: number, isArchived: boolean) => {
@@ -63,15 +70,18 @@ export function useArchivableList(
   return {
     items,
     loading,
+    create,
+    update,
     toggleArchive,
     refetch: fetchItems,
   };
 }
 
 /**
- * Utilitaire pour centraliser tous les hooks archivables par type
+ * Centralise les hooks archivables pour chaque type de ressource géré dans l'onglet Données.
+ * Chaque hook n'est activé que lorsque l'onglet correspondant est sélectionné.
  */
-export function getArchivableHooks(
+export function useArchivableHooks(
   selectedItem: string,
   showArchived: boolean
 ) {
@@ -87,7 +97,7 @@ export function getArchivableHooks(
 }
 
 /**
- * Labels d'affichage pour les entités archivables (utilisé dans getTitle)
+ * Labels d'affichage pour les entités gérées dans l'onglet Données.
  */
 export const resourceLabels: Record<string, string> = {
   gammes: "Gammes",

@@ -28,8 +28,10 @@ from .views import (
     check_orthographe_view,
     validate_xml_view,
     healthcheck,
+    publier_map,
+    get_formats_publication,
+    publication_diff_view,
 )
-from .utils import publier_map, get_formats_publication
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 # Create a router and register the viewsets
@@ -74,6 +76,11 @@ urlpatterns = [
     path("api/dita-template/", generate_dita, name="generate_dita_template"),
     path("api/orthographe/", check_orthographe_view, name="check_orthographe"),
     path("api/validate-xml/", validate_xml_view, name="validate_xml"),
+    path(
+        "api/projets/<int:projet_id>/publication-diff/",
+        publication_diff_view,
+        name="publication_diff",
+    ),
 ]
 
 # Custom error handlers

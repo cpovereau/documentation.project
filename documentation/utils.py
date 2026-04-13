@@ -1,16 +1,44 @@
 # documentation/utils.py
 # -- Fonctions utilitaires pour la gestion des rubriques et des versions de projet --
-from django.http import JsonResponse
+import hashlib
+import xml.etree.ElementTree as ET
 from django.utils.timezone import now
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from .models import Rubrique, VersionProjet
-from .exporters import export_map_to_dita
 
 # --- Gestion des exceptions personnalisées ---
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# --- Hash déterministe du contenu XML ---
+
+def compute_xml_hash(xml_str: str | None) -> str:
+    """
+    Calcule un hash SHA-256 déterministe du contenu XML fourni.
+
+    Normalisation appliquée :
+    - Suppression des espaces en tête/queue
+    - Parsing ElementTree puis re-sérialisation (élimine déclaration XML,
+      différences d'espacement, ordre d'attributs normalisé Python 3.8+)
+    - Chaîne vide → hash de la chaîne vide (cas rubrique racine)
+    - XML invalide → hash du texte brut strippé (pas de blocage)
+
+    Invariant : deux XML sémantiquement identiques produisent le même hash.
+    Usage : détecter si un contenu XML a réellement changé avant de créer une révision.
+    """
+    stripped = (xml_str or "").strip()
+    if not stripped:
+        return hashlib.sha256(b"").hexdigest()
+    try:
+        root = ET.fromstring(stripped)
+        normalized = ET.tostring(root, encoding="unicode")
+    except ET.ParseError:
+        # XML malformé : on hash le texte brut normalisé sans bloquer
+        normalized = stripped
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 # --- Fonction utilitaire pour obtenir les versions d'un projet ---
@@ -202,37 +230,3 @@ def generate_dita_template(
 
 # Formats de sortie autorisés pour DITA-OT
 DITA_OUTPUT_FORMATS = ["pdf", "html5", "xhtml", "scorm", "markdown", "eclipsehelp"]
-
-# Vue Django API pour appeler la publication
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def publier_map(request, map_id):
-    format_output = request.data.get("format", "pdf")
-    try:
-        result = export_map_to_dita(map_id, output_format=format_output)
-        if result.get("status") == "error":
-            logger.error(
-                f"Erreur lors de la publication de la map {map_id} : {result.get('message', 'Erreur inconnue')}"
-            )
-            result["formats_supportes"] = DITA_OUTPUT_FORMATS
-        return JsonResponse(result)
-    except Exception as e:
-        logger.exception(f"Erreur inattendue lors de la publication de la map {map_id}")
-        return JsonResponse(
-            {
-                "status": "error",
-                "message": f"Erreur système : {str(e)}",
-                "formats_supportes": DITA_OUTPUT_FORMATS,
-            },
-            status=500,
-        )
-
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def get_formats_publication(request):
-    return JsonResponse({"formats_supportes": DITA_OUTPUT_FORMATS})

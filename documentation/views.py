@@ -20,6 +20,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.renderers import JSONRenderer
 from rest_framework.exceptions import ValidationError
+from django.db.models import Max
 from rest_framework.parsers import MultiPartParser
 from .models import (
     Projet,
@@ -70,6 +71,7 @@ from .serializers import (
     MapRubriqueStructureSerializer,
     MapRubriqueCreateSerializer,
     RubriqueSerializer,
+    RevisionRubriqueSerializer,
     CreateRubriqueInMapSerializer,
     MapStructureAttachSerializer,
     UserSerializer,
@@ -77,12 +79,19 @@ from .serializers import (
 )
 from .services import (
     add_rubrique_to_map,
+    create_initial_revision,
     create_project,
     create_rubrique_in_map,
+    create_revision_if_changed,
     indent_map_rubrique,
     outdent_map_rubrique,
     reorder_map_rubriques,
+    publish_project,
+    get_publication_diff,
 )
+from .utils import compute_xml_hash
+from .exporters import export_map_to_dita
+from .utils import DITA_OUTPUT_FORMATS
 from django.utils.timezone import now
 
 
@@ -495,9 +504,12 @@ class MapViewSet(viewsets.ModelViewSet):
 
 # ViewSet pour les rubriques
 class RubriqueViewSet(viewsets.ModelViewSet):
+    # annotation revision_courante_numero : évite le N+1 sur les vues liste et détail.
+    # Lit Max(RevisionRubrique.numero) pour chaque rubrique en une seule requête agrégée.
     queryset = (
         Rubrique.objects.select_related("projet", "version_projet", "type_rubrique")
         .select_related("fonctionnalite")
+        .annotate(revision_courante_numero=Max("revisions__numero"))
         .all()
     )
     serializer_class = RubriqueSerializer
@@ -517,10 +529,16 @@ class RubriqueViewSet(viewsets.ModelViewSet):
                 {"version_projet": ["Aucune version active pour ce projet."]}
             )
 
-        rubrique = serializer.save(version_projet=version_projet)
+        with transaction.atomic():
+            rubrique = serializer.save(version_projet=version_projet)
+            # Révision initiale — source de vérité unique via create_initial_revision()
+            create_initial_revision(rubrique=rubrique, user=request.user)
+
         logger.info(
             f"[Rubrique] '{rubrique.titre}' créée pour '{rubrique.projet.nom}' par {request.user.username}"
         )
+        # Re-fetch via queryset annoté pour exposer revision_courante_numero dans la réponse
+        rubrique = self.get_queryset().get(pk=rubrique.pk)
         return Response(self.get_serializer(rubrique).data, status=201)
 
     def update(self, request, *args, **kwargs):
@@ -543,10 +561,24 @@ class RubriqueViewSet(viewsets.ModelViewSet):
                     {"version_projet": ["La version ne correspond pas au projet."]}
                 )
 
+            # — Versioning : créer une révision si contenu_xml a changé —
+            # Appelé avant serializer.save() pour que le hash compare
+            # l'état courant en DB (locked) avec le nouveau XML du payload.
+            new_xml = serializer.validated_data.get("contenu_xml")
+            if new_xml is not None:
+                create_revision_if_changed(
+                    rubrique=rubrique,
+                    new_xml=new_xml,
+                    user=request.user,
+                )
+
             rubrique = serializer.save()
             logger.info(
                 f"[Rubrique] '{rubrique.titre}' mise à jour par {request.user.username}"
             )
+            # serializer.save() retourne l'instance sans annotation.
+            # Re-fetch via queryset annoté pour exposer revision_courante_numero à jour.
+            rubrique = self.get_queryset().get(pk=rubrique.pk)
             return Response(self.get_serializer(rubrique).data, status=200)
 
     def destroy(self, request, *args, **kwargs):
@@ -564,6 +596,25 @@ class RubriqueViewSet(viewsets.ModelViewSet):
             f"[Rubrique] '{instance.titre}' supprimée par {request.user.username}"
         )
         return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=["get"], url_path="revisions")
+    def revisions(self, request, pk=None):
+        """
+        GET /api/rubriques/{id}/revisions/
+
+        Retourne l'historique complet des révisions de la rubrique, trié par numéro
+        décroissant (révision la plus récente en premier).
+
+        Lecture seule — aucune écriture en base.
+        404 si la rubrique n'existe pas.
+        """
+        rubrique = self.get_object()  # lève 404 si inexistant
+        qs = (
+            rubrique.revisions.select_related("auteur")
+            .order_by("-numero")
+        )
+        serializer = RevisionRubriqueSerializer(qs, many=True)
+        return Response(serializer.data)
 
 
 # Vue pour la consultation des projets
@@ -970,3 +1021,102 @@ def generate_dita(request):
         fonctionnalites=fonctionnalites,
     )
     return Response({"xml": xml})
+
+
+# ---------------------------------------------------------------------------
+# Publication versionnante — Lot 3
+# ---------------------------------------------------------------------------
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_formats_publication(request):
+    """GET /api/formats-publication/ — retourne la liste des formats DITA-OT supportés."""
+    return Response({"formats_supportes": DITA_OUTPUT_FORMATS})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def publier_map(request, map_id):
+    """
+    POST /api/publier-map/{map_id}/
+    Body JSON : { "format": "pdf" }  (défaut : "pdf")
+
+    Orchestre la publication complète :
+    1. Versionnage métier (bump de version, snapshots) si des rubriques ont changé.
+    2. Export technique DITA via export_map_to_dita().
+
+    Contrainte v1 : la map doit être une map master.
+    """
+    try:
+        map_obj = Map.objects.select_related("projet").get(pk=map_id)
+    except Map.DoesNotExist:
+        return Response({"status": "error", "message": "Map introuvable."}, status=404)
+
+    if not map_obj.is_master:
+        return Response(
+            {
+                "status": "error",
+                "message": "Seule la map master peut être publiée (v1).",
+            },
+            status=400,
+        )
+
+    format_output = request.data.get("format", "pdf")
+    if format_output not in DITA_OUTPUT_FORMATS:
+        return Response(
+            {
+                "status": "error",
+                "message": f"Format non supporté. Formats acceptés : {DITA_OUTPUT_FORMATS}",
+            },
+            status=400,
+        )
+
+    try:
+        result = publish_project(
+            projet=map_obj.projet,
+            map_obj=map_obj,
+            format_output=format_output,
+            user=request.user,
+        )
+        return Response(result, status=200)
+    except ValidationError as exc:
+        logger.warning("[publier_map] ValidationError map_id=%s : %s", map_id, exc.detail)
+        return Response({"status": "error", "detail": exc.detail}, status=400)
+    except Exception:
+        logger.exception("[publier_map] Erreur inattendue map_id=%s", map_id)
+        return Response(
+            {
+                "status": "error",
+                "message": "Erreur système lors de la publication.",
+                "formats_supportes": DITA_OUTPUT_FORMATS,
+            },
+            status=500,
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def publication_diff_view(request, projet_id):
+    """
+    GET /api/projets/{projet_id}/publication-diff/
+
+    Retourne le diff entre l'état courant de la map master et la dernière version publiée.
+    Lecture seule — aucune écriture en base.
+
+    Permet au frontend d'informer l'utilisateur avant une publication.
+    """
+    try:
+        projet = Projet.objects.get(pk=projet_id)
+    except Projet.DoesNotExist:
+        return Response({"detail": "Projet introuvable."}, status=404)
+
+    master_map = Map.objects.filter(projet=projet, is_master=True).first()
+    if master_map is None:
+        return Response({"detail": "Aucune map master trouvée pour ce projet."}, status=404)
+
+    try:
+        diff = get_publication_diff(projet=projet, map_obj=master_map)
+        return Response(diff, status=200)
+    except Exception:
+        logger.exception("[publication_diff] Erreur inattendue projet_id=%s", projet_id)
+        return Response({"detail": "Erreur serveur."}, status=500)

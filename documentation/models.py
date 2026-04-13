@@ -84,8 +84,11 @@ class Projet(models.Model):
     auteur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     date_mise_a_jour = models.DateTimeField(auto_now=True)
+    # DÉPRÉCIÉ — doublon de VersionProjet.version_numero. À supprimer dans un lot ultérieur.
     version_numero = models.CharField(max_length=20, blank=True, null=True)
+    # DÉPRÉCIÉ — doublon de VersionProjet.date_lancement. À supprimer dans un lot ultérieur.
     date_lancement = models.DateTimeField(blank=True, null=True)
+    # DÉPRÉCIÉ — doublon de VersionProjet.notes_version. À supprimer dans un lot ultérieur.
     notes_version = models.TextField(blank=True, null=True)
     gamme = models.ForeignKey(Gamme, on_delete=models.SET_NULL, null=True)
 
@@ -130,20 +133,25 @@ class Rubrique(models.Model):
         "TypeRubrique", on_delete=models.SET_NULL, null=True, blank=True
     )
     titre = models.CharField(max_length=200)
+    # État de travail courant (WIP). Les snapshots immuables sont dans RevisionRubrique.
     contenu_xml = models.TextField()
     auteur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     date_creation = models.DateField(auto_now_add=True)
     date_mise_a_jour = models.DateField(auto_now=True)
     audience = models.CharField(max_length=200, default="générique")
+    # DÉPRÉCIÉ — remplacé par RevisionRubrique.numero. Ne pas utiliser dans les nouveaux flux.
     revision_numero = models.IntegerField(default=1)
     projet = models.ForeignKey(Projet, on_delete=models.CASCADE)
+    # DÉPRÉCIÉ — ambigu, sans usage actif. À supprimer dans un lot ultérieur.
     version = models.IntegerField(default=1)
+    # DÉPRÉCIÉ — design par copie non conforme au référentiel. À supprimer dans un lot ultérieur.
     version_precedente = models.ForeignKey(
         "self", on_delete=models.SET_NULL, null=True, blank=True
     )
     fonctionnalite = models.ForeignKey(
         "Fonctionnalite", on_delete=models.SET_NULL, null=True, blank=True
     )
+    # Version de création de la rubrique. Conservé pour l'invariant de création (create_project, create_rubrique_in_map).
     version_projet = models.ForeignKey(
         "VersionProjet", on_delete=models.CASCADE, related_name="rubriques", null=True
     )
@@ -167,6 +175,83 @@ class Rubrique(models.Model):
 
     def __str__(self):
         return f"{self.titre} (Version {self.version})"
+
+
+# --- Versioning documentaire ---
+
+class RevisionRubrique(models.Model):
+    """
+    Snapshot immuable d'une modification réelle du contenu XML d'une rubrique.
+
+    Invariants :
+    - Créée uniquement lorsque hash(nouveau_xml) ≠ hash(xml_courant).
+    - Immuable après création : aucun update() autorisé.
+    - numero est séquentiel par rubrique (1, 2, 3…).
+    - contenu_xml est la copie exacte du XML au moment de la révision.
+
+    Champ hash_contenu :
+    - Algorithme : SHA-256
+    - Encodage : hexadécimal, 64 caractères ASCII fixes
+    - Calculé via utils.compute_xml_hash() — normalisation ElementTree appliquée
+    - Invariant : deux appels sur le même contenu XML produisent toujours le même hash
+    - Usage : détecter une modification réelle sans comparer les chaînes XML entières
+    """
+    rubrique = models.ForeignKey(
+        "Rubrique", on_delete=models.CASCADE, related_name="revisions"
+    )
+    numero = models.PositiveIntegerField()
+    contenu_xml = models.TextField()
+    # SHA-256 hex — 64 caractères. Calculé par utils.compute_xml_hash().
+    hash_contenu = models.CharField(max_length=64)
+    auteur = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="revisions_rubriques"
+    )
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("rubrique", "numero")
+        ordering = ["rubrique", "numero"]
+        verbose_name = "Révision de rubrique"
+        verbose_name_plural = "Révisions de rubrique"
+
+    def __str__(self):
+        return f"Rubrique {self.rubrique_id} — Révision {self.numero}"
+
+
+class PublicationSnapshot(models.Model):
+    """
+    Jointure figée entre une VersionProjet publiée et les révisions exactes
+    de chaque rubrique au moment de la publication.
+
+    Invariants :
+    - Créée uniquement lors d'une publication (service publish_project).
+    - Immuable après création : aucune modification ni suppression autorisée.
+    - Une seule ligne par (version_projet, rubrique).
+    - Permet de répondre : "quelles révisions exactes étaient publiées dans cette version ?"
+
+    Périmètre v1 : basé sur la map master uniquement.
+    """
+    version_projet = models.ForeignKey(
+        "VersionProjet", on_delete=models.CASCADE, related_name="publication_snapshots"
+    )
+    rubrique = models.ForeignKey(
+        "Rubrique", on_delete=models.CASCADE, related_name="publication_snapshots"
+    )
+    revision = models.ForeignKey(
+        "RevisionRubrique", on_delete=models.CASCADE, related_name="publication_snapshots"
+    )
+
+    class Meta:
+        unique_together = ("version_projet", "rubrique")
+        verbose_name = "Publication Snapshot"
+        verbose_name_plural = "Publication Snapshots"
+
+    def __str__(self):
+        return (
+            f"Snapshot v{self.version_projet.version_numero}"
+            f" — Rubrique {self.rubrique_id}"
+            f" — Révision {self.revision.numero}"
+        )
 
 
 # --- Maps et Relations ---

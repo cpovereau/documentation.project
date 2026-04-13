@@ -12,6 +12,7 @@ from .models import (
     Produit,
     ProfilPublication,
     Projet,
+    RevisionRubrique,
     Rubrique,
     Tag,
     TypeRubrique,
@@ -231,6 +232,12 @@ class RubriqueSerializer(serializers.ModelSerializer):
         required=False,
     )
     locked_by = serializers.StringRelatedField(read_only=True)
+    # Numéro de la révision courante — lu depuis l'annotation Max("revisions__numero")
+    # injectée par RubriqueViewSet.queryset. Zéro requête N+1 : l'agrégat est calculé
+    # une seule fois par le queryset annoté du ViewSet.
+    # Null uniquement si aucune RevisionRubrique n'existe (impossible post-migrations).
+    # Ne pas inclure dans RubriqueMiniSerializer (structure list — non annoté).
+    revision_courante_numero = serializers.IntegerField(read_only=True, allow_null=True)
 
     class Meta:
         model = Rubrique
@@ -249,6 +256,8 @@ class RubriqueSerializer(serializers.ModelSerializer):
             "date_mise_a_jour",
             "locked_by",
             "locked_at",
+            "revision_courante_numero",
+            # Champs dépréciés — conservés pour rétrocompatibilité, à supprimer dans un lot ultérieur
             "revision_numero",
             "audience",
             "version",
@@ -258,6 +267,7 @@ class RubriqueSerializer(serializers.ModelSerializer):
             "version",
             "version_precedente",
             "revision_numero",
+            "revision_courante_numero",
             "version_projet",
             "date_creation",
             "date_mise_a_jour",
@@ -311,3 +321,23 @@ class MapStructureAttachSerializer(serializers.Serializer):
     rubrique_id = serializers.IntegerField()
     parent_id = serializers.IntegerField(required=False, allow_null=True)
     ordre = serializers.IntegerField(required=False, allow_null=True)
+
+
+class RevisionRubriqueSerializer(serializers.ModelSerializer):
+    """
+    Serializer en lecture seule pour l'historique des révisions d'une rubrique.
+    Utilisé par GET /api/rubriques/{id}/revisions/
+    """
+    auteur_username = serializers.CharField(source="auteur.username", read_only=True, default=None)
+
+    class Meta:
+        model = RevisionRubrique
+        fields = [
+            "id",
+            "numero",
+            "hash_contenu",
+            "contenu_xml",
+            "auteur_username",
+            "date_creation",
+        ]
+        read_only_fields = fields

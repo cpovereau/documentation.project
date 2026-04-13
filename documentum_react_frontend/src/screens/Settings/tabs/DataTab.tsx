@@ -1,6 +1,6 @@
 // =====================================================
 // 📂 Fichier : DataTab.tsx
-// 🔎 Description :
+// 🔎 Description : Onglet "Données" des Paramètres
 // 🗣️ Tous les commentaires doivent être écrits en français.
 // =====================================================
 
@@ -9,7 +9,7 @@ import { useAllDictionnaireData } from "@/hooks/useAllDictionnaireData";
 import api from "@/lib/apiClient";
 import { useImportModal } from "@/hooks/useImportModal";
 import { toast } from "sonner";
-import { getArchivableHooks, resourceLabels } from "@/hooks/useArchivableList";
+import { useArchivableHooks, resourceLabels } from "@/hooks/useArchivableList";
 import AddItemModal from "components/ui/AddItemModal";
 import DataListPanel from "components/ui/DataListPanel";
 import { Button } from "components/ui/button";
@@ -28,10 +28,9 @@ const DataTab = () => {
     | "interface_ui"
   >("gammes");
   const [editMode, setEditMode] = useState(false);
-
   const [showArchived, setShowArchived] = useState(false);
 
-  const hooks = getArchivableHooks(selectedItem, showArchived);
+  const hooks = useArchivableHooks(selectedItem, showArchived);
   const currentHook = hooks[selectedItem];
 
   const { openImportModal } = useImportModal();
@@ -42,45 +41,42 @@ const DataTab = () => {
     setIsModalOpen(true);
   };
 
-  // Fonction pour rafraîchir la liste des éléments
+  // Délègue la création au hook — gère le bon endpoint et le refetch
   const handleCreate = async (item: any) => {
     if (!currentHook) return;
     try {
-      await api.post(`/${selectedItem}/`, item, { withCredentials: true });
-      await currentHook.refetch();
+      await currentHook.create(item);
       toast.success(`${resourceLabels[selectedItem]} ajouté avec succès.`);
     } catch (err: any) {
-      console.error("Erreur lors de l'ajout :", err);
-      toast.error("Erreur lors de la création.");
+      toast.error(err.message || "Erreur lors de la création.");
     }
   };
 
-  // Fonction pour gérer l'archivage ou la restauration d'un élément
+  // Délègue l'archivage/restauration au hook
   const handleArchive = async (id: number, isArchived: boolean) => {
     if (!currentHook) return;
-
     try {
       await currentHook.toggleArchive(id, isArchived);
     } catch (err: any) {
-      console.error("Erreur archivage:", err);
       toast.error(err.message || "Erreur lors de l'archivage/restauration.");
     }
   };
 
-  // Fonction pour obtenir le titre de l'onglet en fonction de l'élément sélectionné
+  // Titre affiché dans l'entête du panneau
   const getTitle = () => {
     return resourceLabels[selectedItem] ?? "";
   };
 
-  // Fonction pour obtenir les éléments de la liste en fonction de l'élément sélectionné
+  // Éléments de la liste pour la ressource active
   const getItems = () => {
     return currentHook?.items ?? [];
   };
 
-  // Fonction pour obtenir les colonnes du tableau en fonction de l'élément sélectionné
+  // Colonnes du tableau selon la ressource active
   const getColumns = () => {
     switch (selectedItem) {
       case "gammes":
+      case "audiences":
         return [
           { key: "nom", label: "Nom" },
           { key: "description", label: "Description" },
@@ -98,11 +94,6 @@ const DataTab = () => {
           { key: "id_fonctionnalite", label: "Id Associée" },
           { key: "produit_nom", label: "Produit" },
           { key: "code", label: "Code" },
-        ];
-      case "audiences":
-        return [
-          { key: "nom", label: "Nom" },
-          { key: "description", label: "Description" },
         ];
       case "tags":
         return [{ key: "nom", label: "Nom" }];
@@ -148,9 +139,8 @@ const DataTab = () => {
     </Button>
   );
 
-  // Récupère les données des produits pour l'importation
+  // Données dictionnaire centralisées (gammes et produits pour les modales de création)
   const { data: allData, refetch: refetchAllData } = useAllDictionnaireData();
-  const produits = allData.produits || [];
 
   // Bouton Importer pour les fonctionnalités
   const importButton = selectedItem === "fonctionnalites" && (
@@ -162,7 +152,7 @@ const DataTab = () => {
         onClick={() =>
           openImportModal({
             context: "fonctionnalites",
-            produits,
+            produits: allData.produits,
             title: "Importer des fonctionnalités",
             onConfirm: async ({ file, mapping, produitId, skipHeader }) => {
               const form = new FormData();
@@ -182,18 +172,6 @@ const DataTab = () => {
       </Button>
     </div>
   );
-
-  // Force le chargement initial des gammes
-  useEffect(() => {
-    api
-      .get("/gammes/", { params: { archived: false } })
-      .then((res) => {
-        console.log("✅ [init] Gammes préchargées :", res.data);
-      })
-      .catch((err) => {
-        console.error("❌ [init] Erreur API /gammes/ :", err);
-      });
-  }, []);
 
   // Réinitialise le mode édition quand on change d'onglet
   useEffect(() => {
@@ -295,7 +273,7 @@ const DataTab = () => {
 
         {/* Colonne droite */}
         <div className="flex-1 overflow-auto">
-          {/* ➤ Zone entête au-dessus du tableau */}
+          {/* Zone entête au-dessus du tableau */}
           <div className="flex justify-between items-center px-4 py-2">
             <div className="flex items-center gap-4">
               <h2 className="text-xl font-semibold">{getTitle()}</h2>
@@ -314,15 +292,12 @@ const DataTab = () => {
             onToggleArchived={setShowArchived}
             editable={editMode}
             onUpdate={async (id, changes) => {
+              // Délègue la mise à jour au hook — gère le bon endpoint et le refetch
               try {
-                await api.patch(`/${selectedItem}/${id}/`, changes, {
-                  withCredentials: true,
-                });
-                await currentHook.refetch();
+                await currentHook.update(id, changes);
                 toast.success("Élément mis à jour.");
               } catch (err: any) {
-                console.error("Erreur modification :", err);
-                toast.error("Erreur lors de la mise à jour.");
+                toast.error(err.message || "Erreur lors de la mise à jour.");
               }
             }}
           />
@@ -333,8 +308,8 @@ const DataTab = () => {
         onClose={() => setIsModalOpen(false)}
         itemType={selectedItem}
         onSubmit={handleCreate}
-        gammes={hooks["gammes"]?.items ?? []}
-        produits={hooks["produits"]?.items ?? []}
+        gammes={allData.gammes}
+        produits={allData.produits}
       />
     </>
   );
