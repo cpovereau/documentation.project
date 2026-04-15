@@ -5,6 +5,7 @@ from decouple import config
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "local")
 BASE_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = BASE_DIR.parent.parent  # ancré sur la racine du dépôt (C:\Documentum)
 SECRET_KEY = config("SECRET_KEY", default="unsafe-default-key")
 # SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'default-insecure-secret-key')
 
@@ -100,7 +101,7 @@ SPECTACULAR_SETTINGS = {
 # Clé primaire automatique et URL statique
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "static")
+STATIC_ROOT = os.path.join(REPO_ROOT, "static")
 
 # Hôtes autorisés
 ALLOWED_HOSTS = [
@@ -150,4 +151,4 @@ SESSION_COOKIE_SECURE = False  # True si HTTPS
 
 # Stockage local des images
 MEDIA_URL = "/medias/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "medias")
+MEDIA_ROOT = os.path.join(REPO_ROOT, "medias")

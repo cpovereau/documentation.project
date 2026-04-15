@@ -39,10 +39,12 @@ jobs:
             pip install -r requirements-dev.txt
       - run:
           name: Run Migrations
+          working_directory: apps/documentum-core-backend
           command: |
             python manage.py migrate --noinput
       - run:
           name: Run Tests
+          working_directory: apps/documentum-core-backend
           command: |
             python manage.py test --noinput
 

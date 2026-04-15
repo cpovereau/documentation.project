@@ -2,11 +2,11 @@
   "folders": [
     {
       "name": "Backend - Django",
-      "path": "."
+      "path": "apps/documentum-core-backend"
     },
     {
       "name": "Frontend - React",
-      "path": "documentum_react_frontend"
+      "path": "apps/documentum-core-frontend"
     }
   ],
   "settings": {

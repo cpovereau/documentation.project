@@ -1,5 +1,5 @@
 {
   "scripts": {
-    "dev": "powershell -Command \"& { . env/Scripts/Activate.ps1; python manage.py runserver }\""
+    "dev": "powershell -Command \"& { . env/Scripts/Activate.ps1; cd apps/documentum-core-backend; python manage.py runserver }\""
   }
 }
