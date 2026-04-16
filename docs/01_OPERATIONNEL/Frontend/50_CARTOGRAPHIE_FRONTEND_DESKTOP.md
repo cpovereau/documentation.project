@@ -1,10 +1,12 @@
 # Documentum – Cartographie frontend — `Desktop`
 
-> **Objet** : cartographie de l’existant basée sur le modèle fourni
-> 
-> **Statut** : analyse stricte, sans modification de fond ni jugement
+> **Objet** : cartographie de l’existant basée sur le modèle officiel
+>
+> **Statut** : conforme — orchestrateur UI pur, chaîne de sélection fonctionnelle
 >
 > **Composant analysé :** `Desktop` (`src/screens/Desktop/Desktop.tsx`)
+>
+> **Dernière mise à jour** : 2026-04-16
 
 ---
 

@@ -1,10 +1,12 @@
 # 📡 Cartographie Backend Canonique Exposé — Documentum
 
-> **Statut** : opérationnel — source de vérité runtime
+> **Objet** : cartographie des routes backend réellement exposées — correspondance vues, serializers et services métiers
 >
-> **Objectif** : décrire les routes backend réellement exposées après refonte et leur correspondance avec les vues, serializers et services métiers
+> **Statut** : opérationnel — source de vérité runtime ; §3.1 Projets incomplet (GET list/retrieve + DELETE à ajouter)
 >
-> **Référentiel associé** : documentum_referentiel_backend_canonique.md
+> **Périmètre backend :** `ProjetViewSet`, `MapViewSet`, `RubriqueViewSet` — apps `projets`, `maps`, `rubriques`
+>
+> **Dernière mise à jour** : 2026-04-16
 
 ---
 
@@ -48,7 +50,10 @@ Ce document **ne décrit pas** :
 
 | Méthode | Route | Vue | Service | Rôle |
 |--------|------|-----|--------|------|
+| GET | `/api/projets/` | `ProjetViewSet.list` | — | Liste des projets (`?archived=false` supporté) |
+| GET | `/api/projets/{id}/` | `ProjetViewSet.retrieve` | — | Lecture d'un projet |
 | POST | `/api/projets/` | `ProjetViewSet.create` | `create_project()` | Création complète projet + invariants |
+| DELETE | `/api/projets/{id}/` | `ProjetViewSet.destroy` | — | Suppression définitive (Lot 3) |
 
 ---
 
@@ -144,9 +149,9 @@ Ce document **ne décrit pas** :
 
 ## 8. Position dans la documentation
 
-- 🔹 Référentiel → définit les règles :contentReference[oaicite:2]{index=2}  
-- 🔹 Ce document → décrit la réalité  
-- 🔹 Analyse → explique les transformations :contentReference[oaicite:3]{index=3}  
+- 🔹 Référentiel → définit les règles
+- 🔹 Ce document → décrit la réalité
+- 🔹 Analyse → explique les transformations
 
 ---
 

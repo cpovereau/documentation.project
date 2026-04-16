@@ -1,5 +1,13 @@
 # 🧩 50 — Cartographie Frontend : CentralEditor
 
+> **Objet** : cartographie de l'existant — éditeur de contenu DITA (XML ↔ TipTap), synchronisation buffer, sauvegarde backend
+>
+> **Statut** : 🟡 Acceptable mais critique — flux principaux fonctionnels, endpoint sauvegarde sans préfixe `/api/`, couplage fort
+>
+> **Composant(s) analysé(s) :** `CentralEditor` (`src/components/ui/CentralEditor.tsx`)
+>
+> **Dernière mise à jour** : 2026-04-16
+
 ---
 
 ## 1. Rôle fonctionnel réel

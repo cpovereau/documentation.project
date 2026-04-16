@@ -1,5 +1,13 @@
 # Documentum – Cartographie Frontend : CentralEditor
 
+> **Objet** : analyse technique approfondie — orchestration éditoriale DITA, hooks, stores Zustand, sauvegarde backend
+>
+> **Statut** : 🟡 Conforme sous contrainte — sauvegarde active mais endpoint sans préfixe `/api/` explicite
+>
+> **Composant(s) analysé(s) :** `CentralEditor` (`src/components/ui/CentralEditor.tsx`)
+>
+> **Dernière mise à jour** : 2026-04-16
+
 ---
 
 ## 1. Rôle fonctionnel réel

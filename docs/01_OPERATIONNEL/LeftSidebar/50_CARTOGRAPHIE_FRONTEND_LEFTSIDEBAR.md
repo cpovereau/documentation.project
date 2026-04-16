@@ -1,6 +1,12 @@
-# Cartographie Frontend — `LeftSidebar`
+# Documentum — Cartographie Frontend — `LeftSidebar`
 
-> **Dernière mise à jour** : 2026-04-10 — Réalignement post-Sprint 4 backend + audit complet exécution
+> **Objet** : cartographie de l'existant basée sur le modèle officiel
+>
+> **Statut** : conforme — tous les flux disponibles en v1 branchés sur le backend
+>
+> **Composant analysé :** `LeftSidebar` (`src/components/ui/LeftSidebar.tsx`)
+>
+> **Dernière mise à jour** : 2026-04-16
 
 ---
 

@@ -1,10 +1,12 @@
-# Documentum – Cartographie Frontend : `MapModule`
+# Documentum — Cartographie Frontend — `MapModule`
 
-> **Objet** : modèle officiel de cartographie frontend
-> 
-> **Statut** : référence méthodologique
-> 
-> **Usage** : analyser l’existant frontend sans le modifier, en vue d’un réalignement avec le backend canonique.
+> **Objet** : cartographie de l’existant basée sur le modèle officiel
+>
+> **Statut** : conforme — composant de présentation pur, aucun appel backend direct
+>
+> **Composant analysé :** `MapModule` (`src/components/ui/MapModule.tsx`)
+>
+> **Dernière mise à jour** : 2026-04-16
 
 ---
 

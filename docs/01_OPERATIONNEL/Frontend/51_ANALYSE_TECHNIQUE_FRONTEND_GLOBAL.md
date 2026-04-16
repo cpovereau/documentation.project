@@ -1,3 +1,13 @@
+# Documentum — Analyse technique des composants frontend
+
+> **Objet** : analyse technique des composants frontend principaux (rôles, dépendances, flux, DTO, règles)
+>
+> **Statut** : document de référence opérationnelle
+>
+> **Composants couverts :** `LeftSidebar`, `MapModule`, `ProjectModule`, `Desktop`, `CentralEditor`
+>
+> **Dernière mise à jour** : 2026-04-16
+
 ---
 
 # Documentation technique des composants
@@ -315,11 +325,10 @@
 - Aucun hook métier (coordination UI)
 
 **Stores / Contextes :**
-- Aucun store direct (état local uniquement)
+- `useSelectionStore` : lit `selectedRubriqueId` (source de vérité pour la rubrique active) ✅ (Lot 1)
 
 **DTO manipulés :**
-- `MapItem[]` : état local pour expansion (dérivé de `LeftSidebar`)
-- Aucun DTO backend direct
+- Aucun DTO backend ni DTO UI direct — Desktop ne manipule pas de données métier, il transmet `selectedRubriqueId` en prop `rubriqueId` à `CentralEditor`
 
 **Services API :**
 - Aucun appel API direct
@@ -327,8 +336,9 @@
 ### 3. Flux métier principaux
 
 **Flux 1 : Sélection d’une rubrique**
-- Déclencheur : sélection dans `LeftSidebar` → `setSelectedMapItemId(id)`
-- Propagation : `selectedMapItemId` → calcul `selectedRubriqueId` → prop `rubriqueId` à `CentralEditor`
+- Déclencheur : sélection dans `LeftSidebar` → `selectionStore.setSelection({ mapItemId, rubriqueId })`
+- Desktop lit `selectedRubriqueId` directement depuis `useSelectionStore` — aucun calcul local sur mapItems ✅ (Lot 1)
+- Propagation : `selectedRubriqueId` (store) → prop `rubriqueId` à `CentralEditor`
 - Effet : `CentralEditor` charge la rubrique correspondante
 
 **Flux 2 : Mode preview**
@@ -348,23 +358,19 @@
 
 ### 4. Contrats de données (DTO)
 
-**MapItem** (Frontend UI)
-- Origine : état local dérivé de `LeftSidebar`
-- Rôle : gestion expansion des nœuds map
-- Champs clés : `id`, `expanded`
-- Usage : lecture/écriture (état UI local)
+Desktop ne maintient aucun DTO de données métier. Il lit `selectedRubriqueId` depuis `useSelectionStore` et le transmet directement en prop `rubriqueId` à `CentralEditor`.
+
+> Mis à jour 2026-04-16 — correction post-Lot 1 : l’état `mapItems` local et le calcul de `selectedRubriqueId` ont été supprimés. La description antérieure décrivait le comportement pré-Lot 1.
 
 ### 5. Règles et invariants métier
 
-- Sélection rubrique : une seule rubrique active à la fois
+- Sélection rubrique : une seule rubrique active à la fois, source de vérité dans `useSelectionStore`
 - Mode preview : sidebars masquées, pas de modification possible
 - Dock editors : un seul dock visible à la fois (`visibleDockEditor`)
 - Marges : calculées dynamiquement selon états expansion
 
 ### 6. Points de vigilance / dette potentielle
 
-- État `mapItems` : duplication partielle avec `LeftSidebar` (expansion uniquement)
-- Synchronisation : risque de désynchronisation entre `Desktop.mapItems` et `LeftSidebar.mapItems`
 - Props drilling : nombreux états passés en props (candidat pour contexte)
 - Responsive : marges fixes, pas d’adaptation mobile
 

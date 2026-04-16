@@ -2,7 +2,7 @@
 
 Ce dossier contient la documentation technique, fonctionnelle et métier du projet **Documentum**.
 
-La documentation est organisée selon une stratégie explicite décrite dans `00_DOCUMENTATION_STRATEGY.md`.
+La documentation est organisée selon une stratégie explicite décrite dans `00_REFERENTIEL/Strategie/00_DOCUMENTATION_STRATEGY.md`.
 
 Son objectif est de :
 
@@ -15,7 +15,7 @@ Son objectif est de :
 
 ## 🧭 Vue d'ensemble
 
-La documentation est structurée en **3 niveaux principaux**.
+La documentation est structurée en **4 niveaux principaux**.
 
 ### 1. `00_REFERENTIEL`
 
@@ -65,37 +65,70 @@ On y trouve :
 
 ---
 
+### 4. `03_PILOTAGE`
+
+Contient les documents de pilotage opérationnel, les roadmaps et les guides de migration.
+
+On y trouve :
+
+* le tableau de bord de pilotage projet,
+* la roadmap d'évolution vers Documentum Nexus,
+* les guides de migration Claude Code,
+* les plans de restructuration du dépôt.
+
+👉 Ce niveau pilote les **transformations structurelles et l'avancement opérationnel du projet**.
+
+---
+
 ## 📁 Arborescence logique
 
 ```text
 DOCS/
 │
-├── 00_DOCUMENTATION_STRATEGY.md
-├── 00_INDEX_DOCUMENTUM.md
-│
 ├── 00_REFERENTIEL/
+│   ├── Index/
+│   │   └── 00_INDEX_DOCUMENTUM.md          ← ce fichier
+│   ├── Strategie/
+│   │   └── 00_DOCUMENTATION_STRATEGY.md
+│   ├── Architecture/
+│   │   ├── documentum_architecture_technique_modulaire.md
+│   │   ├── documentum_nexus_architecture_structure_documentum.md
+│   │   ├── modele_metier_transverse.md
+│   │   └── modele_metier_transverse_niveaux.md
+│   ├── Frontend/
+│   │   └── 20_XML_TIPTAP_CONVERSION_SPEC.md
+│   ├── 40_GOVERNANCE/
 │   ├── 00_CONTEXTE_PROJET.md
 │   ├── 10_GLOSSAIRE.md
+│   ├── 10_MODELE_METIER_BASE_METIER.md
 │   ├── 10_MODELE_METIER_DOCUMENTUM.md
 │   ├── 10_VERSIONING_DOCUMENTAIRE.md
 │   ├── 20_ARCHITECTURE_FRONTEND.md
-│   ├── 30_PILOTAGE_PROJET.md
+|   |── 20_SECURITE_SYSTEME.md
 │   ├── 40_EDITION_RUBRIQUE.md
-│   ├── 60_TESTING_STRATEGY.md
-│   ├── 40_GOVERNANCE/
-│   └── Frontend/                          
-│       └── 20_XML_TIPTAP_CONVERSION_SPEC.md
+│   └── 60_TESTING_STRATEGY.md
 │
 ├── 01_OPERATIONNEL/
 │   ├── Backend/
 │   ├── CentralEditor/
 │   ├── Frontend/
-│   └── LeftSidebar/
+│   ├── LeftSidebar/
+│   ├── ProductDocSync/
+│   ├── RightSidebar/
+│   └── Settings/
 │
 ├── 02_ANALYSE/
 │   ├── archive/
 │   ├── audits/
 │   └── syntheses/
+│
+├── 03_PILOTAGE/
+│   ├── 30_MASTER_PILOTAGE_DOCUMENTUM.md
+│   ├── 30_PILOTAGE_PROJET.md
+│   ├── 30_SUIVI_REALISATION.md
+│   ├── 30_ROADMAP_DOCUMENTUM_NEXUS.md
+│   └── migrations/
+│       └── 2026-04-15_documentum_nexus_restructuration_guide_claude_code.md
 │
 └── tools/
 ```
@@ -110,12 +143,20 @@ Le référentiel regroupe les documents qui définissent la vérité du projet.
 
 * `00_CONTEXTE_PROJET.md` : cadre général, objectifs et périmètre du projet
 * `10_GLOSSAIRE.md` : vocabulaire officiel du projet
-* `10_MODELE_METIER_DOCUMENTUM.md` : concepts métier structurants
+* `10_MODELE_METIER_DOCUMENTUM.md` : concepts métier structurants (orienté logiciel)
+* `10_MODELE_METIER_BASE_METIER.md` : modèle canonique du module G — Base Métier
 * `10_VERSIONING_DOCUMENTAIRE.md` : logique de versioning et de publication
 * `20_ARCHITECTURE_FRONTEND.md` : architecture cible et principes frontend
-* `30_PILOTAGE_PROJET.md` : pilotage des travaux en cours
+* `20_SECURITE_SYSTEME.md` : modèle de sécurité global
 * `40_EDITION_RUBRIQUE.md` : principes et règles d'édition
 * `60_TESTING_STRATEGY.md` : stratégie de tests et règles fondamentales
+
+### Architecture (`00_REFERENTIEL/Architecture`)
+
+* `documentum_architecture_technique_modulaire.md` : vision cible de l'architecture modulaire autour de Documentum comme noyau de connaissance
+* `documentum_nexus_architecture_structure_documentum.md` : source de vérité sur l'architecture complète de Documentum Nexus
+* `modele_metier_transverse.md` : abstraction du modèle métier vers un modèle générique multi-domaines
+* `modele_metier_transverse_niveaux.md` : structuration du modèle transverse en niveaux (socle universel → spécifique)
 
 ### Gouvernance (`00_REFERENTIEL/40_GOVERNANCE`)
 
@@ -148,6 +189,7 @@ Cette section décrit l'implémentation réelle du projet.
 
 * `50_CARTOGRAHIE_CENTRALEDITOR.md` : cartographie du composant CentralEditor
 * `51_ANALYSE_TECHNIQUE_CENTRALEDITOR.md` : analyse technique détaillée
+* `CENTRALEDITOR_REFACTOR_ROADMAP.md` : roadmap de refactoring du CentralEditor
 
 👉 Zone dédiée à l'éditeur central, au parsing XML ⇄ TipTap et aux flux techniques associés.
 
@@ -155,18 +197,39 @@ Cette section décrit l'implémentation réelle du projet.
 
 * `50_CARTOGRAPHIE_FRONTEND_DESKTOP.md` : cartographie du composant Desktop
 * `51_ANALYSE_TECHNIQUE_FRONTEND_GLOBAL.md` : analyse technique globale du frontend
-* `CENTRALEDITOR_REFACTOR_ROADMAP.md` : roadmap de refactoring du CentralEditor
 * `MAP_FRONTEND_ROADMAP.md` : roadmap d'évolution du module Map côté frontend
 
-👉 Point d'entrée sur le fonctionnement réel du frontend et les évolutions planifiées.
+👉 Point d'entrée sur le fonctionnement réel du frontend.
 
 ### `LeftSidebar/`
 
 * `50_CARTOGRAPHIE_FRONTEND_LEFTSIDEBAR.md` : cartographie du composant LeftSidebar
 * `50_CARTOGRAPHIE_FRONTEND_MAPMODULE.md` : cartographie du module Map
 * `50_CARTOGRAPHIE_FRONTEND_PROJECTMODULE.md` : cartographie du module Project
+* `LEFTSIDEBAR_ROADMAP.md` : roadmap & suivi des lots d'évolution (Lots 1–5 terminés, Lots 6–7 en attente backend)
 
 👉 Documentation détaillée des modules de navigation et de structure documentaire.
+
+### `RightSidebar/`
+
+* `50_CARTOGRAPHIE_FRONTEND_RIGHTSIDEBAR.md` : cartographie du composant RightSidebar (modes ancré/flottant, données hardcodées)
+* `RIGHTSIDEBAR_ROADMAP.md` : roadmap & suivi (Phase 1 — branchement API médiathèque à faire)
+
+👉 Panneau de ressources médias. Fonctionnel visuellement, non branché au backend.
+
+### `ProductDocSync/`
+
+* `50_CARTOGRAPHIE_FRONTEND_PRODUCTDOCSYNC.md` : cartographie de l'écran ProductDocSync (données hardcodées, aucune API branchée)
+* `PRODUCTDOCSYNC_ROADMAP.md` : roadmap & suivi (5 phases — branchement API, ImpactDocumentaire, plan de test)
+
+👉 Écran de pilotage documentaire Nexus. Backend `FonctionnaliteViewSet` disponible, branchement à faire (P4 gap analysis).
+
+### `Settings/`
+
+* `50_CARTOGRAPHIE_FRONTEND_SETTINGS.md` : cartographie de l'écran Settings et de ses 7 onglets (DataTab opérationnel, autres locaux)
+* `SETTINGS_ROADMAP.md` : roadmap & suivi par onglet (Phase 1 DataTab terminée, Phases 2–6 à faire)
+
+👉 Écran de configuration. DataTab pleinement branché API. Les 6 autres onglets fonctionnent en local.
 
 ---
 
@@ -176,6 +239,8 @@ Ces documents ne font pas autorité. Ils servent à comprendre, préparer et pil
 
 ### `audits/`
 
+* `DOCUMENTUM_NEXUS_GAP_ANALYSIS_GLOBAL.md` : analyse d'écart complète entre le référentiel Documentum Nexus et l'implémentation actuelle — base d'estimation de charge (produit le 2026-04-15)
+* `DOCUMENTUM_NEXUS_GAP_VALIDATION.md` : validation du gap analysis global — remplace le gap analysis pour le pilotage ; identifie les écarts obsolètes (résolus) vs confirmés (produit le 2026-04-15)
 * `BACKEND_GAP_ANALYSIS.md` : analyse des écarts entre le backend réel et le référentiel
 * `dependencies.md` : état des dépendances du projet
 * `deps_installed.json` : liste des packages installés
@@ -207,6 +272,25 @@ Contient les documents de sprints passés, conservés pour traçabilité.
 
 ---
 
+## 🚀 Pilotage (`03_PILOTAGE`)
+
+Cette section regroupe les documents de pilotage opérationnel, les roadmaps et les guides de migration.
+
+### Documents principaux
+
+* `30_MASTER_PILOTAGE_DOCUMENTUM.md` : **point d'entrée de pilotage** — oriente vers le bon document selon le besoin ; synthèse de l'état du projet et de la transition vers Documentum Nexus
+* `30_PILOTAGE_PROJET.md` : tableau de bord + détail des chantiers **en cours et à venir** uniquement
+* `30_SUIVI_REALISATION.md` : archive des chantiers terminés avec détail technique et journal de bord
+* `30_ROADMAP_DOCUMENTUM_NEXUS.md` : roadmap structurée en phases pour aligner Documentum avec Documentum Nexus (valeur produit : publication, ProductDocSync, Base Métier)
+
+### `migrations/`
+
+* `2026-04-15_documentum_nexus_restructuration_guide_claude_code.md` : guide de restructuration progressive du dépôt vers l'organisation Documentum Nexus
+
+👉 Démarrer par `30_MASTER_PILOTAGE_DOCUMENTUM.md` pour obtenir une orientation rapide. Les guides de migration servent de référence pendant les opérations structurelles.
+
+---
+
 ## 🧰 Outils (`tools`)
 
 * `modèle_analyse_technique_frontend.md` : gabarit pour produire une analyse technique
@@ -220,7 +304,7 @@ Contient les documents de sprints passés, conservés pour traçabilité.
 
 | Besoin                                   | Document recommandé                                                                 |
 | ---------------------------------------- | ----------------------------------------------------------------------------------- |
-| Comprendre la stratégie documentaire     | `00_DOCUMENTATION_STRATEGY.md`                                                      |
+| Comprendre la stratégie documentaire     | `00_REFERENTIEL/Strategie/00_DOCUMENTATION_STRATEGY.md`                             |
 | Comprendre le contexte global du projet  | `00_REFERENTIEL/00_CONTEXTE_PROJET.md`                                              |
 | Comprendre le vocabulaire Documentum     | `00_REFERENTIEL/10_GLOSSAIRE.md`                                                    |
 | Comprendre le modèle métier              | `00_REFERENTIEL/10_MODELE_METIER_DOCUMENTUM.md`                                     |
@@ -230,11 +314,26 @@ Contient les documents de sprints passés, conservés pour traçabilité.
 | Comprendre la stratégie de test          | `00_REFERENTIEL/60_TESTING_STRATEGY.md`                                             |
 | Comprendre les principes invariants      | `00_REFERENTIEL/40_GOVERNANCE/gov_principles.md`                                    |
 | Identifier les zones à risque            | `00_REFERENTIEL/40_GOVERNANCE/gov_risk-areas.md`                                    |
-| Comprendre la spec XML ↔ TipTap          | `00_REFERENTIEL/Fontend/20_XML_TIPTAP_CONVERSION_SPEC.md`                           |
+| Comprendre la spec XML ↔ TipTap          | `00_REFERENTIEL/Frontend/20_XML_TIPTAP_CONVERSION_SPEC.md`                          |
+| Comprendre l'architecture modulaire Nexus | `00_REFERENTIEL/Architecture/documentum_architecture_technique_modulaire.md`        |
+| Comprendre le modèle métier Base Métier  | `00_REFERENTIEL/10_MODELE_METIER_BASE_METIER.md`                                    |
+| Obtenir un point de pilotage rapide      | `03_PILOTAGE/30_MASTER_PILOTAGE_DOCUMENTUM.md`                                      |
+| Piloter les prochains travaux            | `03_PILOTAGE/30_PILOTAGE_PROJET.md`                                                 |
+| Consulter l'historique des chantiers terminés | `03_PILOTAGE/30_SUIVI_REALISATION.md`                                          |
+| Comprendre la roadmap Nexus              | `03_PILOTAGE/30_ROADMAP_DOCUMENTUM_NEXUS.md`                                        |
+| Analyser les écarts avec Documentum Nexus | `02_ANALYSE/audits/DOCUMENTUM_NEXUS_GAP_VALIDATION.md`                             |
+| Piloter une migration / restructuration  | `03_PILOTAGE/migrations/`                                                           |
 | Comprendre le frontend réel              | `01_OPERATIONNEL/Frontend/50_CARTOGRAPHIE_FRONTEND_DESKTOP.md`                      |
 | Comprendre les APIs backend              | `01_OPERATIONNEL/Backend/10_CARTOGRAPHIE_BACKEND_CANONIQUE_EXPOSE.md`               |
 | Comprendre CentralEditor                 | `01_OPERATIONNEL/CentralEditor/50_CARTOGRAHIE_CENTRALEDITOR.md`                     |
 | Comprendre LeftSidebar et modules liés   | `01_OPERATIONNEL/LeftSidebar/`                                                      |
+| Suivre l'évolution de LeftSidebar        | `01_OPERATIONNEL/LeftSidebar/LEFTSIDEBAR_ROADMAP.md`                                |
+| Comprendre RightSidebar                  | `01_OPERATIONNEL/RightSidebar/50_CARTOGRAPHIE_FRONTEND_RIGHTSIDEBAR.md`             |
+| Suivre l'évolution de RightSidebar       | `01_OPERATIONNEL/RightSidebar/RIGHTSIDEBAR_ROADMAP.md`                              |
+| Comprendre ProductDocSync                | `01_OPERATIONNEL/ProductDocSync/50_CARTOGRAPHIE_FRONTEND_PRODUCTDOCSYNC.md`         |
+| Suivre l'évolution de ProductDocSync     | `01_OPERATIONNEL/ProductDocSync/PRODUCTDOCSYNC_ROADMAP.md`                          |
+| Comprendre Settings                      | `01_OPERATIONNEL/Settings/50_CARTOGRAPHIE_FRONTEND_SETTINGS.md`                     |
+| Suivre l'évolution de Settings           | `01_OPERATIONNEL/Settings/SETTINGS_ROADMAP.md`                                      |
 | Consulter les roadmaps frontend          | `01_OPERATIONNEL/Frontend/CENTRALEDITOR_REFACTOR_ROADMAP.md`                        |
 | Consulter les synthèses frontend         | `02_ANALYSE/syntheses/`                                                             |
 | Consulter les audits                     | `02_ANALYSE/audits/`                                                                |
@@ -246,7 +345,7 @@ Contient les documents de sprints passés, conservés pour traçabilité.
 
 ### Nouveau sur le projet
 
-1. `00_DOCUMENTATION_STRATEGY.md`
+1. `00_REFERENTIEL/Strategie/00_DOCUMENTATION_STRATEGY.md`
 2. `00_REFERENTIEL/00_CONTEXTE_PROJET.md`
 3. `00_REFERENTIEL/10_GLOSSAIRE.md`
 4. `00_REFERENTIEL/10_MODELE_METIER_DOCUMENTUM.md`
@@ -254,17 +353,20 @@ Contient les documents de sprints passés, conservés pour traçabilité.
 
 ### Développeur frontend
 
-1. `00_DOCUMENTATION_STRATEGY.md`
+1. `00_REFERENTIEL/Strategie/00_DOCUMENTATION_STRATEGY.md`
 2. `00_REFERENTIEL/20_ARCHITECTURE_FRONTEND.md`
-3. `00_REFERENTIEL/Fontend/20_XML_TIPTAP_CONVERSION_SPEC.md`
+3. `00_REFERENTIEL/Frontend/20_XML_TIPTAP_CONVERSION_SPEC.md`
 4. `01_OPERATIONNEL/Frontend/50_CARTOGRAPHIE_FRONTEND_DESKTOP.md`
 5. `01_OPERATIONNEL/CentralEditor/`
 6. `01_OPERATIONNEL/LeftSidebar/`
-7. `00_REFERENTIEL/60_TESTING_STRATEGY.md`
+7. `01_OPERATIONNEL/RightSidebar/`
+8. `01_OPERATIONNEL/ProductDocSync/`
+9. `01_OPERATIONNEL/Settings/`
+10. `00_REFERENTIEL/60_TESTING_STRATEGY.md`
 
 ### Développeur backend
 
-1. `00_DOCUMENTATION_STRATEGY.md`
+1. `00_REFERENTIEL/Strategie/00_DOCUMENTATION_STRATEGY.md`
 2. `00_REFERENTIEL/10_MODELE_METIER_DOCUMENTUM.md`
 3. `01_OPERATIONNEL/Backend/10_BACKEND_CANONIQUE.md`
 4. `01_OPERATIONNEL/Backend/10_CARTOGRAPHIE_BACKEND_CANONIQUE_EXPOSE.md`
@@ -272,12 +374,13 @@ Contient les documents de sprints passés, conservés pour traçabilité.
 
 ### Pilotage / produit
 
-1. `00_DOCUMENTATION_STRATEGY.md`
-2. `00_REFERENTIEL/00_CONTEXTE_PROJET.md`
-3. `00_REFERENTIEL/10_MODELE_METIER_DOCUMENTUM.md`
-4. `00_REFERENTIEL/10_VERSIONING_DOCUMENTAIRE.md`
-5. `00_REFERENTIEL/30_PILOTAGE_PROJET.md`
-6. `00_REFERENTIEL/40_GOVERNANCE/gov_decision-log.md`
+1. `03_PILOTAGE/30_MASTER_PILOTAGE_DOCUMENTUM.md`
+2. `03_PILOTAGE/30_PILOTAGE_DOCUMENTUM_LIGHT.md`
+3. `03_PILOTAGE/30_ROADMAP_DOCUMENTUM_NEXUS.md`
+4. `02_ANALYSE/audits/DOCUMENTUM_NEXUS_GAP_VALIDATION.md`
+5. `00_REFERENTIEL/00_CONTEXTE_PROJET.md`
+6. `00_REFERENTIEL/10_VERSIONING_DOCUMENTAIRE.md`
+7. `00_REFERENTIEL/40_GOVERNANCE/gov_decision-log.md`
 
 ---
 
@@ -315,8 +418,9 @@ Cet index doit permettre :
 
 ## ⚠️ Points de maintenance identifiés
 
-* **`00_REFERENTIEL/Fontend/`** : faute de frappe dans le nom du dossier, à renommer en `Frontend`.
-* Le dossier `02_ANALYSE/refontes/` n'existe plus — les documents de refonte en cours sont à créer si besoin ou à maintenir dans `01_OPERATIONNEL/`.
+* Le dossier `02_ANALYSE/refontes/` n'existe plus — les documents de refonte en cours sont maintenus dans `01_OPERATIONNEL/`.
+* `30_PILOTAGE_PROJET.md` a été déplacé de `00_REFERENTIEL/` vers `03_PILOTAGE/` — ne pas recréer une copie dans le référentiel.
+* Le gap analysis `DOCUMENTUM_NEXUS_GAP_ANALYSIS_GLOBAL.md` (2026-04-15) contient des écarts désormais obsolètes — se référer à `DOCUMENTUM_NEXUS_GAP_VALIDATION.md` pour le pilotage actuel.
 
 ---
 

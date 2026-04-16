@@ -1,10 +1,12 @@
 # Documentum – Référentiel Backend Canonique
 
-> **Statut** : document de référence
+> **Objet** : définir la vérité métier, les responsabilités backend et les contrats d’API afin de garantir la cohérence globale du système Documentum
 >
-> **Objectif** : définir la vérité métier, les responsabilités backend et les contrats d’API afin de garantir la cohérence globale du système Documentum.
+> **Statut** : document normatif — fait foi pour toute évolution backend et sert de socle d’alignement pour le frontend
 >
-> Ce document fait foi pour toute évolution backend et sert de socle d’alignement pour le frontend.
+> **Périmètre backend :** `ProjetViewSet`, `MapViewSet`, `RubriqueViewSet` — apps `projets`, `maps`, `rubriques`
+>
+> **Dernière mise à jour** : 2026-04-16
 
 ---
 
@@ -141,7 +143,7 @@ Il est manipulé **uniquement** via l’entité `Rubrique`.
 ### 5.2. Endpoint canonique de contenu
 
 ```
-PUT /api/rubriques/{id}/
+PATCH /api/rubriques/{id}/
 ```
 
 Payload minimal :

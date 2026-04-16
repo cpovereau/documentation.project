@@ -1,5 +1,13 @@
 # Cartographie Frontend — `ProjectModule`
 
+> **Objet** : cartographie de l'existant — composant présentationnel de gestion des projets dans la sidebar gauche
+>
+> **Statut** : 🟢 Conforme — tous les flux disponibles branchés sur le backend ; clone/suppression hors scope v1
+>
+> **Composant(s) analysé(s) :** `ProjectModule` (`src/components/ui/ProjectModule.tsx`)
+>
+> **Dernière mise à jour** : 2026-04-16
+
 ---
 
 ## 1. Rôle fonctionnel réel
