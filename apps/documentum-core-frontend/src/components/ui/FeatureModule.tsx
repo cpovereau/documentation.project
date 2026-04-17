@@ -11,13 +11,12 @@ import {
   useSensors,
   DragEndEvent,
 } from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { FeatureItem as FeatureItemComponent } from "@/components/ui/FeatureItem";
 import type { FeatureItem as FeatureItemType } from "@/types/FeatureItem";
+
+// NOTE(métier): Pas de onIndent/onOutdent — hiérarchie désactivée (cadrage 2026-04-16).
+// À réintroduire si confirmation métier de la structure hiérarchique.
 
 export interface FeatureModuleProps {
   features: FeatureItemType[];
@@ -29,8 +28,6 @@ export interface FeatureModuleProps {
   onPaste: () => void;
   onReorderFeatures: (items: FeatureItemType[]) => void;
   onToggleExpand: (id: number, expand: boolean) => void;
-  onIndent: (id: number) => void;
-  onOutdent: (id: number) => void;
 }
 
 function getVisibleItems(items: FeatureItemType[]): FeatureItemType[] {
@@ -55,12 +52,8 @@ export const FeatureModule: React.FC<FeatureModuleProps> = ({
   onPaste,
   onReorderFeatures,
   onToggleExpand,
-  onIndent,
-  onOutdent,
 }) => {
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const visibleItems = getVisibleItems(features);
 
   function handleDragEnd(event: DragEndEvent) {
@@ -73,7 +66,7 @@ export const FeatureModule: React.FC<FeatureModuleProps> = ({
   }
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full h-full flex flex-col min-h-0">
       <Separator />
       <h2 className="h-[26px] font-bold text-black text-[32px] leading-normal m-0">
         Fonctionnalités
@@ -112,17 +105,13 @@ export const FeatureModule: React.FC<FeatureModuleProps> = ({
           className="w-12 h-12 p-0 flex items-center justify-center"
           onClick={() => selectedFeatureId && onDelete(selectedFeatureId)}
           disabled={!selectedFeatureId}
-          title="Supprimer"
+          title="Archiver"
         >
           <Trash className="w-8 h-8" strokeWidth={2.5} />
         </Button>
       </div>
-      <ScrollArea maxHeight="600px">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
+      <ScrollArea className="flex-1 min-h-0">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
             items={visibleItems.map((item) => item.id)}
             strategy={verticalListSortingStrategy}
@@ -137,8 +126,6 @@ export const FeatureModule: React.FC<FeatureModuleProps> = ({
                   onSelect={onSelectFeature}
                   features={features}
                   onToggleExpand={onToggleExpand}
-                  onIndent={onIndent}
-                  onOutdent={onOutdent}
                 />
               ))}
             </div>

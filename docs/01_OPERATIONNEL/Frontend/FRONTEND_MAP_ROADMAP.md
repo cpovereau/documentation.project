@@ -1,4 +1,4 @@
-# MAP_FRONTEND_ROADMAP
+# FRONTEND_MAP_ROADMAP
 
 ---
 
@@ -29,6 +29,17 @@ Ce document synthétise **les travaux restants** concernant la gestion de la Map
 - `MapModule` ne manipule **que des `MapItem`** (abstraction UI).
 - La notion de racine est portée par `MapItem.isRoot` (donnée dérivée).
 - La logique structurelle (racine, insertion) est centralisée dans `mapStructure.ts`.
+
+### Fonctionnalités de la toolbar — état réel (2026-04-17)
+
+| Bouton | Statut |
+|---|---|
+| Créer rubrique (`FilePlus`) | ✅ Fonctionnel |
+| Charger map (`FolderSearch`) | ✅ Fonctionnel |
+| Import Word | ⚠️ Bouton présent, logique non implémentée |
+| Charger rubrique existante (`Download`) | ⚠️ Déclenche `alert()` — non implémenté |
+| Dupliquer (`Copy`) | ⚠️ Stub v1 — `toast.error(...)` sans action backend |
+| Supprimer (`Trash`) | ⚠️ Stub v1 — `toast.error(...)` sans action backend |
 
 ---
 
@@ -68,14 +79,16 @@ Les routes legacy (`POST /api/rubriques/` + `POST /api/maps/{id}/rubriques/`) on
 
 Les routes canoniques de persistance structurelle sont en place et appelées par le frontend :
 
-| Opération | Route canonique |
-|---|---|
-| Réordonnancement | `POST /api/maps/{id}/structure/reorder/` — payload `{ orderedIds, parentId }` |
-| Indentation | `POST /api/maps/{id}/structure/{map_rubrique_id}/indent/` |
-| Désindentation | `POST /api/maps/{id}/structure/{map_rubrique_id}/outdent/` |
-| Attachement rubrique existante | `POST /api/maps/{id}/structure/attach/` |
+| Opération | Route canonique | Statut frontend |
+|---|---|---|
+| Réordonnancement | `POST /api/maps/{id}/structure/reorder/` — payload `{ orderedIds }` | ✅ Appelé |
+| Indentation | `POST /api/maps/{id}/structure/{map_rubrique_id}/indent/` | ✅ Appelé |
+| Désindentation | `POST /api/maps/{id}/structure/{map_rubrique_id}/outdent/` | ✅ Appelé |
+| Attachement rubrique existante | `POST /api/maps/{id}/structure/attach/` | ⚠️ Non appelé (non implémenté côté frontend) |
 
 > La route `PATCH /maps/{mapId}/rubriques/{id}/` n'a jamais existé et est définitivement hors scope.
+
+> ⚠️ Le payload `reorder` n'envoie pas `parentId` — le backend déduit le parent des IDs reçus. Le drag & drop est donc limité au même niveau hiérarchique (pas de cross-niveau).
 
 Le rechargement systématique après chaque opération est à la charge du frontend (voir section 4).
 
@@ -87,6 +100,8 @@ Rechargement présent après chaque opération structurelle (create, indent, out
 Rechargement via `GET /api/maps/{id}/structure/` (canonique) depuis Lot 2.
 
 La sélection différée après création (`pendingSelectId`) utilise `setSelection()` du `selectionStore` depuis Lot 1 — CentralEditor reçoit le `rubriqueId` réel après chaque rechargement.
+
+> ✅ Confirmé dans le code : chaque handler (`handleIndent`, `handleOutdent`, `handleReorder`, `handleAddMapItem`) appelle `setMapRubriques(await listMapRubriques(currentMapId))` après l'opération.
 
 ---
 
@@ -105,10 +120,11 @@ La sélection différée après création (`pendingSelectId`) utilise `setSelect
 
 1. ✅ Stabilisation de la Map (Sprint 1–3)
 2. ✅ Création de rubrique via route canonique atomique (Sprint 4)
-3. 🔜 Étape 4 — Projection `level → parent / ordre` (drag & drop cross-niveau) ➡️ Permettra le drag & drop multi-niveaux fiable
-4. ✅ Persistance backend (reorder / indent / outdent) + routes canoniques (Sprint 4)
-5. 🔜 Rechargement systématique côté frontend après chaque opération structurelle
-6. 🔜 Ajustements UX optionnels
+3. ✅ Persistance backend (reorder / indent / outdent) + routes canoniques (Sprint 4)
+4. ✅ Rechargement systématique après chaque opération structurelle
+5. 🔜 Étape 4 — Projection `level → parent / ordre` (drag & drop cross-niveau) ➡️ Permettra le drag & drop multi-niveaux fiable
+6. 🔜 Implémentation clone et suppression depuis la Map toolbar (stubs v1 actuellement)
+7. 🔜 Ajustements UX optionnels
 
 ---
 

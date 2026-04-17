@@ -268,17 +268,18 @@ Le composant UI `ProjectExportPanel` existe avec l'interface de sélection de fo
 
 **Vérification :**
 ```typescript
-// ProductDocSync.tsx — écran existant, données hardcodées statiques
-const features = [{ id: 1, name: "Congés payés", ... }];  // aucun appel API
-```
-```python
-# urls.py → router.register('fonctionnalites', FonctionnaliteViewSet)  ← backend disponible
+// ProductDocSync.tsx — branchement effectué (2026-04-17)
+// ✅ Produits : useProduits() → GET /api/produits/ — selectedProductId: number | null
+// ✅ Fonctionnalités : useFonctionnaliteList(produitId) → GET /api/fonctionnalites/
+//      + POST /api/fonctionnalites/ (add) + PATCH .../archive/ (soft delete)
+// ❌ Versions Produit : locales — VersionProjet.projet → Projet (pas Produit)
+//      Pas d'entité "version Produit" en backend ; TODO(Phase 2 — bloqué)
 ```
 
 **Reformulation de l'écart réel :**
-L'écran existe. Le backend `FonctionnaliteViewSet` est exposé. Ce qui manque : le **branchement frontend → API** et le modèle `ImpactDocumentaire` absent du backend.
+Produits et Fonctionnalités sont branchés sur l'API. Ce qui reste : la **gestion des versions Produit** (entité backend à définir — `VersionProjet` est liée à `Projet`, pas à `Produit`) et le modèle `ImpactDocumentaire` absent du backend.
 
-**Verdict : ⚠️ PARTIEL** — Type ⚠️ Perception
+**Verdict : ⚠️ PARTIEL** — Type ⚠️ Perception — progression : Produits + Fonctionnalités ✅ / Versions ❌
 
 ---
 
@@ -457,7 +458,7 @@ Ces 8 écarts sont résolus dans le code mais encore présentés comme actifs da
 | Rubrique racine XML vide | XS | XS — maintenu |
 | Formats d'erreur vues utilitaires | S | XS–S — périmètre réduit |
 | API export backend + pipeline DITA-OT | L–XL | L — UI existante, pipeline manquant |
-| Branchement ProductDocSync → API | L | M — écran et backend existants |
+| Branchement ProductDocSync → API | L | XS résiduel — Produits + Fonctionnalités ✅ ; reste : entité "version Produit" (décision métier) |
 | ImpactDocumentaire (modèle + API + flux) | inclus dans XL ProductDocSync | L — entité centrale manquante |
 | Module G Base Métier | XL | XL — maintenu |
 | APIs de connaissance Nexus | M–L | M–L — maintenu |
@@ -474,7 +475,7 @@ Ces 8 écarts sont résolus dans le code mais encore présentés comme actifs da
 | **P1** | Initialiser `contenu_xml` avec un template DITA minimal valide dans `create_project()` | XS | — |
 | **P2** | Normaliser les formats de réponse de `validate_xml_view`, `publier_map`, `publication_diff_view` vers `custom_exception_handler` | XS–S | — |
 | **P3** | Implémenter autosave (debounce 30s + indicateur visuel + retry réseau) dans CentralEditor | M | — |
-| **P4** | Brancher `ProductDocSync.tsx` sur `FonctionnaliteViewSet` (API déjà disponible) | M | — |
+| **P4** | ~~Brancher `ProductDocSync.tsx` sur `FonctionnaliteViewSet`~~ ⚠️ **Partiel (2026-04-17)** — Produits + Fonctionnalités branchés ✅ ; Versions Produit locales ❌ (entité backend à définir) | M → XS résiduel | — |
 | **P5** | Implémenter `ImpactDocumentaire` : modèle + API + intégration ProductDocSync | L | P4 |
 | **P6** | Implémenter API export backend + pipeline DITA-OT minimal | L | — |
 | **P7** | Définir frontières modules Django avant tout développement Lot 3+ | — | Décision architecture |
@@ -486,10 +487,10 @@ Ces 8 écarts sont résolus dans le code mais encore présentés comme actifs da
 
 | Priorité | Action | Document cible |
 |----------|--------|---------------|
-| **D1** | Marquer les 8 écarts obsolètes dans le gap analysis (voir §6) | `02_ANALYSE/audits/DOCUMENTUM_NEXUS_GAP_ANALYSIS_GLOBAL.md` |
-| **D2** | Recalibrer les sections §3 (synthèse), §4 (backend/CentralEditor), §5 (cartographie), §8 (lots) du gap analysis | `DOCUMENTUM_NEXUS_GAP_ANALYSIS_GLOBAL.md` |
+| **D1** | ✅ **Effectué (2026-04-17)** — 8 écarts obsolètes marqués dans le gap analysis (banners ❌ + tableau §5 + §3 zones critiques + §9 prérequis) | `02_ANALYSE/audits/DOCUMENTUM_NEXUS_GAP_ANALYSIS_GLOBAL.md` |
+| **D2** | ✅ **Effectué (2026-04-17)** — §3 alignement/estimation/risques recalibrés ; §8 Lots 1+2+3 mis à jour avec statuts réels | `DOCUMENTUM_NEXUS_GAP_ANALYSIS_GLOBAL.md` |
 | **D3** | Créer la cartographie opérationnelle de ProductDocSync | `01_OPERATIONNEL/Frontend/` (nouveau fichier) |
-| **D4** | Mettre à jour `10_CARTOGRAPHIE_BACKEND_CANONIQUE_EXPOSE.md` pour refléter routes actuelles (sans compat) | `01_OPERATIONNEL/Backend/` |
+| **D4** | ✅ **Effectué (2026-04-17)** — routes compat absentes confirmées ; §3.4 `FonctionnaliteViewSet` ajouté ; §7 dette mise à jour | `01_OPERATIONNEL/Backend/10_CARTOGRAPHIE_BACKEND_CANONIQUE_EXPOSE.md` |
 | **D5** | Formaliser les décisions frontières modules dans `gov_decision-log.md` avant Lot 3 | `00_REFERENTIEL/40_GOVERNANCE/gov_decision-log.md` |
 
 ---
@@ -515,7 +516,7 @@ P1 — Sécurisation UX
 - XML racine valide
 
 P2 — Activation valeur Nexus
-- ProductDocSync branché
+- ProductDocSync branché ⚠️ en cours — Produits + Fonctionnalités ✅ / Versions Produit ❌ (entité backend manquante)
 - ImpactDocumentaire
 
 P3 — Structuration long terme
@@ -534,7 +535,7 @@ P3 — Structuration long terme
 | Frontend — Desktop, LeftSidebar, stores | Moyen à Fort | **Fort** |
 | CentralEditor — parsing, validation, navigation | Faible (phases en cours) | **Moyen à Fort** |
 | Flux publication — API, pipeline, UI | Absent | **Faible** (UI existe, API manquante) |
-| ProductDocSync | Absent | **Faible** (écrans et API partiels) |
+| ProductDocSync | Absent | **Faible à Moyen** (Produits + Fonctionnalités branchés ; Versions locales ; ImpactDocumentaire absent) |
 | Module G Base Métier | Absent | **Absent** |
 | Modules C, D, E, F | Absents | **Absents** |
 
@@ -597,6 +598,7 @@ Sans ces éléments, la valeur produit Documentum Nexus reste incomplète.
 |------|--------|
 | 2026-04-15 | Version initiale — validation factuelle des verdicts |
 | 2026-04-15 | Version 2 — refactoring opérationnel : types d'écarts, plan d'actions, impact projet |
+| 2026-04-17 | Version 3 — D1/D2/D4 effectués ; P2/P4 partiel : Produits + Fonctionnalités branchés, Versions Produit bloquées (entité backend manquante) |
 
 ---
 

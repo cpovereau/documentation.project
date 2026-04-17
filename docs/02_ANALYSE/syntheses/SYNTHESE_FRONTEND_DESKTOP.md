@@ -6,6 +6,8 @@
 > **Source** : Cartographie Frontend — Desktop
 > 
 > **Objectif** : formaliser le rôle et la position architecturale de Desktop dans la chaîne frontend Documentum.
+>
+> **Dernière mise à jour** : 2026-04-17
 
 ---
 
@@ -29,18 +31,20 @@
 
 | Flux | Déclencheur UI | Implémentation | Commentaire |
 |------|----------------|----------------|-------------|
-| Sélection projet | action utilisateur | Propagation vers LeftSidebar | Conforme |
-| Sélection map | action utilisateur | Propagation vers LeftSidebar | Conforme |
-| Sélection rubrique | action utilisateur | Propagation vers CentralEditor | Conforme |
-| Redimensionnement éditeurs | drag handle | Gestion locale UI | Conforme |
+| Sélection projet / map / rubrique | action utilisateur dans LeftSidebar | Via `useSelectionStore` (Zustand) | Desktop lit `selectedRubriqueId` directement depuis le store |
+| Transmission rubriqueId à l'éditeur | changement de sélection | Prop `rubriqueId` vers CentralEditor | Desktop n'orchestre plus la sélection — il la consomme |
+| Mode prévisualisation | bouton toggle | États locaux + repli des sidebars | Conforme |
+| Dock éditeurs (Question / Exercice) | barre d'outils CentralEditor | `visibleDockEditor` état local | Nouveau — toggle Question/Exercice |
+| Redimensionnement dock | drag handle vertical | `dockEditorHeight` état local | Nouveau |
+| RightSidebar flottante / ancrée | toggle | `isRightSidebarFloating` état local | Nouveau |
 
 ---
 
 ## 4. États et données manipulés
 
-- États locaux purement UI (dimensions, visibilité)
-- Données structurantes reçues via props
-- DTO manipulé : `MapItem[]` (UI only)
+- États locaux purement UI : visibilité sidebars, mode prévisualisation, dock éditeur, hauteur dock
+- `selectedRubriqueId` consommé depuis `useSelectionStore` (lecture seule dans Desktop)
+- Aucun `MapItem[]` manipulé directement par Desktop
 
 > Aucun état métier persistant n’est porté par Desktop.
 
@@ -77,6 +81,7 @@ Desktop est totalement découplé du backend.
 - Composant stable lors du réalignement backend
 - Ne nécessite aucune correction structurelle
 - Sert de socle pour l’orchestration UI future
+- Patron de consommation de `useSelectionStore` : référence pour les futurs composants
 
 ---
 

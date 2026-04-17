@@ -197,7 +197,7 @@ Cette section décrit l'implémentation réelle du projet.
 
 * `50_CARTOGRAPHIE_FRONTEND_DESKTOP.md` : cartographie du composant Desktop
 * `51_ANALYSE_TECHNIQUE_FRONTEND_GLOBAL.md` : analyse technique globale du frontend
-* `MAP_FRONTEND_ROADMAP.md` : roadmap d'évolution du module Map côté frontend
+* `FRONTEND_MAP_ROADMAP.md` : roadmap d'évolution du module Map côté frontend
 
 👉 Point d'entrée sur le fonctionnement réel du frontend.
 
@@ -254,6 +254,7 @@ Ces documents ne font pas autorité. Ils servent à comprendre, préparer et pil
 * `SYNTHESE_FRONTEND_LEFTSIDEBAR.md`
 * `SYNTHESE_FRONTEND_MAPMODULE.md`
 * `SYNTHESE_FRONTEND_PROJECTMODULE.md`
+* `SYNTHESE_FRONTEND_PRODUCTDOCSYNC.md`
 * `SYNTHESE_FRONTEND_GLOBALE.md`
 
 ### `archive/`
@@ -334,7 +335,7 @@ Cette section regroupe les documents de pilotage opérationnel, les roadmaps et 
 | Suivre l'évolution de ProductDocSync     | `01_OPERATIONNEL/ProductDocSync/PRODUCTDOCSYNC_ROADMAP.md`                          |
 | Comprendre Settings                      | `01_OPERATIONNEL/Settings/50_CARTOGRAPHIE_FRONTEND_SETTINGS.md`                     |
 | Suivre l'évolution de Settings           | `01_OPERATIONNEL/Settings/SETTINGS_ROADMAP.md`                                      |
-| Consulter les roadmaps frontend          | `01_OPERATIONNEL/Frontend/CENTRALEDITOR_REFACTOR_ROADMAP.md`                        |
+| Consulter les roadmaps frontend          | `01_OPERATIONNEL/CentralEditor/CENTRALEDITOR_REFACTOR_ROADMAP.md`                   |
 | Consulter les synthèses frontend         | `02_ANALYSE/syntheses/`                                                             |
 | Consulter les audits                     | `02_ANALYSE/audits/`                                                                |
 | Consulter l'historique des sprints       | `02_ANALYSE/archive/`                                                               |
@@ -375,7 +376,7 @@ Cette section regroupe les documents de pilotage opérationnel, les roadmaps et 
 ### Pilotage / produit
 
 1. `03_PILOTAGE/30_MASTER_PILOTAGE_DOCUMENTUM.md`
-2. `03_PILOTAGE/30_PILOTAGE_DOCUMENTUM_LIGHT.md`
+2. `03_PILOTAGE/30_PILOTAGE_PROJET.md`
 3. `03_PILOTAGE/30_ROADMAP_DOCUMENTUM_NEXUS.md`
 4. `02_ANALYSE/audits/DOCUMENTUM_NEXUS_GAP_VALIDATION.md`
 5. `00_REFERENTIEL/00_CONTEXTE_PROJET.md`
@@ -401,6 +402,106 @@ Une information ne doit exister **qu'à un seul endroit comme source de vérité
 1. le **référentiel** fait foi,
 2. l'**opérationnel** doit être corrigé,
 3. l'**analyse** doit être mise à jour, archivée ou supprimée.
+
+---
+
+
+---
+
+## 🔄 Cycle de vie documentaire (obligatoire)
+
+La documentation Documentum est gouvernée par le principe suivant :
+
+👉 Toute évolution du système doit être reflétée dans le référentiel documentaire **avant implémentation**.
+
+---
+
+### 🔴 Règle bloquante
+
+Une évolution est considérée comme invalide si :
+
+- elle n’est pas documentée,
+- ou si son impact documentaire n’est pas explicitement traité,
+- ou si l’index n’est pas mis à jour.
+
+---
+
+### 📌 Mise à jour de l’index (obligatoire)
+
+#### Cas 1 — Création d’un document
+
+Toute création de document doit :
+
+- être immédiatement ajoutée dans cet index,
+- être positionnée dans la bonne section (`00_REFERENTIEL`, `01_OPERATIONNEL`, etc.),
+- être référencée dans les parcours de lecture si nécessaire.
+
+👉 Un document non indexé est considéré comme inexistant.
+
+---
+
+#### Cas 2 — Modification d’un document existant
+
+Toute modification impactant :
+
+- le métier
+- l’architecture
+- le backend
+- le frontend
+- les flux
+
+doit entraîner :
+
+- une mise à jour du document concerné,
+- une vérification de cohérence dans cet index,
+- une mise à jour des liens ou parcours si nécessaire.
+
+---
+
+#### Cas 3 — Suppression ou déplacement
+
+Toute suppression ou déplacement de document doit :
+
+- être répercuté immédiatement dans l’index,
+- éviter toute référence cassée,
+- être tracé si nécessaire dans le `decision-log.md`.
+
+---
+
+### 📚 Synchronisation avec la gouvernance
+
+Cette règle est alignée avec :
+
+- `gov_principles.md` (5.2 — décisions traçables)
+- `gov_forbidden-patterns.md` (décisions non documentées interdites)
+- `gov_decision-log.md` (traçabilité des décisions)
+
+---
+
+### 🤖 Règle IA (ChatGPT / Claude)
+
+Toute interaction impliquant une évolution doit inclure :
+
+## Impact documentaire
+
+- documents à modifier ou créer
+- position dans l’index
+- nature de la modification
+
+👉 L’IA doit systématiquement proposer ces impacts.
+
+---
+
+### ✔️ Critère de complétude
+
+Une évolution est terminée uniquement si :
+
+- le code est implémenté
+- les tests sont validés
+- la documentation est à jour
+- l’index est cohérent
+
+👉 Sinon, elle est incomplète.
 
 ---
 

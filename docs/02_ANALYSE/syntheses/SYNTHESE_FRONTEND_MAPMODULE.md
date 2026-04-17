@@ -6,6 +6,8 @@
 > **Source** : Cartographie Frontend — MapModule
 > 
 > **Objectif** : formaliser la position architecturale de MapModule et confirmer son rôle dans la chaîne frontend.
+>
+> **Dernière mise à jour** : 2026-04-17
 
 ---
 
@@ -29,11 +31,13 @@
 
 | Flux | Déclencheur UI | Implémentation métier | Commentaire |
 |------|----------------|-----------------------|-------------|
-| Sélection rubrique | clic sur item | Handler parent | Conforme |
-| Expansion / repli | clic chevron | Handler parent | Conforme |
-| Indentation | action UI | Handler parent | Dépend backend |
-| Désindentation | action UI | Handler parent | Dépend backend |
-| Réordonnancement | drag & drop | Handler parent | Dépend backend |
+| Sélection rubrique | clic sur item | Handler parent (`onSelect`) | Conforme — racine non sélectionnable |
+| Expansion / repli | clic chevron | Filtrage local (`getVisibleItems`) | UI interne — `expanded` vient des props |
+| Indentation | menu contextuel item | Handler parent (`onIndent`) | Dépend backend |
+| Désindentation | menu contextuel item | Handler parent (`onOutdent`) | Dépend backend |
+| Réordonnancement | drag & drop (DnD kit) | Calcul local → `onReorder` parent | Tri visible calculé localement avant délégation |
+| Renommage | double-clic | Handler parent (`onRename` / `onRenameSave`) | Inline edit via prop `editingItemId` |
+| Clone / Suppression | barre d'outils | Handler parent (`onClone` / `onDelete`) | Désactivés sur la racine documentaire |
 
 ---
 
@@ -41,6 +45,8 @@
 
 - Données reçues exclusivement via props
 - DTO manipulé : `MapItem` (UI only)
+- Calcul interne : `getVisibleItems()` — filtre les items selon `expanded` pour le rendu et le DnD
+- État DnD géré par `@dnd-kit/core` + `@dnd-kit/sortable` (local, sans persistance)
 - Aucun état critique persistant
 
 ---

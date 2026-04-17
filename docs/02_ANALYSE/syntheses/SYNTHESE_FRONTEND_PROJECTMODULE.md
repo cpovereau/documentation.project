@@ -6,6 +6,8 @@
 > **Source** : Cartographie Frontend — ProjectModule
 > 
 > **Objectif** : fournir une vision synthétique et décisionnelle des écarts frontend ↔ backend liés à la gestion des projets, avant poursuite de la cartographie.
+>
+> **Dernière mise à jour** : 2026-04-17
 
 ---
 
@@ -18,50 +20,49 @@
 ---
 
 ## 2. Inventaire des endpoints impliqués (indirectement)
+
 | Endpoint                           | Responsabilité métier  | Statut                       | Commentaire                            |
 | ---------------------------------- | ---------------------- | ---------------------------- | -------------------------------------- |
 | `GET /api/projets/{id}/`           | Chargement d’un projet | 🟢 Conforme                  | Appelé indirectement via LeftSidebar   |
 | `GET /api/projets/?archived=false` | Liste des projets      | 🟢 Conforme                  | Utilisé par LoadProjectDialog          |
-| `POST /projet/create/`             | Création de projet     | 🔴 Non conforme              | Doit être remplacé par `/api/projets/` |
-| `POST /api/publier-map/{map_id}/`  | Publication d’une map  | 🟡 Conforme mais non utilisé | Ambiguïté projet vs map                |
-| `POST /api/versions/{id}/clone/`   | Clonage version/projet | 🔴 Non implémenté            | Fonctionnalité simulée frontend        |
-| `DELETE /api/projets/{id}/`        | Suppression projet     | 🔴 Non implémenté            | Fonctionnalité simulée frontend        |
+| `POST /api/projets/`               | Création de projet     | 🟢 Conforme (résolu)         | Via `createProjectValidated()` — remplace l’ancien `/projet/create/` |
+| `POST /api/publier-map/{map_id}/`  | Publication d’une map  | 🟢 Conforme et utilisé       | Via `publishMap()` — sélection master / unique automatique |
+| `POST /api/versions/{id}/clone/`   | Clonage version/projet | 🔴 Non implémenté            | Toast d’information à l’utilisateur (v1) |
+| `DELETE /api/projets/{id}/`        | Suppression projet     | 🟢 Implémenté (résolu)       | Fonctionnel — nettoyage état local inclus |
 
 
 ---
 
 ## 3. Typologie des écarts identifiés
 
-### 3.1. Écarts fonctionnels
+### 3.1. Écarts résolus (depuis audit initial)
 
-- Publication de projet non implémentée
-- Clonage de projet simulé localement
-- Suppression de projet simulée localement
-
-Ces fonctionnalités sont **visuellement disponibles mais techniquement inopérantes**.
+- ✅ Création de projet : endpoint `/projet/create/` remplacé par `/api/projets/` (canonique, validé Zod)
+- ✅ Suppression de projet : `DELETE /api/projets/{id}/` implémenté et opérationnel
+- ✅ Publication : `POST /api/publier-map/{map_id}/` désormais appelé avec sélection intelligente de la map (master > unique > blocage)
+- ✅ Ambiguïté projet/map résolue par la logique de sélection dans `handleExport` (LeftSidebar)
 
 ---
 
-### 3.2. Écarts contractuels
+### 3.2. Écarts fonctionnels résiduels
 
-- Utilisation persistante de l’endpoint `/projet/create/`
-- Absence d’endpoint backend dédié au clonage et à la suppression de projet
+- Clone projet : non implémenté — toast explicite à l’utilisateur (`"Clonage de projet non disponible (v1)."`)
 
 ---
 
 ### 3.3. Écarts conceptuels
 
-- Confusion d’intention : publication d’un **projet** côté frontend vs publication d’une **map** côté backend
-- Absence de décision métier explicite sur ce point
+- Publication d’un **projet** côté UI → publication d’une **map** côté backend : décision tranchée par règle de sélection (master > unique)
+- Format de publication : choix utilisateur via `PUBLISH_FORMATS` (pdf, html5, xhtml, scorm, markdown, eclipsehelp)
 
 ---
 
-## 4. Logiques compensatoires frontend
+## 4. Logiques frontend actuelles
 
-- Génération locale d’identifiants lors du clonage
-- Suppression immédiate de l’état local sans confirmation backend
+- Export card dans ProjectModule : sélection format + bouton Publier → délégation à `onExport(format)` (handler LeftSidebar)
+- Clone : délibérément hors scope v1, sans simulation locale
 
-> Ces logiques sont des **simulations**, non des implémentations métier.
+> Les logiques compensatoires locales (génération d’identifiants, suppression sans backend) ont été supprimées.
 
 ---
 
@@ -83,11 +84,8 @@ Ces fonctionnalités sont **visuellement disponibles mais techniquement inopéra
 
 ## 7. Recommandations de pilotage
 
-- Ne pas corriger ProjectModule tant que :
-  - la création de projet n’est pas alignée backend
-  - la notion de publication (projet vs map) n’est pas tranchée
-  - le clonage et la suppression ne sont pas implémentés backend
-
+- Implémenter le clonage de projet côté backend (seul écart restant)
+- Lorsque disponible, remplacer le `toast.error` clone par l’appel réel
 - Utiliser cette synthèse comme **référence transverse** pour la suite de la cartographie frontend
 
 ---

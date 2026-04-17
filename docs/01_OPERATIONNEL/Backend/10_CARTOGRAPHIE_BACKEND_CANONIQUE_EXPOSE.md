@@ -2,11 +2,11 @@
 
 > **Objet** : cartographie des routes backend réellement exposées — correspondance vues, serializers et services métiers
 >
-> **Statut** : opérationnel — source de vérité runtime ; §3.1 Projets incomplet (GET list/retrieve + DELETE à ajouter)
+> **Statut** : opérationnel — source de vérité runtime
 >
-> **Périmètre backend :** `ProjetViewSet`, `MapViewSet`, `RubriqueViewSet` — apps `projets`, `maps`, `rubriques`
+> **Périmètre backend :** `ProjetViewSet`, `MapViewSet`, `RubriqueViewSet`, `FonctionnaliteViewSet` — apps `projets`, `maps`, `rubriques`, `documentation`
 >
-> **Dernière mise à jour** : 2026-04-16
+> **Dernière mise à jour** : 2026-04-17
 
 ---
 
@@ -90,6 +90,21 @@ Ce document **ne décrit pas** :
 
 ---
 
+### 🏷 3.4 Fonctionnalités (ProductDocSync)
+
+> Exposé via `ArchivableModelViewSet` — DELETE retourne HTTP 405 ; suppression douce via PATCH `archive/`.
+
+| Méthode | Route | Vue | Rôle |
+|--------|------|-----|------|
+| GET | `/api/fonctionnalites/` | `FonctionnaliteViewSet.list` | Liste des fonctionnalités (`?archived=false` supporté) |
+| POST | `/api/fonctionnalites/` | `FonctionnaliteViewSet.create` | Créer une fonctionnalité (`produit`, `nom`, `code`, `id_fonctionnalite`) |
+| GET | `/api/fonctionnalites/{id}/` | `FonctionnaliteViewSet.retrieve` | Lecture d'une fonctionnalité |
+| PATCH | `/api/fonctionnalites/{id}/archive/` | `FonctionnaliteViewSet.archive` | Archive (suppression douce) — DELETE → 405 |
+
+**Filtrage produit** : côté frontend (`f.produit === produitId`) — pas de `?produit=` côté backend (TODO Phase 2).
+
+---
+
 ## 4. Services métiers utilisés
 
 | Service | Rôle |
@@ -141,9 +156,10 @@ Ce document **ne décrit pas** :
 
 ## 7. Dette restante (connue)
 
-- contenu XML racine vide
-- `ProjetSerializer.create()` non aligné sur `create_project()`
-- DTO à affiner par flux
+- `contenu_xml=""` invalide à la création de rubrique racine (B7 — XS)
+- Formats d'erreur non uniformes sur 3 vues utilitaires : `validate_xml_view`, `publier_map`, `publication_diff_view` (B6 — XS)
+- Filtrage `?produit=` absent sur `/api/fonctionnalites/` — filtrage frontend provisoire (TODO Phase 2)
+- DTO à affiner par flux (édition / navigation / publication)
 
 ---
 

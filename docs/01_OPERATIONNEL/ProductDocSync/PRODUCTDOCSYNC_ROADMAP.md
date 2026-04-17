@@ -9,40 +9,42 @@ Ce document est synthétique, durable, et conçu pour un travail non linéaire d
 
 L'évolution est organisée en **5 phases** :
 
-1. **Phase 1 — Branchement API fonctionnalités (À FAIRE — priorité haute)**
-2. **Phase 2 — Branchement API produits et versions (À FAIRE)**
+1. **Phase 1 — Branchement API fonctionnalités (PARTIEL ✅)**
+2. **Phase 2 — Branchement API produits et versions (PARTIEL ⚠️ — versions bloquées)**
 3. **Phase 3 — ImpactDocumentaire : modèle et API (À FAIRE — prérequis Nexus)**
 4. **Phase 4 — Plan de test et carte d'impact (À FAIRE)**
 5. **Phase 5 — Nettoyage et stabilisation technique (À FAIRE)**
 
 ---
 
-# ⚠️ État actuel (2026-04-16)
+# ⚠️ État actuel (2026-04-17)
 
 ### Ce qui fonctionne
 - Layout complet en 4 zones : `SyncLeftSidebar`, `SyncEditor`, `SyncBottombar`, `SyncRightSidebar`
 - Navigation entre fonctionnalités (sélection, expansion, collapse)
-- Réordonnancement drag & drop des fonctionnalités (local)
-- Indentation / désindentation des fonctionnalités (local, niveaux 1 à 5)
-- Copier / coller une fonctionnalité (local, avec toast de confirmation)
-- Suppression d'une fonctionnalité (local)
-- Ajout d'une fonctionnalité (local)
-- Ajout d'une version (incrémentation locale du numéro mineur)
+- Réordonnancement drag & drop des fonctionnalités (local — persistance non implémentée, pas de champ `ordre` backend)
+- Indentation / désindentation des fonctionnalités (UI locale, mono-niveau — cadrage 2026-04-16)
+- Copier / coller une fonctionnalité → colle via `POST /api/fonctionnalites/` (persisté)
+- Suppression d'une fonctionnalité → archive via `PATCH /api/fonctionnalites/{id}/archive/` (persisté)
+- Ajout d'une fonctionnalité → dialog + `POST /api/fonctionnalites/` (persisté)
+- **Produits chargés depuis `GET /api/produits/`** via `useProduits` (plus hardcodé)
+- **Fonctionnalités chargées depuis `GET /api/fonctionnalites/`** via `useFonctionnaliteList` (plus hardcodé)
+- Ajout d'une version (incrémentation locale du numéro mineur — bloqué, voir ci-dessous)
 - Bascule type d'article (évolution / correctif) dans `SyncEditor`
 - Redimensionnement vertical de `SyncBottombar` par drag
 - `ImpactMapModal` : ouverture / fermeture
 - `TestPlanModal` : ouverture / fermeture / réordonnancement des tâches
 
-### Ce qui ne fonctionne pas
-- **Toutes les données sont hardcodées** : produits, versions, fonctionnalités — aucun appel API
-- **Aucune mutation n'est persistée** : toute action est perdue au rechargement
-- **Publication de version** → `alert()` navigateur
-- **Génération du plan de test** → `console.log` + fermeture modale sans action backend
+### Ce qui ne fonctionne pas / reste à faire
+- **Versions hardcodées** : `VersionProjet` est lié à `Projet`, pas à `Produit` — arbitrage métier nécessaire avant branchement API
+- **Publication de version** → `alert()` navigateur (bloqué, même raison)
+- **Réordonnancement** non persisté : pas de champ `ordre` dans le modèle `Fonctionnalite`
+- **Génération du plan de test** → fermeture modale sans action backend
 - **`ImpactDocumentaire`** : modèle absent du backend (M1 dans le gap analysis)
 
 ---
 
-# 🔜 Phase 1 — Branchement API fonctionnalités (À FAIRE — priorité haute)
+# ✅ Phase 1 — Branchement API fonctionnalités (PARTIEL)
 
 ### 🎯 Objectifs
 - Charger les fonctionnalités depuis `FonctionnaliteViewSet` (déjà disponible côté backend).
@@ -54,29 +56,30 @@ L'évolution est organisée en **5 phases** :
 
 #### 1.1 — Chargement initial
 
-- [ ] Créer le hook `useFonctionnaliteList(produitId, versionId)` → `GET /api/fonctionnalites/?produit={id}`
-- [ ] Remplacer le `useState<FeatureItem[]>([...])` hardcodé par `useFonctionnaliteList`
-- [ ] Gérer les états `loading`, `error`, liste vide
-- [ ] Mapper les champs backend (`id`, `nom`, `code`, `id_fonctionnalite`) vers `FeatureItem` frontend
+- [x] Créer le hook `useFonctionnaliteList(produitId)` → `GET /api/fonctionnalites/?archived=false`
+- [x] Remplacer le `useState<FeatureItem[]>([...])` hardcodé par `useFonctionnaliteList`
+- [x] Gérer les états `loading`, `error` (conditionné par `showFeatures`)
+- [x] Mapper les champs backend (`id`, `nom`, `code`, `id_fonctionnalite`) vers `FeatureItem` frontend
+- [ ] Filtrage backend par produit (`?produit={id}`) — actuellement filtré côté frontend
 
 #### 1.2 — Persistance des mutations
 
-- [ ] `handleAddFeature` → `POST /api/fonctionnalites/` + rechargement
-- [ ] `handleDeleteFeature(id)` → `DELETE /api/fonctionnalites/{id}/` + rechargement
-- [ ] `handleReorder(newItems)` → décider si l'ordre est persisté (champ `ordre` côté backend ?)
-- [ ] `handleIndent(id)` / `handleOutdent(id)` → décider si `level` est persisté ou dérivé de la hiérarchie backend
+- [x] `handleAddFeature` → `POST /api/fonctionnalites/` + invalidation cache React Query
+- [x] `handleDeleteFeature(id)` → `PATCH /api/fonctionnalites/{id}/archive/` (DELETE retourne 405)
+- [ ] `handleReorder(newItems)` → non implémenté, pas de champ `ordre` dans le modèle backend
+- [ ] `handleIndent(id)` / `handleOutdent(id)` → non implémenté, cadrage mono-niveau (2026-04-16)
 
 #### 1.3 — Nettoyage
 
-- [ ] Supprimer `console.log("Fonctionnalité collée :", newFeature.name)` (ligne 144)
-- [ ] Déplacer le type `MinimalTask` (défini localement) vers `src/types/`
+- [x] Supprimer `console.log("Fonctionnalité collée :", newFeature.name)` — supprimé
+- [ ] Déplacer le type `MinimalTask` (défini localement avec TODO) vers `src/types/`
 
 ### 📝 Notes
-`FonctionnaliteViewSet` est exposé sur `GET/POST/PATCH/DELETE /api/fonctionnalites/`. Le champ `level` de `FeatureItem` est une abstraction UI — vérifier si le backend stocke une hiérarchie ou un ordre plat avant d'implémenter le persist de l'indentation.
+Le filtrage par produit est actuellement fait côté frontend (`filter(f => f.produit === produitId)`). Ajouter `?produit={id}` côté backend réduira les données chargées. `level` reste une abstraction UI fixée à 1 (mono-niveau) — pas de hiérarchie backend.
 
 ---
 
-# 🔜 Phase 2 — Branchement API produits et versions (À FAIRE)
+# ⚠️ Phase 2 — Branchement API produits et versions (PARTIEL — versions bloquées)
 
 ### 🎯 Objectifs
 - Charger les produits disponibles depuis le référentiel DataTab.
@@ -87,29 +90,28 @@ L'évolution est organisée en **5 phases** :
 
 #### 2.1 — Chargement produits
 
-- [ ] Remplacer `const products = ["Planning", "Usager", "Finance"]` par `GET /api/produits/`
-- [ ] Brancher `setSelectedProduct` sur la sélection réelle
-- [ ] Aligner les valeurs de `productOptions` sur les IDs backend (pas les noms en clair)
+- [x] Remplacer la liste hardcodée par `GET /api/produits/` via `useProduits()`
+- [x] `selectedProductId` est l'ID technique backend (number | null)
+- [x] `productOptions` alignés sur les IDs backend
 
 #### 2.2 — Chargement versions
 
-- [ ] Créer le hook `useVersionList(produitId)` → `GET /api/versions/?produit={id}` (ou endpoint dédié)
+- [ ] Créer le hook `useVersionProduitList(produitId)` → endpoint à définir
 - [ ] Remplacer `useState(["1.0", "1.1", "1.2"])` hardcodé par ce hook
-- [ ] Recharger la liste des versions quand `selectedProduct` change
+- [ ] **BLOQUÉ** : `VersionProjet` est lié à `Projet` (pas à `Produit`) — mauvais modèle pour ProductDocSync ; nécessite arbitrage métier sur l'entité "version Produit"
 
 #### 2.3 — Création de version
 
-- [ ] `handleAddVersion` → `POST /api/versions/` (payload : `{ produit, nom }`)
-- [ ] Remplacer l'incrémentation locale par l'appel backend + rechargement liste
-- [ ] Sélectionner automatiquement la version créée après réponse backend
+- [ ] `handleAddVersion` → `POST` vers l'endpoint "version Produit" (à définir)
+- [ ] **BLOQUÉ** : même raison que 2.2 — incrémentation locale maintenue en attendant
 
 #### 2.4 — Publication de version
 
-- [ ] `handlePublishVersion` → `POST /api/publier-version/{id}/` ou endpoint à définir
-- [ ] Remplacer `alert()` par un appel backend + toast de confirmation
+- [ ] `handlePublishVersion` → remplacer `alert()` par appel backend + toast
+- [ ] **BLOQUÉ** : dépend de la définition du modèle "version Produit"
 
 ### 📝 Notes
-La structure des versions dans Documentum est liée au modèle `VersionProjet` (backend). Vérifier si `ProductDocSync` utilise les mêmes entités que `LeftSidebar` ou un modèle de version propre à ProductDocSync.
+`VersionProjet.projet` pointe sur `Projet`, pas sur `Produit`. Brancher ProductDocSync sur `VersionProjet` serait une mauvaise hypothèse métier. L'entité "version Produit" reste à définir avec l'équipe avant toute implémentation.
 
 ---
 

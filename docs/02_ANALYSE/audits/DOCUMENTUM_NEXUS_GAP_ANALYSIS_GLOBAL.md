@@ -70,9 +70,9 @@ Il ne remplace ni le référentiel métier, ni la cartographie opérationnelle. 
 
 | Périmètre | Alignement |
 |-----------|-----------|
-| Module A — Documentum Core (backend) | **Moyen** — noyau fonctionnel, dette structurelle active |
-| Module A — Frontend | **Moyen à fort** — Lots 1–4 effectués, phases CentralEditor en cours |
-| Module B — Product Knowledge / ProductDocSync | **Faible** — modèle défini, pas d'API exposée, pas d'UI cartographiée |
+| Module A — Documentum Core (backend) | **Moyen à Fort** — violations B1–B5 résolues Sprint 4 ; dette résiduelle XS (XML racine, formats erreurs utilitaires) |
+| Module A — Frontend | **Fort** — Lots 1–4 terminés, CentralEditor Phases 3+4+5 terminées, 22 tests round-trip |
+| Module B — Product Knowledge / ProductDocSync | **Faible à Moyen** — Produits + Fonctionnalités branchés sur API ; ImpactDocumentaire + versions Produit manquants |
 | Module G — Base Métier | **Absent** — modèle canonique défini, aucune implémentation |
 | Modules C, D, E, F (ITIL, IA, Portail, Formation) | **Absents** — vision définie, aucune implémentation |
 | Modèle transverse Nexus | **Absent** — abstractions génériques non introduites |
@@ -87,29 +87,31 @@ Le cœur documentaire (édition, structure, versioning de base) est fonctionnel.
 
 Décomposition indicative :
 
-| Domaine | Effort |
-|---------|--------|
-| Réalignement backend Core (violations + dette) | S–M |
-| CentralEditor phases 3–4 (parsing + sauvegarde DITA) | L |
-| Publication complète (UI + export + pipeline) | L |
-| ProductDocSync complet (backend + frontend) | L–XL |
-| Base Métier — module G (modèle + API + UI) | XL |
-| APIs de connaissance Nexus | M–L |
-| Modules C, D, E, F | hors périmètre immédiat |
+| Domaine | Effort initial | État (2026-04-17) |
+|---------|---------------|-------------------|
+| ~~Réalignement backend Core (violations + dette)~~ | ~~S–M~~ | ❌ Terminé Sprint 4 — résiduel XS (XML racine, 3 vues utilitaires) |
+| ~~CentralEditor phases 3–4 (parsing + sauvegarde DITA)~~ | ~~L~~ | ❌ Terminé — Phases 3+4+5 TERMINÉES |
+| Publication complète (UI + export + pipeline) | L | ✅ Actif — UI partielle, API + DITA-OT manquants |
+| ProductDocSync (backend + frontend) | L–XL | ⚠️ Partiel — Produits + Fonctionnalités ✅ ; ImpactDocumentaire + versions Produit ❌ |
+| Base Métier — module G (modèle + API + UI) | XL | ✅ Actif — non commencé |
+| APIs de connaissance Nexus | M–L | ✅ Actif — non commencé |
+| Modules C, D, E, F | hors périmètre immédiat | — |
 
 ### Zones les plus critiques
 
-1. **CentralEditor — parsing XML ↔ TipTap** : phase 3 non terminée, risque de perte de données documentaires.
-2. **Backend — violations actives** : route `/projet/create/` hors canon, exposition CRUD directe `MapRubrique`, suppression en cascade non protégée.
-3. **ProductDocSync** : fonctionnalité clé de la proposition de valeur Nexus, non implémentée côté API.
-4. **Publication** : la logique `RevisionRubrique` / `SnapshotPublication` existe côté backend mais aucune UI ni pipeline DITA n'est en place.
+1. ~~**CentralEditor — parsing XML ↔ TipTap** : phase 3 non terminée~~ ❌ **Résolu** — Phase 3 + 4 + 5 TERMINÉES, 22 tests round-trip.
+2. ~~**Backend — violations actives** : route `/projet/create/` hors canon, CRUD MapRubrique, DELETE cascade~~ ❌ **Résolu Sprint 4** — B1, B2, B3, B4, B5 résolus.
+3. **ProductDocSync** : ⚠️ Partiellement implémenté — Produits + Fonctionnalités branchés ; ImpactDocumentaire et versions Produit manquants.
+4. **Publication** : toujours bloquée — `SnapshotPublication` existe en backend mais aucune UI ni pipeline DITA-OT en place.
 
 ### Risques majeurs
 
-- **Perte de contenu** : transformation XML ↔ TipTap incomplète → publication corrompue
-- **Désynchronisation silencieuse** : DELETE rubrique avec cascade MapRubrique sans protection
-- **Dette masquée** : 4 formats d'erreur API coexistent, routes compat non supprimées
-- **Dérive monolithique** : absence d'architecture modulaire réelle, risque de tout intégrer dans le Core
+- ~~**Perte de contenu** : transformation XML ↔ TipTap incomplète → publication corrompue~~ ❌ Levé — Phase 3 TERMINÉE, 22 tests round-trip (R1)
+- ~~**Désynchronisation silencieuse** : DELETE rubrique avec cascade MapRubrique sans protection~~ ❌ Levé — `RubriqueViewSet.destroy()` protégé (R2)
+- ~~**Dette masquée** : 4 formats d'erreur API coexistent, routes compat non supprimées~~ ❌ Levé partiellement — routes compat supprimées ; formats d'erreur réduits aux 3 vues utilitaires (B6)
+- **Dérive monolithique** : absence d'architecture modulaire réelle, risque de tout intégrer dans le Core (R6 — actif)
+- **Autosave absent** : toute fermeture non sauvegardée = perte de contenu (R4 — actif)
+- **Fragmentation Base Métier** : module G non commencé, règles métier sans gouvernance (R7 — actif)
 
 ---
 
@@ -121,12 +123,14 @@ Décomposition indicative :
 
 #### 4.1.1 Création de projet
 
+> ❌ **OBSOLÈTE — Résolu Sprint 4** · `ProjetViewSet.create()` appelle désormais le service `create_project()` ; aucune route `/projet/create/` dans `urls.py`. Détail : [DOCUMENTUM_NEXUS_GAP_VALIDATION.md §4 — B1](DOCUMENTUM_NEXUS_GAP_VALIDATION.md)
+
 **État attendu (référentiel)**
 - Porte d'entrée unique : `POST /api/projets/`
 - Orchestration via `ProjetViewSet.create()` → service `create_project()`
 - Invariants garantis : projet + version active + map master + rubrique racine + MapRubrique racine
 
-**État réel (code)**
+**État réel au moment de la rédaction (2026-04-09)**
 - Route active : `POST /projet/create/` via `CreateProjectAPIView` (`views.py:719–861`)
 - `ProjetViewSet.create()` désactivé volontairement — lève `ValidationError`
 - Logique d'orchestration dans la view, pas dans un service
@@ -145,13 +149,20 @@ Décomposition indicative :
 
 #### 4.1.2 Structure documentaire (Maps / MapRubrique)
 
+> ❌ **OBSOLÈTE (3 écarts sur 3) — Résolu Sprint 4 Phase B**
+> - **B2** `POST /api/map-rubriques/` supprimé — MapRubrique plus jamais exposé directement
+> - **B3** `POST /api/maps/{id}/structure/attach/` implémenté dans `MapViewSet`
+> - **B5** 6 routes compat (`indent`, `outdent`, `reorder`, `CreateMapView`, etc.) supprimées
+>
+> Détail : [DOCUMENTUM_NEXUS_GAP_VALIDATION.md §4 — B2, B3, B5](DOCUMENTUM_NEXUS_GAP_VALIDATION.md)
+
 **État attendu**
 - Handler unique `MapViewSet` sur `/api/maps/`
 - MapRubrique jamais exposé directement au frontend
 - Endpoints canoniques `structure/*` pour toutes les opérations structurelles
 - `POST /api/maps/{id}/structure/attach/` pour l'attachement d'une rubrique existante
 
-**État réel**
+**État réel au moment de la rédaction (2026-04-09)**
 - Tous les endpoints `structure/*` sont implémentés et fonctionnels
 - `POST /api/map-rubriques/` expose MapRubrique directement (violation canon)
 - `POST /api/maps/{id}/structure/attach/` absent
@@ -178,7 +189,7 @@ Décomposition indicative :
 - `RubriqueContentDTO` minimal (rubrique_id + contenu_xml) pour l'édition
 - DELETE rubrique protégé contre la suppression en cascade silencieuse
 
-**État réel**
+**État réel au moment de la rédaction (2026-04-09)**
 - `PUT/PATCH /api/rubriques/{id}/` fonctionnel avec verrou et transaction
 - `DELETE /api/rubriques/{id}/` → suppression en cascade des MapRubrique sans protection ni signal
 - `RubriqueSerializer` polyvalent — utilisé pour tous les flux sans distinction
@@ -186,13 +197,13 @@ Décomposition indicative :
 - `GET /api/rubriques/` retourne `contenu_xml` sans filtre ni pagination forcée
 
 **Écart identifié**
-- Risque de corruption structurelle silencieuse via DELETE non protégé
+- ❌ **B4 OBSOLÈTE** — DELETE rubrique protégé : `RubriqueViewSet.destroy()` lève désormais `ValidationError` si des `MapRubrique` actifs existent (`views.py:584`)
+- ✅ **Actif** — Rubrique racine créée avec `contenu_xml=""` invalide (B7 — XS résiduel)
 - Absence de DTO orientés flux (édition / navigation / publication)
-- Rubrique racine dans un état XML invalide à la création
 
-**Gravité** : 🔴 Critique (DELETE sans protection — I-4)
-**Impact** : fonctionnel — perte de structure documentaire possible ; technique — qualité des données
-**Effort** : XS (protection DELETE) + M (DTO orientés flux)
+**Gravité** : 🟠 Moyen (résiduel)
+**Impact** : technique — qualité des données à la création
+**Effort** : XS (initialiser `contenu_xml` avec template DITA minimal dans `create_project()`)
 
 ---
 
@@ -230,15 +241,18 @@ Décomposition indicative :
 - Logs structurés sur tous les flux critiques
 - Permissions explicites sur toutes les vues
 
-**État réel**
+**État réel au moment de la rédaction (2026-04-09)**
 - 4 formats d'erreur coexistent (DRF standard, 3 formats maison)
 - `custom_exception_handler` contourné dans `add_rubrique_to_map_view` et partiellement dans `CreateProjectAPIView` et `RubriqueViewSet.update`
 - Vues de compatibilité (`MapRubriqueIndentView`, `MapRubriqueOutdentView`, `MapReorderCompatView`) sans `permission_classes` explicites
 - Reorder effectue N `save()` individuels (pas de `bulk_update`)
 
-**Gravité** : 🟠 Moyen (pas de bug fonctionnel, mais fragilité systémique)
+> ❌ **B5 OBSOLÈTE (permissions vues compat)** — vues compat supprimées Sprint 4 Phase B, le risque de permission est levé avec elles.
+> ⚠️ **B6 PARTIEL** — inconsistance des formats d'erreur réduite aux vues utilitaires fonctionnelles (`validate_xml_view`, `publier_map`, `publication_diff_view`). ViewSets CRUD conformes. Détail : [DOCUMENTUM_NEXUS_GAP_VALIDATION.md §5 — B6](DOCUMENTUM_NEXUS_GAP_VALIDATION.md)
+
+**Gravité** : 🟠 Moyen (résiduel — vues utilitaires uniquement)
 **Impact** : technique — debugging difficile, comportements frontend imprévisibles
-**Effort** : S (normalisation gestion erreurs + permissions explicites)
+**Effort** : XS–S (normalisation des 3 vues utilitaires restantes)
 
 ---
 
@@ -323,13 +337,15 @@ Décomposition indicative :
 
 #### Parsing XML ↔ TipTap
 
+> ❌ **F1 OBSOLÈTE — Phase 3 TERMINÉE** · Parsing complet implémenté. Suite de 22 tests round-trip automatisés opérationnelle (`dita_concept_roundtrip.spec.ts`) couvrant : concept, task, reference, table, codeblock, fig, glossentry, stress tests. Détail : [DOCUMENTUM_NEXUS_GAP_VALIDATION.md §4 — F1](DOCUMENTUM_NEXUS_GAP_VALIDATION.md)
+
 **État attendu (spec `20_XML_TIPTAP_CONVERSION_SPEC.md`)**
 - Parseur XML → TipTap tolérant et auto-réparateur
 - Sérialiseur TipTap → XML strict et normé DITA
 - Round-trip stable : `XML → TipTap → XML ≈ XML initial`
 - Support complet des balises DITA (topics, steps, sections, balises contextuelles, prolog, etc.)
 
-**État réel**
+**État réel au moment de la rédaction (2026-04-09)**
 - `parseXmlToTiptap` et `tiptapToXml` existent et fonctionnent pour le flux nominal
 - Phase 3 (parsing complet) **non terminée** selon la roadmap
 - Limites de normalisation XML documentées (whitespace text nodes, ordre attributs) — non bloquants dans le flux normal TipTap
@@ -349,24 +365,28 @@ Décomposition indicative :
 
 #### Sauvegarde backend
 
+> ❌ **F2 OBSOLÈTE (validation XML)** — Phase 4 (validation XML DITA côté frontend) et Phase 5 (navigation guard + modal) TERMINÉES. `useXmlValidation.ts` + `XmlValidationPanel` intégrés dans `CentralEditor.tsx`. Détail : [DOCUMENTUM_NEXUS_GAP_VALIDATION.md §4 — F2](DOCUMENTUM_NEXUS_GAP_VALIDATION.md)
+>
+> ✅ **Actif** — autosave toujours absent (F3) ; pas de gestion de conflits (F4).
+
 **État attendu**
 - `PATCH /api/rubriques/{id}/` seul point de persistance
 - Création de révision si contenu modifié (via hash)
 - Validation XML DITA avant sauvegarde
 
-**État réel**
+**État réel au moment de la rédaction (2026-04-09)**
 - `PATCH /api/rubriques/{id}/` appelé via `useRubriqueSave`
 - Phase 4 (validation XML DITA côté frontend) **non terminée**
 - Pas d'autosave
 - Pas de vérification frontend de cohérence XML avant envoi
 
-**Écart identifié**
-- XML invalide ou incomplet peut être sauvegardé sans avertissement frontend
+**Écart actif résiduel**
 - Pas de fallback / récupération en cas d'erreur réseau
+- Autosave absent
 
 **Gravité** : 🟠 Moyen
-**Impact** : fonctionnel — données dégradées possibles ; UX — manque de fiabilité perçue
-**Effort** : M (validation XML + autosave + gestion erreurs réseau)
+**Impact** : UX — manque de fiabilité perçue
+**Effort** : M (autosave + gestion erreurs réseau)
 
 ---
 
@@ -459,28 +479,27 @@ Décomposition indicative :
 
 | Domaine | Élément | Écart | Gravité | Effort | Risque principal |
 |---------|---------|-------|---------|--------|-----------------|
-| Backend | Porte d'entrée projet | Route hors `/api/`, service absent | 🔴 | S | Dette architecture |
-| Backend | DELETE rubrique | Cascade MapRubrique silencieuse | 🔴 | XS | Perte de structure |
-| Backend | `structure/attach` | Endpoint manquant | 🟠 | XS | Blocage migration frontend |
-| Backend | CRUD direct MapRubrique | Violation canon — `POST /api/map-rubriques/` | 🔴 | S | Couplage implicite |
-| Backend | Formats d'erreur | 4 formats coexistent | 🟠 | S | Débug difficile, frontend imprévisible |
-| Backend | Permissions vues compat | Pas de `permission_classes` explicites | 🟠 | XS | Risque sécurité si config globale change |
-| Backend | Publication API | Endpoint absent | 🔴 | L | Valeur produit bloquée |
-| Backend | ProductDocSync API | Entités modélisées, pas exposées | 🔴 | XL | Différentiateur produit absent |
-| Backend | Routes compat | 6 routes transitoires maintenues | 🟠 | M | Dette croissante |
-| Backend | Rubrique racine XML vide | `contenu_xml=""` invalide à la création | 🟠 | XS | Incohérence DITA |
+| Backend | Porte d'entrée projet | ❌ **B1 Résolu Sprint 4** | ~~🔴~~ | ~~S~~ | — |
+| Backend | DELETE rubrique | ❌ **B4 Résolu Sprint 4** — `ValidationError` si MapRubrique actifs | ~~🔴~~ | ~~XS~~ | — |
+| Backend | `structure/attach` | ❌ **B3 Résolu** — implémenté dans `MapViewSet` | ~~🟠~~ | ~~XS~~ | — |
+| Backend | CRUD direct MapRubrique | ❌ **B2 Résolu Sprint 4 Phase B** — route supprimée | ~~🔴~~ | ~~S~~ | — |
+| Backend | Formats d'erreur vues utilitaires | ⚠️ **B6 Partiel** — ViewSets CRUD conformes ; 3 vues utilitaires non normalisées | 🟠 | XS–S | Débug difficile |
+| Backend | Routes compat | ❌ **B5 Résolu Sprint 4 Phase B** — 6 routes supprimées | ~~🟠~~ | ~~M~~ | — |
+| Backend | Publication API | ✅ Endpoint absent | 🔴 | L | Valeur produit bloquée |
+| Backend | ProductDocSync API | ⚠️ Partiel — Fonctionnalités + Produits branchés ; Versions Produit + ImpactDocumentaire manquants | 🟠 | M résiduel | Pilotage documentaire |
+| Backend | Rubrique racine XML vide | ✅ Actif — `contenu_xml=""` invalide à la création | 🟠 | XS | Incohérence DITA |
 | Frontend | LeftSidebar | Conforme post Lots 1–4 | 🟢 | — | Frontière structure/contenu à surveiller |
 | Frontend | Desktop | Conforme | 🟢 | — | — |
-| Frontend | Publication UI | Absente (toast hors scope) | 🔴 | L | Valeur produit |
+| Frontend | Publication UI | ⚠️ Partiel — `ProjectExportPanel` existe ; API export et pipeline DITA-OT absents | 🔴 | L | Valeur produit |
 | Frontend | Clone/Delete rubrique | Absents (toast hors scope, endpoint manquant) | 🟠 | M | Opérations basiques manquantes |
-| CentralEditor | Parsing XML ↔ TipTap | Phase 3 non terminée | 🔴 | L | Perte/corruption données |
-| CentralEditor | Validation XML DITA | Phase 4 non terminée | 🟠 | M | Données dégradées possibles |
-| CentralEditor | Autosave | Absent | 🟠 | M | Perte contenu non sauvegardé |
-| CentralEditor | Gestion conflits | Absente | 🟠 | XL (collab) / M | Écrasement silencieux |
+| CentralEditor | Parsing XML ↔ TipTap | ❌ **F1 Résolu — Phase 3 TERMINÉE** — 22 tests round-trip | ~~🔴~~ | ~~L~~ | — |
+| CentralEditor | Validation XML DITA | ❌ **F2 Résolu — Phases 4 + 5 TERMINÉES** — `useXmlValidation` + navigation guard | ~~🟠~~ | ~~M~~ | — |
+| CentralEditor | Autosave | ✅ Actif — absent | 🟠 | M | Perte contenu non sauvegardé |
+| CentralEditor | Gestion conflits | ✅ Actif — absente | 🟠 | XL (collab) / M | Écrasement silencieux |
 | Flux | Versioning UI | API prête, UI absente | 🟠 | M | Inaccessible utilisateur |
 | Flux | Publication pipeline | DITA-OT absent, export absent | 🔴 | XL | Valeur produit bloquée |
-| Flux | ProductDocSync | Non implémenté | 🔴 | XL | Différentiateur absent |
-| Nexus | Module B — Product Knowledge | Partiellement modélisé, non exposé | 🔴 | XL | Stratégique |
+| Flux | ProductDocSync | ⚠️ Partiel — Produits + Fonctionnalités branchés ; Versions + ImpactDocumentaire manquants | 🟠 | M résiduel | Pilotage documentaire |
+| Nexus | Module B — Product Knowledge | Partiellement modélisé, partiellement exposé | 🟠 | M résiduel | Stratégique |
 | Nexus | Module G — Base Métier | Modèle défini, zéro implémentation | 🔴 | XL | Stratégique |
 | Nexus | Modules C, D, E, F | Totalement absents | — | hors périmètre | Dépendances futures |
 | Nexus | Modèle transverse générique | Absent | 🟠 | L | Évolutivité multi-domaine |
@@ -599,12 +618,14 @@ Ces axes ne sont pas actuellement traités dans les documents de roadmap du proj
 
 ### 7.1 Tests de round-trip XML automatisés
 
-Le parsing XML ↔ TipTap est la zone de risque la plus élevée. Il n'existe pas de suite de tests automatisés qui valide :
-- La fidélité de la conversion pour chaque balise DITA supportée
-- La stabilité du round-trip sur un corpus de rubriques réelles
-- La détection de régression lors de l'évolution des extensions TipTap
+> ❌ **T1 OBSOLÈTE — Implémenté** · `dita_concept_roundtrip.spec.ts` — 22 tests, couverture : concept / task / reference / table / codeblock / fig / glossentry / stress tests. Détail : [DOCUMENTUM_NEXUS_GAP_VALIDATION.md §4 — T1](DOCUMENTUM_NEXUS_GAP_VALIDATION.md)
 
-**Recommandation** : constituer un corpus de fixtures DITA représentatives et implémenter des tests paramétrés (Jest ou Vitest) avant tout déploiement de la phase 3.
+~~Le parsing XML ↔ TipTap est la zone de risque la plus élevée. Il n'existe pas de suite de tests automatisés qui valide :~~
+- ~~La fidélité de la conversion pour chaque balise DITA supportée~~
+- ~~La stabilité du round-trip sur un corpus de rubriques réelles~~
+- ~~La détection de régression lors de l'évolution des extensions TipTap~~
+
+**Recommandation résiduelle** : étendre le corpus si de nouvelles balises DITA sont ajoutées.
 
 ---
 
@@ -665,56 +686,57 @@ La v1 de `SnapshotPublication` couvre uniquement la map master. Le référentiel
 
 ## 8. Proposition de découpage en lots de refonte
 
-### Lot 1 — Sécurisation (faible risque, sans dépendance)
+### Lot 1 — Sécurisation ✅ TERMINÉ à ~85%
 
 **Objectif** : Éliminer les violations actives et les dettes bloquantes sans toucher aux flux utilisateurs.
 
-**Périmètre**
-- Protéger `DELETE /api/rubriques/{id}/` contre la cascade silencieuse (→ 409)
-- Implémenter `POST /api/maps/{id}/structure/attach/` (service existant)
-- Supprimer `CreateMapView` du registre URL (dead code)
-- Supprimer `MapViewSet.create_rubrique` (doublon exact de `structure_create`)
-- Normaliser les formats d'erreur (un seul format via `custom_exception_handler`)
-- Ajouter `permission_classes` explicites sur les vues compat
+**Périmètre — état (2026-04-17)**
+- ❌ ~~Protéger `DELETE /api/rubriques/{id}/` contre la cascade silencieuse~~ — `ValidationError` active (`views.py:584`)
+- ❌ ~~Implémenter `POST /api/maps/{id}/structure/attach/`~~ — implémenté dans `MapViewSet`
+- ❌ ~~Supprimer `CreateMapView` du registre URL (dead code)~~ — supprimé Sprint 4 Phase B
+- ❌ ~~Supprimer `MapViewSet.create_rubrique` (doublon exact de `structure_create`)~~ — supprimé
+- ❌ ~~Ajouter `permission_classes` explicites sur les vues compat~~ — vues compat supprimées, risque levé
+- ⚠️ **Résiduel** : normaliser les formats d'erreur des 3 vues utilitaires (`validate_xml_view`, `publier_map`, `publication_diff_view`) — XS
 
 **Dépendances** : aucune
-**Risques** : faibles (ajouts et protections, pas de suppressions de routes actives)
-**Estimation** : S (2–5 jours)
+**Estimation résiduelle** : XS
 
 ---
 
-### Lot 2 — Consolidation du noyau Core (structurant)
+### Lot 2 — Consolidation du noyau Core ⚠️ EN COURS (~60%)
 
 **Objectif** : Canoniser la création de projet, finaliser le CentralEditor, rendre la publication accessible.
 
-**Périmètre**
-- Extraire `create_project()` dans `services.py` et migrer `ProjetViewSet.create()`
-- CentralEditor phase 3 : parsing XML ↔ TipTap complet + tests round-trip
-- CentralEditor phase 4 : validation XML DITA avant sauvegarde
-- Autosave avec indicateur visuel
-- API de publication (endpoint déclenchement + sélection périmètre)
-- UI publication minimale dans LeftSidebar (remplacement du toast)
+**Périmètre — état (2026-04-17)**
+- ❌ ~~Extraire `create_project()` dans `services.py` et migrer `ProjetViewSet.create()`~~ — service en place, `ProjetViewSet.create()` conforme
+- ❌ ~~CentralEditor phase 3 : parsing XML ↔ TipTap complet + tests round-trip~~ — Phase 3 TERMINÉE, 22 tests
+- ❌ ~~CentralEditor phase 4 : validation XML DITA avant sauvegarde~~ — Phase 4 + 5 TERMINÉES
+- ✅ **Actif** : Autosave avec indicateur visuel — non implémenté
+- ✅ **Actif** : API de publication (endpoint déclenchement + sélection périmètre)
+- ✅ **Actif** : UI publication minimale (`ProjectExportPanel` existe, API backend manquante)
 
-**Dépendances** : Lot 1 (protect DELETE, structure/attach)
-**Risques** : moyens (CentralEditor est critique — tests obligatoires)
-**Estimation** : L (3–6 semaines selon les ressources)
+**Dépendances** : Lot 1 ✅ satisfait
+**Risques** : faibles sur CentralEditor (terminé) ; moyens sur pipeline DITA-OT
+**Estimation résiduelle** : M (autosave + API publication + pipeline DITA-OT minimal)
 
 ---
 
-### Lot 3 — ProductDocSync et pilotage documentaire (critique)
+### Lot 3 — ProductDocSync et pilotage documentaire ⚠️ EN COURS (~25%)
 
 **Objectif** : Implémenter le différentiateur produit — suivi des impacts documentaires et couverture fonctionnelle.
 
-**Périmètre**
-- Exposer les APIs `Fonctionnalité` et `ImpactDocumentaire`
-- Implémenter l'écran ProductDocSync frontend
-- Lier ImpactDocumentaire → Rubrique → statut de couverture
-- Intégrer le cycle de vie : déclaration d'impact → traitement → validation
-- Suppression des routes compat backend (conditionnée à confirmation logs)
+**Périmètre — état (2026-04-17)**
+- ❌ ~~Exposer les APIs `Fonctionnalité`~~ — `FonctionnaliteViewSet` exposé (GET + POST + PATCH archive)
+- ✅ **Actif** : Exposer l'API `ImpactDocumentaire` — modèle absent du backend
+- ❌ ~~Implémenter l'écran ProductDocSync frontend~~ — écran existant, Produits + Fonctionnalités branchés
+- ✅ **Actif** : Versions Produit — entité backend à définir (`VersionProjet` → `Projet`, pas `Produit`)
+- ✅ **Actif** : Lier ImpactDocumentaire → Rubrique → statut de couverture
+- ✅ **Actif** : Intégrer le cycle de vie : déclaration d'impact → traitement → validation
+- ❌ ~~Suppression des routes compat~~ — faite Sprint 4 Phase B
 
-**Dépendances** : Lot 2 (publication, versioning stable)
-**Risques** : élevés (domaine non cartographié, dépendances modèle complexes)
-**Estimation** : XL (6–10 semaines)
+**Dépendances** : Lot 2 (publication, versioning stable) — partiellement satisfait
+**Risques** : élevés sur ImpactDocumentaire (modèle absent) ; modérés sur versions Produit (décision métier bloquante)
+**Estimation résiduelle** : L (ImpactDocumentaire + versions Produit + cycle de vie)
 
 ---
 
@@ -765,11 +787,11 @@ Les choix structurants (app Django dédiée par module, contrat d'interface entr
 
 ### Prérequis avant refonte
 
-| Prérequis | Lotcible | État |
+| Prérequis | Lot cible | État |
 |-----------|---------|------|
-| Logs d'accès backend pour confirmer non-utilisation routes compat | Lot 1–2 | Non disponibles |
-| Corpus DITA représentatif pour tests round-trip | Lot 2 | À constituer |
-| Cartographie ProductDocSync frontend | Lot 3 | Absente |
+| Logs d'accès backend pour confirmer non-utilisation routes compat | Lot 1–2 | ❌ Levé — routes supprimées Sprint 4 Phase B |
+| Corpus DITA représentatif pour tests round-trip | Lot 2 | ❌ Levé — 22 tests implémentés |
+| Cartographie ProductDocSync frontend | Lot 3 | ⚠️ Partiel — branchement effectué, cartographie formelle à compléter |
 | Décisions architecture Nexus (frontières modules) | Lot 3–4 | À formaliser dans decision-log |
 | Stratégie de migration modèle transverse | Lot 4 | À planifier |
 

@@ -189,7 +189,7 @@ Ces trois opérations affichent aujourd'hui un toast informatif. La décision de
 ### 📌 TODO futurs (non priorisés)
 
 - 1️⃣ Import Word depuis LeftSidebar : bouton présent dans MapModule, logique non implémentée
-- 2️⃣ Drag & drop cross-niveau : réorganisation cross-niveau fiable nécessite la projection `level → parent/ordre` (voir `MAP_FRONTEND_ROADMAP.md`)
+- 2️⃣ Drag & drop cross-niveau : réorganisation cross-niveau fiable nécessite la projection `level → parent/ordre` (voir `FRONTEND_MAP_ROADMAP.md`)
 - 3️⃣ Scroll vers rubrique sélectionnée : après chargement d'une map, la rubrique active n'est pas scrollée dans le viewport automatiquement
 
 ---
