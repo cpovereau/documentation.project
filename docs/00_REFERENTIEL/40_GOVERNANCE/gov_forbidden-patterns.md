@@ -41,7 +41,16 @@ Tous les appels passent obligatoirement par le client centralisé (`apiClient`).
 
 ---
 
-### 1.3 Duplication d’état global
+### 1.3 Appels API non conformes
+
+Il est interdit de :
+- appeler une route hors `/api/`
+- utiliser une URL hardcodée
+- appeler le backend sans passer par `apiClient`
+
+---
+
+### 1.4 Duplication d’état global
 Il est interdit de :
 - dupliquer un état global dans un state local,
 - maintenir deux sources de vérité pour une même donnée.
@@ -146,6 +155,55 @@ La génération des noms doit être :
 - déterministe,
 - conforme aux règles de nomenclature,
 - validée côté backend.
+
+---
+
+### 4.3 Fallback `?? []` instable dans un hook TanStack Query utilisé comme dépendance useEffect
+
+Il est interdit d'écrire :
+
+```typescript
+return {
+  items: query.data ?? [],  // ← INTERDIT
+};
+```
+
+quand `items` est utilisé comme dépendance d'un `useEffect`.
+
+**Pourquoi** : quand `query.data` est `undefined` (query en chargement ou désactivée), `?? []` crée une **nouvelle référence tableau à chaque rendu**. React compare les dépendances par `Object.is` — deux tableaux vides distincts ne sont pas égaux. L'effet se déclenche à chaque rendu, appelle `setState`, provoque un nouveau rendu, et ainsi de suite : boucle infinie (`Maximum update depth exceeded`).
+
+**Régression identifiée** : Chantier 4, `useMapStructure.ts` — boucle de rendu sur `LeftSidebar` lors de l'ouverture d'un projet.
+
+**Règle** : utiliser une constante module-level stable :
+
+```typescript
+const EMPTY_ITEMS: MyType[] = [];
+
+export function useMyHook() {
+  ...
+  return {
+    items: query.data ?? EMPTY_ITEMS,  // ← référence stable
+  };
+}
+```
+
+---
+
+### 3.4 Envoi de fragments XML non encapsulés au backend
+
+Il est interdit d'envoyer à l'API un `contenu_xml` qui ne soit pas un XML bien formé à racine unique.
+
+Un fragment multi-racines (ex. `<p>ligne 1</p>\n<p>ligne 2</p>`) est **rejeté** par `ET.fromstring()` côté backend et produit une erreur "contenu XML invalide" au rechargement de la rubrique.
+
+**Format canonique** : `<body>...nœuds sérialisés...</body>`
+
+Règles dérivées :
+- `tiptapToXml()` est un sérialiseur de nœuds — il ne produit pas le wrapper.
+- Le wrapper `<body>` est appliqué dans `useXmlBufferSync`, **avant** stockage dans le buffer.
+- `useDitaLoader` applique une tolérance de chargement pour les données dégradées existantes (fragments sans racine → wrappés avec `<body>` avant parsing).
+- Tout nouveau point de sérialisation TipTap → XML doit produire un document `<body>` complet.
+
+**Raison** : bug bloquant identifié 2026-04-17. Voir decision-log `2026-04-17 – Format canonique de contenu_xml`.
 
 ---
 

@@ -16,7 +16,7 @@ import { Input } from "components/ui/input";
 import { Button } from "components/ui/button";
 import type { FeatureItem } from "types/FeatureItem";
 import { toast } from "sonner";
-import { useProduits } from "hooks/useProduits";
+import { useProduits } from "@/hooks/useDictionnaireHooks";
 import { useFonctionnaliteList } from "hooks/useFonctionnaliteList";
 
 // TODO(backend): MinimalTask à déplacer dans src/types/ une fois stabilisé

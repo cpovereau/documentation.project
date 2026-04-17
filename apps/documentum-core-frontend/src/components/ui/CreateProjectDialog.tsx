@@ -4,17 +4,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import api, {
+import {
   createProjectValidated as createProject,
   getProjectDetailsValidated as getProjectDetails,
 } from "@/lib/apiClient";
+import { useGammes } from "@/hooks/useDictionnaireHooks";
 import { toast } from "sonner";
-
-interface Gamme {
-  id: number;
-  nom: string;
-  is_archived: boolean;
-}
 
 interface Props {
   open: boolean;
@@ -26,7 +21,6 @@ export const CreateProjectDialog: React.FC<Props> = ({ open, onClose, onConfirm 
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
   const [gammeId, setGammeId] = useState<string>("");
-  const [gammes, setGammes] = useState<Gamme[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{
     nom?: string;
@@ -34,14 +28,14 @@ export const CreateProjectDialog: React.FC<Props> = ({ open, onClose, onConfirm 
     gamme?: string;
   }>({});
 
+  const { data: gammes = [] } = useGammes();
+
   useEffect(() => {
     if (open) {
       setNom("");
       setDescription("");
       setGammeId("");
-      api.get("/api/gammes/").then((res) => {
-        setGammes(res.data.filter((g: Gamme) => !g.is_archived));
-      });
+      setErrors({});
     }
   }, [open]);
 
@@ -61,19 +55,15 @@ export const CreateProjectDialog: React.FC<Props> = ({ open, onClose, onConfirm 
       setLoading(true);
       const { projet } = await createProject({
         nom: nomTrim,
-        description: descTrim, // jamais vide
+        description: descTrim,
         gamme_id: Number(gammeId),
       });
-      const full = await getProjectDetails(projet.id);
+      await getProjectDetails(projet.id);
       onConfirm(projet.id);
       onClose();
     } catch (err: any) {
-      // remonte proprement les erreurs DRF par champ
       if (err.fields?.description) {
-        setErrors((e) => ({
-          ...e,
-          description: String(err.fields.description),
-        }));
+        setErrors((e) => ({ ...e, description: String(err.fields.description) }));
       }
       toast.error(err.message ?? "Erreur lors de la création du projet.");
     } finally {
@@ -96,6 +86,7 @@ export const CreateProjectDialog: React.FC<Props> = ({ open, onClose, onConfirm 
               onChange={(e) => setNom(e.target.value)}
               placeholder="Ex: Documentation Usager"
             />
+            {errors.nom && <p className="text-sm text-red-500 mt-1">{errors.nom}</p>}
           </div>
 
           <div>
@@ -105,6 +96,9 @@ export const CreateProjectDialog: React.FC<Props> = ({ open, onClose, onConfirm 
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Obligatoire"
             />
+            {errors.description && (
+              <p className="text-sm text-red-500 mt-1">{errors.description}</p>
+            )}
           </div>
 
           <div>
@@ -121,6 +115,7 @@ export const CreateProjectDialog: React.FC<Props> = ({ open, onClose, onConfirm 
                 </option>
               ))}
             </select>
+            {errors.gamme && <p className="text-sm text-red-500 mt-1">{errors.gamme}</p>}
           </div>
 
           <div className="flex justify-end pt-4">

@@ -6,7 +6,8 @@
 // =====================================================
 
 import React, { useState, useRef, useEffect } from "react";
-import api from "@/lib/apiClient";
+import { useMediaNomCheck } from "@/hooks/useMediaNomCheck";
+import { useImportMedia } from "@/hooks/useImportMedia";
 import {
   Dialog,
   DialogContent,
@@ -103,49 +104,26 @@ export const ImportModal = ({
   // État pour la fonctionnalité et l'interface utilisateur
   const [fonctionnaliteId, setFonctionnaliteId] = useState<number | null>(null);
   const [interfaceId, setInterfaceId] = useState<number | null>(null);
-  const [nomMedia, setNomMedia] = useState<string>(""); // nom proposé (PLA-MEN-EDT-005.jpg)
   const [fileExtension, setFileExtension] = useState<string>("jpg"); // ou png, gif...
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [doublon, setDoublon] = useState<boolean>(false);
-  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [selectedImageToReplace, setSelectedImageToReplace] = useState<string | null>(null);
 
-  // Nommage des Médias et remplacement
+  const importMedia = useImportMedia();
+  const { data: nomCheckData, isError: nomCheckError } = useMediaNomCheck(
+    produitId,
+    fonctionnaliteId,
+    interfaceId,
+    fileExtension,
+  );
+
+  const isParamsComplete = !!produitId && !!fonctionnaliteId && !!interfaceId;
+  const nomMedia = !isParamsComplete ? "" : nomCheckError ? "ERREUR_GENERATION_NOM" : (nomCheckData?.nomMedia ?? "");
+  const doublon = isParamsComplete ? (nomCheckData?.doublon ?? false) : false;
+  const existingImages = isParamsComplete ? (nomCheckData?.existingImages ?? []) : [];
+
   useEffect(() => {
-    const fetchMediaNames = async () => {
-      if (!produitId || !fonctionnaliteId || !interfaceId) {
-        setNomMedia("");
-        setExistingImages([]);
-        return;
-      }
-
-      try {
-        const res = await api.get("/api/medias-check-nom/", {
-          params: {
-            produit: produitId,
-            fonctionnalite: fonctionnaliteId,
-            interface: interfaceId,
-          },
-        });
-
-        const { prefix, existing = [] } = res.data;
-        const extension = fileExtension || "jpg";
-        const nextNom = generateNextMediaName(prefix, existing, extension);
-        setNomMedia(nextNom);
-
-        setNomMedia(nextNom);
-        setDoublon(existing.includes(nextNom));
-        setExistingImages(existing);
-        setSelectedImageToReplace(null);
-      } catch (err) {
-        console.error("❌ Erreur lors de la vérification du nom du média :", err);
-        setNomMedia("ERREUR_GENERATION_NOM");
-        setExistingImages([]);
-      }
-    };
-
-    fetchMediaNames();
-  }, [produitId, fonctionnaliteId, interfaceId, fileExtension]);
+    setSelectedImageToReplace(null);
+  }, [produitId, fonctionnaliteId, interfaceId]);
 
   // Drag & drop fichier
   const handleDrop = (e: React.DragEvent) => {
@@ -221,29 +199,21 @@ export const ImportModal = ({
         return;
       }
 
-      const formData = new FormData();
-      formData.append("file", file as Blob);
-      formData.append("produit", produitId?.toString() || "");
-      formData.append("fonctionnalite", fonctionnaliteId?.toString() || "");
-      formData.append("interface", interfaceId?.toString() || "");
-      formData.append("nom_fichier", selectedImageToReplace || nomMedia);
-      formData.append("remplacer", selectedImageToReplace ? "true" : "false");
-
-      if (selectedImageToReplace) {
-        formData.append("remplacer_nom_fichier", selectedImageToReplace);
-      }
-
       try {
-        const res = await api.post("/import/media/", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+        const result = await importMedia.mutateAsync({
+          file: file as Blob,
+          produitId: produitId!,
+          fonctionnaliteId: fonctionnaliteId!,
+          interfaceId: interfaceId!,
+          nomFichier: selectedImageToReplace || nomMedia,
+          remplacer: !!selectedImageToReplace,
+          remplacerNomFichier: selectedImageToReplace,
         });
-
-        toast.success(res.data.message || "Média importé avec succès.");
+        toast.success(result.message || "Média importé avec succès.");
       } catch (error: any) {
         console.error("Erreur import média :", error);
         toast.error(error?.response?.data?.error || "Erreur lors de l'import.");
+        return;
       }
 
       onConfirm({

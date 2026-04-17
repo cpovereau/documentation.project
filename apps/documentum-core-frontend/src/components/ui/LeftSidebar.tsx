@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import api from "@/lib/apiClient";
+import { useQueryClient } from "@tanstack/react-query";
 import { mapRubriquesToMapItems } from "@/lib/mapMappers";
 import { Button } from "@/components/ui/button";
 import { ProjectModule } from "@/components/ui/ProjectModule";
@@ -7,16 +7,17 @@ import { MapModule } from "@/components/ui/MapModule";
 import type { MapItem } from "@/types/MapItem";
 import type { ProjectMap } from "@/types/ProjectMap";
 import type { ProjectDTO } from "@/types/ProjectDTO";
-import type { MapRubriqueDTO } from "@/api/maps";
+import { publishMap } from "@/api/maps";
+import { getInsertionParentId } from "@/lib/mapStructure";
 import useSelectedVersion from "@/hooks/useSelectedVersion";
 import { useNewRubriqueXml } from "@/hooks/useNewRubriqueXml";
-import { listMapRubriques, publishMap } from "@/api/maps";
-import { getInsertionParentId } from "@/lib/mapStructure";
 import useProjectStore from "@/store/projectStore";
 import useXmlBufferStore from "@/store/xmlBufferStore";
 import useSelectionStore from "@/store/selectionStore";
 import { toast } from "sonner";
 import { useRubriqueSave } from "@/hooks/useSaveRubrique";
+import { useMapStructure, mapStructureQueryKey } from "@/hooks/useMapStructure";
+import { useProjetActions } from "@/hooks/useProjetActions";
 import { CreateProjectDialog } from "@/components/ui/CreateProjectDialog";
 import { LoadProjectDialog } from "@/components/ui/LoadProjectDialog";
 import { LoadMapDialog } from "components/ui/LoadMapDialog";
@@ -51,17 +52,18 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const [createOpen, setCreateOpen] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
   const [mapItems, setMapItems] = useState<MapItem[]>([]);
-  const [mapRubriques, setMapRubriques] = useState<MapRubriqueDTO[]>([]);
   const [currentMapId, setCurrentMapId] = useState<number | null>(null);
   const [loadMapOpen, setLoadMapOpen] = useState(false);
   const [importWordOpen, setImportWordOpen] = useState(false);
   const [pendingSelectId, setPendingSelectId] = useState<number | null>(null);
 
+  const queryClient = useQueryClient();
+
   // Stores
   const { selectedProjectId } = useSelectedVersion();
   const setSelectedProjectId = useProjectStore((s) => s.setSelectedProjectId);
   const generateRubriqueXml = useNewRubriqueXml();
-  const { setXml, getXml, getStatus } = useXmlBufferStore();
+  const { getStatus } = useXmlBufferStore();
 
   // 🎯 Sélection — source de vérité unique
   const {
@@ -72,6 +74,11 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   } = useSelectionStore();
 
   const [projects, setProjects] = useState<ProjectDTO[]>([]);
+
+  // ── Hooks API ────────────────────────────────────────────────────────────
+  const mapStructure = useMapStructure(currentMapId);
+  const projetActions = useProjetActions(selectedProjectId);
+  const { mapRubriques } = mapStructure;
 
   // ─────────────────────────────────────────────────────────────
   // Fonction centrale de sélection d'un item de la map.
@@ -124,6 +131,32 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     setPendingNavigation(null);
   };
 
+  // ─────────────────────────────────────────────────────────────
+  // Sync structure projet → currentMapId + pre-populate cache map
+  // ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setCurrentMapId(null);
+      clearSelection();
+      return;
+    }
+    if (projetActions.structure.data) {
+      const mapId = projetActions.structure.data.map.id;
+      setCurrentMapId(mapId);
+      queryClient.setQueryData(
+        mapStructureQueryKey(mapId),
+        projetActions.structure.data.structure,
+      );
+    } else {
+      setCurrentMapId(null);
+    }
+  }, [projetActions.structure.data, selectedProjectId, queryClient]);
+
+  // Erreur chargement map
+  useEffect(() => {
+    if (mapStructure.isError) toast.error("Impossible de charger la map.");
+  }, [mapStructure.isError]);
+
   // Sélection différée après création d'une rubrique
   useEffect(() => {
     if (!pendingSelectId || mapRubriques.length === 0) return;
@@ -148,24 +181,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     setMapItems(mapRubriquesToMapItems(mapRubriques, selectedMapItemId));
   }, [currentMapId, mapRubriques, selectedMapItemId]);
 
-  // Initialisation du buffer XML pour chaque rubrique
-  useEffect(() => {
-    for (const item of mapItems) {
-      if (item.rubriqueId == null) continue;
-      const xml = getXml(item.rubriqueId);
-      if (!xml) {
-        setXml(
-          item.rubriqueId,
-          `<topic>
-           <title>${item.title}</title>
-           <body>
-             <p>Contenu à compléter</p>
-           </body>
-         </topic>`,
-        );
-      }
-    }
-  }, [mapItems, getXml, setXml]);
+  // Initialisation buffer supprimée — useDitaLoader est désormais le point de charge
+  // unique : il fetche GET /api/rubriques/{id}/ à la sélection et alimente le buffer.
 
   const [showExportCard, setShowExportCard] = useState(false);
 
@@ -191,13 +208,11 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   // Suppression projet — DELETE /api/projets/{id}/
   const handleDelete = async (id: number) => {
     try {
-      await api.delete(`/api/projets/${id}/`);
+      await projetActions.deleteProjet.mutateAsync(id);
       setProjects((prev) => prev.filter((x) => x.id !== id));
       if (selectedProjectId === id) {
         setSelectedProjectId(null);
         setCurrentMapId(null);
-        setMapRubriques([]);
-        setMapItems([]);
         clearSelection();
       }
       toast.success("Projet supprimé.");
@@ -243,25 +258,14 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
   const handleLoad = () => requestNavigation(() => setLoadOpen(true));
 
-  const handleConfirmLoadedProject = (project: ProjectDTO) => {
-    setProjects((prev) => {
-      const exists = prev.some((p) => p.id === project.id);
-      return exists ? prev.map((p) => (p.id === project.id ? project : p)) : [project, ...prev];
-    });
-    openProject(project.id);
-  };
-
   async function openProject(projectId: number) {
     let project = projects.find((p) => p.id === projectId);
 
     if (!project) {
       try {
-        const res = await api.get(`/api/projets/${projectId}/`);
-        const fetchedProject = res.data.project ?? res.data;
-        project = fetchedProject;
-        setProjects((prev) => [...prev, fetchedProject]);
-      } catch (e) {
-        console.error(e);
+        project = await projetActions.fetchProjet(projectId);
+        setProjects((prev) => [...prev, project!]);
+      } catch {
         toast.error("Projet introuvable !");
         return;
       }
@@ -275,8 +279,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     setSelectedProjectId(project.id);
     setProjectMaps(project.maps ?? []);
     setCurrentMapId(null);
-    setMapRubriques([]);
-    setMapItems([]);
     clearSelection();
   }
 
@@ -284,16 +286,10 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   // Gestion de la map
   // ─────────────────────────────────────────────────────────────
 
-  async function openMap(mapId: number) {
+  function openMap(mapId: number) {
     setCurrentMapId(mapId);
     clearSelection();
-    try {
-      const rubriques = await listMapRubriques(mapId);
-      setMapRubriques(rubriques);
-    } catch (e) {
-      console.error(e);
-      toast.error("Impossible de charger la map.");
-    }
+    // useMapStructure(mapId) fetche automatiquement via useQuery
   }
 
   const handleSelectMapItem = (id: number) => {
@@ -315,9 +311,11 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       return;
     }
     try {
-      await api.patch(`/api/rubriques/${mr.rubrique.id}/`, { titre: newTitle });
       assertMapId(currentMapId);
-      setMapRubriques(await listMapRubriques(currentMapId));
+      await mapStructure.renameRubrique.mutateAsync({
+        rubriqueId: mr.rubrique.id,
+        titre: newTitle,
+      });
       toast.success("Rubrique renommée.");
     } catch {
       toast.error("Impossible de renommer la rubrique.");
@@ -348,20 +346,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
       const xml = await generateRubriqueXml("Nouvelle rubrique");
 
-      const created = await api.post(`/api/maps/${currentMapId}/structure/create/`, {
+      const result = await mapStructure.createRubrique.mutateAsync({
         titre: "Nouvelle rubrique",
         contenu_xml: xml,
         parent: parentId,
       });
 
-      const createdMapRubriqueId = created.data.id;
-
-      const refreshed = await listMapRubriques(currentMapId);
-      setMapRubriques(refreshed);
-
-      // Sélection différée : déclenchée après rebuild mapItems
-      setPendingSelectId(createdMapRubriqueId);
-
+      setPendingSelectId(result.data.id);
       toast.success("Rubrique créée.");
     } catch (e) {
       console.error(e);
@@ -389,8 +380,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const handleIndent = async (mapRubriqueId: number) => {
     try {
       assertMapId(currentMapId);
-      await api.post(`/api/maps/${currentMapId}/structure/${mapRubriqueId}/indent/`);
-      setMapRubriques(await listMapRubriques(currentMapId));
+      await mapStructure.indent.mutateAsync(mapRubriqueId);
     } catch {
       toast.error("Indentation impossible.");
     }
@@ -399,10 +389,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const handleOutdent = async (mapRubriqueId: number) => {
     try {
       assertMapId(currentMapId);
-      await api.post(`/api/maps/${currentMapId}/structure/${mapRubriqueId}/outdent/`);
-      setMapRubriques(await listMapRubriques(currentMapId));
-    } catch (e) {
-      console.error(e);
+      await mapStructure.outdent.mutateAsync(mapRubriqueId);
+    } catch {
       toast.error("Désindentation impossible.");
     }
   };
@@ -411,29 +399,11 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const handleReorder = async (orderedMapRubriqueIds: number[]) => {
     try {
       assertMapId(currentMapId);
-      await api.post(`/api/maps/${currentMapId}/structure/reorder/`, {
-        orderedIds: orderedMapRubriqueIds,
-      });
-      setMapRubriques(await listMapRubriques(currentMapId));
-    } catch (e) {
-      console.error(e);
+      await mapStructure.reorder.mutateAsync(orderedMapRubriqueIds);
+    } catch {
       toast.error("Réorganisation impossible.");
     }
   };
-
-  // Synchronisation sur le projet sélectionné
-  useEffect(() => {
-    if (!selectedProjectId) {
-      setMapRubriques([]);
-      clearSelection();
-      return;
-    }
-    (async () => {
-      const res = await api.get(`/api/projets/${selectedProjectId}/structure/`);
-      setCurrentMapId(res.data.map.id);
-      setMapRubriques(res.data.structure);
-    })();
-  }, [selectedProjectId]);
 
   function openLoadMapDialog() {
     requestNavigation(() => setLoadMapOpen(true));

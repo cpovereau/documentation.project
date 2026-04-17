@@ -7,12 +7,13 @@ Ce document est synthétique, durable, et conçu pour un travail non linéaire d
 
 # 🧭 Vue d’ensemble du plan
 
-La refonte est organisée en **4 phases**, à mener progressivement :
+La refonte est organisée en **5 phases**, toutes terminées :
 
-1. **Phase 1 – Fiabilisation du buffer & synchronisation TipTap (FAIT)**
-2. **Phase 2 – Allègement du CentralEditor (EN COURS)**
-3. **Phase 3 – Parsing XML ⇄ TipTap complet (À VENIR)**
-4. **Phase 4 – Sauvegarde backend & validation XML DITA (À VENIR)**
+1. **Phase 1 – Fiabilisation du buffer & synchronisation TipTap ✅**
+2. **Phase 2 – Allègement structurel du CentralEditor ✅**
+3. **Phase 3 – Parsing XML ⇄ TipTap complet ✅**
+4. **Phase 4 – Sauvegarde backend & validation XML DITA ✅**
+5. **Phase 5 – Sécurisation du guard de navigation ✅**
 
 Chaque phase contient des tâches validables individuellement.
 
@@ -227,6 +228,55 @@ Le workflow complet “rédaction → sauvegarde → validation XML” est opér
 - [x] Phase 3 validée
 - [x] Phase 4 validée (Lots B + C)
 - [x] Phase 5 validée (Lots D + E)
+
+---
+
+# 🐛 Correctif — Bug XML invalide : wrapper `<body>` (2026-04-17)
+
+### Contexte
+
+Bug bloquant identifié après validation des 5 phases : `tiptapToXml()` retourne des fragments multi-racines sans wrapper. Le backend rejette ces fragments via `ET.fromstring()`. L'erreur "contenu XML invalide" apparaît au rechargement de la rubrique.
+
+### Cause racine
+
+`useXmlBufferSync` stocke dans le buffer le résultat brut de `tiptapToXml(json.content)` — une concaténation de nœuds sans racine. Le backend (`Rubrique.clean()`) exige un XML monoracine valide.
+
+### Décision d'implémentation
+
+Voir `gov_decision-log.md` — `2026-04-17 – Format canonique de contenu_xml`.
+
+Format cible : `<body>...nœuds...</body>`
+
+### Fichiers à modifier
+
+| Fichier | Modification |
+|---|---|
+| `hooks/useXmlBufferSync.ts` | Wrapper `<body>` autour de la sortie `tiptapToXml` avant stockage buffer |
+| `hooks/useDitaLoader.ts` | Tolérance chargement : fragments dégradés wrappés `<body>` avant `parseXmlToTiptap` |
+| `components/ui/LeftSidebar.tsx` | Template init : `<topic>` → `<body>` |
+
+### Choix `<body>` — décision pragmatique, non définitive
+
+Le wrapper `<body>` est retenu comme **contrat de stabilisation actuel**, pas comme cible architecturale finale.
+
+**Justification pragmatique** :
+- `parseXmlToTiptap` supporte nativement `<body>` : aplatit les enfants directs sans effet de bord.
+- Le round-trip `<body>` est stable : save → load → save produit toujours `<body>`.
+- `<topic>` était détruit à chaque édition (non listé dans `STRUCTURAL_ROOTS`).
+- L'IHM ne dispose pas encore de sélecteur de structure DITA (topic/concept/task/reference) : imposer une racine structurelle aujourd'hui serait prématuré.
+
+**Évolution future attendue** :
+Quand l'IHM permettra à l'utilisateur de choisir le type DITA d'une rubrique (concept, task, reference, topic…), le contrat `contenu_xml` devra évoluer vers une racine structurelle explicite :
+```xml
+<concept id="..."><title>...</title><conbody>...</conbody></concept>
+```
+À ce moment, la migration des données existantes (`<body>`) vers la racine structurelle sera nécessaire. La décision sera tracée dans `gov_decision-log.md` lors de l'implémentation du sélecteur de structure.
+
+### Statut
+
+- [x] Implémentation validée — 2026-04-17
+
+---
 
 ### 📌 Ici se noteront vos remarques, problèmes, ou TODO futurs
 - 1️⃣ Whitelist d’attributs DITA (partiellement traitée, pas finalisée)

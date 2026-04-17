@@ -33,6 +33,7 @@ interface ProjectStoreState {
   selectedProjectId: number | null;
   setProjets: (projets: Projet[]) => void;
   setSelectedProjectId: (id: number | null) => void;
+  reset: () => void;
 }
 
 const useProjectStore = create<ProjectStoreState>((set) => ({
@@ -40,6 +41,7 @@ const useProjectStore = create<ProjectStoreState>((set) => ({
   selectedProjectId: null,
   setProjets: (projets) => set({ projets }),
   setSelectedProjectId: (id) => set({ selectedProjectId: id }),
+  reset: () => set({ projets: [], selectedProjectId: null }),
 }));
 
 export default useProjectStore;

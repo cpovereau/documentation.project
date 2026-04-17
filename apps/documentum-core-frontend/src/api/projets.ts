@@ -6,6 +6,6 @@ import api from '@/lib/apiClient';
 import { Projet } from '@/store/projectStore';
 
 export async function getProjets(): Promise<Projet[]> {
-  const response = await api.get<Projet[]>('/projets/');
+  const response = await api.get<Projet[]>('/api/projets/');
   return response.data;
 }

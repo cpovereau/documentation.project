@@ -74,6 +74,7 @@ function serializeAttributes(attrs?: Record<string, any>): string {
   if (!attrs) return "";
 
   return Object.entries(attrs)
+    .filter(([_k, v]) => v !== null && v !== undefined)
     .map(([k, v]) => `${k}="${escapeXmlAttr(String(v))}"`)
     .join(" ");
 }

@@ -4,9 +4,9 @@
 >
 > **Statut** : opérationnel — source de vérité runtime
 >
-> **Périmètre backend :** `ProjetViewSet`, `MapViewSet`, `RubriqueViewSet`, `FonctionnaliteViewSet` — apps `projets`, `maps`, `rubriques`, `documentation`
+> **Périmètre backend :** `ProjetViewSet`, `MapViewSet`, `RubriqueViewSet`, `FonctionnaliteViewSet`, `MediaItemViewSet`, vues import — apps `projets`, `maps`, `rubriques`, `documentation`, `medias`
 >
-> **Dernière mise à jour** : 2026-04-17
+> **Dernière mise à jour** : 2026-04-17 (ajout routes médias + import — Chantier 4)
 
 ---
 
@@ -90,7 +90,25 @@ Ce document **ne décrit pas** :
 
 ---
 
-### 🏷 3.4 Fonctionnalités (ProductDocSync)
+### 🖼 3.4 Médias
+
+| Méthode | Route | Vue | Rôle |
+|--------|------|-----|------|
+| GET | `/api/media-items/` | `MediaItemViewSet.list` | Liste complète des médias |
+| GET | `/api/medias-check-nom/` | `medias_check_nom_view` | Vérification/génération du nom automatique (`?produit=&fonctionnalite=&interface=`) |
+| POST | `/api/import/media/` | `import_media_view` | Import d'un fichier image (multipart/form-data — `file`, `produit`, `fonctionnalite`, `interface`, `nom_fichier`, `remplacer`) |
+
+---
+
+### 📦 3.5 Import
+
+| Méthode | Route | Vue | Rôle |
+|--------|------|-----|------|
+| POST | `/api/import/fonctionnalites/` | `import_fonctionnalites_view` | Import CSV de fonctionnalités (multipart/form-data — `file`, `mapping`, `produit`, `skip_header`) |
+
+---
+
+### 🏷 3.6 Fonctionnalités (ProductDocSync)
 
 > Exposé via `ArchivableModelViewSet` — DELETE retourne HTTP 405 ; suppression douce via PATCH `archive/`.
 

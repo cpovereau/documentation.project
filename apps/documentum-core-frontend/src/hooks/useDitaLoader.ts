@@ -1,67 +1,103 @@
 /**
  * useDitaLoader
  * --------------
- * Charge le XML d’une rubrique depuis le buffer Zustand
- * et l’injecte DANS TipTap **sans déclencher de boucle update**.
+ * Point de charge unique du contenu d'une rubrique dans TipTap.
  *
- * ✔ Déclenchement uniquement lors d’un changement de rubrique OU éditeur
- * ✔ setContent() avec { emitUpdate: false } pour éviter useXmlBufferSync
- * ✔ Aucune dépendance au buffer → évite les boucles infinies
+ * Stratégie de chargement :
+ *   1. Si buffer "dirty" ou "error" → contenu non sauvegardé en cours : utiliser le buffer.
+ *   2. Sinon → fetcher GET /api/rubriques/{id}/ → mettre en buffer (status "saved") → injecter.
+ *
+ * Tolérance données dégradées :
+ *   Les données en base peuvent être des fragments sans racine unique
+ *   (ex. `<p>a</p><p>b</p>` stocké avant correction du sérialiseur).
+ *   Dans ce cas, wrapIfFragment() détecte le parseerror DOMParser et wrappe avec <body>.
+ *
+ * ✔ setContent() avec { emitUpdate: false } — évite la boucle useXmlBufferSync
+ * ✔ Seuls déclencheurs autorisés : editor, rubriqueId
  */
 
 import { useEffect, useState } from "react";
 import { Editor } from "@tiptap/react";
 import useXmlBufferStore from "@/store/xmlBufferStore";
 import { parseXmlToTiptap } from "@/utils/xmlToTiptap";
+import { getRubrique } from "@/api/rubriques";
 
 interface UseDitaLoaderProps {
   editor: Editor | null;
   rubriqueId: number | null;
 }
 
+function wrapIfFragment(xml: string): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, "application/xml");
+  if (doc.getElementsByTagName("parsererror").length > 0) {
+    return `<body>${xml}</body>`;
+  }
+  return xml;
+}
+
+function injectContent(editor: Editor, xml: string): void {
+  if (!xml || xml.trim() === "") {
+    editor.commands.setContent(
+      "<p>Aucun contenu disponible pour cette rubrique.</p>",
+      { emitUpdate: false },
+    );
+    return;
+  }
+
+  const safeXml = wrapIfFragment(xml);
+  const nodes = parseXmlToTiptap(safeXml);
+  editor.commands.setContent({ type: "doc", content: nodes }, { emitUpdate: false });
+}
+
 export function useDitaLoader({ editor, rubriqueId }: UseDitaLoaderProps) {
-  const getXml = useXmlBufferStore((state) => state.getXml);
+  const getStatus = useXmlBufferStore((s) => s.getStatus);
+  const getXml    = useXmlBufferStore((s) => s.getXml);
+  const setXml    = useXmlBufferStore((s) => s.setXml);
+  const setStatus = useXmlBufferStore((s) => s.setStatus);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Conditions minimales : si l’éditeur n’est pas prêt ou pas de rubrique sélectionnée
-    if (!editor || rubriqueId == null) {
+    if (!editor || rubriqueId == null) return;
+
+    const bufferStatus = getStatus(rubriqueId);
+    const isUnsaved = bufferStatus === "dirty" || bufferStatus === "error";
+
+    if (isUnsaved) {
+      const xml = getXml(rubriqueId) ?? "";
+      try {
+        injectContent(editor, xml);
+      } catch (err) {
+        console.error("❌ [useDitaLoader] Erreur parsing buffer non sauvegardé :", err);
+        editor.commands.setContent("<p>Erreur de conversion XML</p>", { emitUpdate: false });
+      }
       return;
     }
 
+    // Chargement depuis le backend
     setIsLoading(true);
 
-    // Lecture du XML depuis Zustand
-    const xml = getXml(rubriqueId);
+    getRubrique(rubriqueId)
+      .then((rubrique) => {
+        const rawXml = rubrique.contenu_xml ?? "";
+        const safeXml = rawXml.trim() !== "" ? wrapIfFragment(rawXml) : "";
 
-    // Si vide → message fallback
-    if (!xml || typeof xml !== "string" || xml.trim() === "") {
-      editor.commands.setContent(
-        "<p>Aucun contenu disponible pour cette rubrique.</p>",
-        { emitUpdate: false } // ⚠️ INDISPENSABLE
-      );
-      setIsLoading(false);
-      return;
-    }
+        // Mise en buffer avec statut saved
+        setXml(rubriqueId, safeXml);
+        setStatus(rubriqueId, "saved");
 
-    try {
-      // Conversion XML → JSON TipTap
-      const nodes = parseXmlToTiptap(xml);
-
-      // Injection dans TipTap → sans update (évite sync → Zustand → reload → boucle !)
-      editor.commands.setContent(
-        { type: "doc", content: nodes },
-        { emitUpdate: false }
-      );
-
-      setIsLoading(false);
-    } catch (err) {
-      console.error("❌ Erreur lors du parsing XML:", err);
-      editor.commands.setContent("<p>Erreur de conversion XML</p>", {
-        emitUpdate: false,
+        injectContent(editor, safeXml);
+      })
+      .catch((err) => {
+        console.error("❌ [useDitaLoader] Erreur chargement rubrique :", err);
+        editor.commands.setContent(
+          "<p>Erreur de chargement du contenu.</p>",
+          { emitUpdate: false },
+        );
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-      setIsLoading(false);
-    }
   }, [
     editor,
     rubriqueId, // ✔ Seuls déclencheurs autorisés

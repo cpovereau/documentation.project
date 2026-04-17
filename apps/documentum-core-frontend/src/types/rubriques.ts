@@ -12,6 +12,6 @@ export interface RubriqueInitPayload {
 }
 
 export async function prepareNewRubriqueXml(payload: RubriqueInitPayload): Promise<string> {
-  const response = await api.post("/dita-template/", payload);
+  const response = await api.post("/api/dita-template/", payload);
   return response.data.xml;
 } // Le backend renvoie { xml: "..." }

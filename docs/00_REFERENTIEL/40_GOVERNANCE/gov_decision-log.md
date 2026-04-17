@@ -423,6 +423,96 @@ Active
 
 ---
 
+## 2026-04-17 – Adoption de TanStack Query v5 pour le data-fetching frontend
+
+**Sujet**  
+Choix du socle de récupération et synchronisation des données côté frontend.
+
+**Contexte**  
+Le Chantier 4 vise à centraliser les appels API, homogénéiser les hooks métier et supprimer les appels directs au backend depuis les composants.
+
+**Décision**  
+Adoption de TanStack Query v5 comme bibliothèque standard de data-fetching et de gestion de cache serveur côté frontend.
+
+**Justification**  
+- standard éprouvé
+- cohérence avec l’objectif de centralisation
+- gestion robuste du cache, invalidation, états loading/error
+- adapté à la structuration de hooks métier homogènes
+
+**Conséquences**  
+- les nouveaux hooks métier frontend s’appuient sur TanStack Query v5
+- les appels directs `fetch` / `axios` dans les composants sont interdits
+- le Chantier 4 doit créer le cadre commun d’utilisation
+
+**Statut**  
+Active
+
+---
+
+## 2026-04-17 – Interdiction du fallback `?? []` instable dans les hooks TanStack Query
+
+**Sujet**
+Référence instable comme dépendance `useEffect` — boucle de rendu infinie.
+
+**Contexte**
+Lors du Chantier 4, `useMapStructure.ts` retournait `mapRubriques: query.data ?? []`. Quand `query.data` est `undefined` (query désactivée ou en chargement), cette expression crée une nouvelle référence `[]` à chaque rendu. `mapRubriques` étant en dépendance de `useEffect` dans `LeftSidebar`, l'effet se déclenchait à chaque rendu, appelait `setMapItems([])` (autre nouvelle référence), provoquant une nouvelle passe, et ainsi de suite. Résultat : `Maximum update depth exceeded` dès l'ouverture d'un projet.
+
+**Décision**
+- Tout hook retournant un tableau depuis TanStack Query **doit** utiliser une constante module-level stable comme fallback.
+- Le pattern `query.data ?? []` est explicitement interdit si le tableau résultant est utilisé comme dépendance `useEffect`.
+- Règle ajoutée dans `gov_forbidden-patterns.md` (§ 4.3).
+
+**Justification**
+- `Object.is([], [])` est `false` — deux tableaux vides distincts ne sont jamais égaux pour React.
+- Le bug est silencieux à l'écriture (le code compile) mais catastrophique à l'exécution.
+- La constante module-level est la correction minimale, sans impact sur le comportement métier.
+
+**Conséquences**
+- Tous les hooks TanStack Query exposant des tableaux doivent être audités (`useAllDictionnaireData`, etc.).
+- Le Chantier 4 n'est pas clôturé tant que le correctif n'est pas validé en runtime.
+- Pattern ajouté au référentiel de gouvernance.
+
+**Statut**
+Active
+
+---
+
+## 2026-04-17 – Format canonique de `contenu_xml` : wrapper `<body>`
+
+**Sujet**
+Définition du format attendu pour le champ `contenu_xml` des rubriques.
+
+**Contexte**
+L'analyse du bug "contenu XML invalide" a révélé que `tiptapToXml()` retourne une concaténation de nœuds TipTap sans wrapper racine (ex. `<p>a</p>\n<p>b</p>`). Ce fragment multi-racines est stocké dans `xmlBufferStore` puis envoyé directement au backend via `useRubriqueSave`. Le backend (`Rubrique.clean()`) utilise `ET.fromstring()` qui exige un seul élément racine — le XML multi-racines est donc rejeté ou produit une erreur silencieuse. L'erreur "contenu XML invalide" apparaît au rechargement de la rubrique, car `parseXmlToTiptap` utilise aussi `DOMParser` avec `application/xml`, qui produit un `<parsererror>` sur les fragments multi-racines.
+
+**Décision**
+Le champ `contenu_xml` d'une rubrique doit **toujours** contenir un XML bien formé à racine unique `<body>`.
+
+- Le wrapper est ajouté dans `useXmlBufferSync` **avant** stockage dans le buffer, pas dans `tiptapToXml`.
+- `tiptapToXml` conserve son contrat de sérialiseur de nœuds (sans responsabilité de wrapping).
+- `useDitaLoader` applique une tolérance de chargement : si le XML stocké est un fragment sans racine unique (détecté par `<parsererror>` DOMParser), il est wrappé avec `<body>` avant parsing — gère les données dégradées existantes en base sans migration.
+- Le template d'initialisation des nouvelles rubriques (LeftSidebar) est aligné sur `<body>` au lieu de `<topic>`.
+
+**Justification**
+- `<body>` est cohérent avec le parser existant `parseXmlToTiptap` (ligne 450 : `if container.tagName === "body"` → aplatit les enfants — c'est le seul wrapper nativement supporté sans effet de bord structurel).
+- `<topic>` est détruit lors du round-trip : `parseXmlToTiptap` ne le liste pas dans `STRUCTURAL_ROOTS` → cherche `<body>` enfant → aplatit → `tiptapToXml` reconstruit sans wrapper. Résultat : le wrapper `<topic>` disparaît à la première édition.
+- `ET.fromstring("<body>...</body>")` est valide — aucune modification backend requise.
+- La tolérance au chargement dans `useDitaLoader` évite une migration base de données.
+
+**Conséquences**
+- `useXmlBufferSync` : wrapping `<body>` obligatoire après `tiptapToXml`.
+- `useDitaLoader` : tolérance de chargement pour données dégradées (fragment → `<body>` avant parsing).
+- `LeftSidebar` : template init aligné sur `<body>` (suppression de `<topic>`).
+- Backend : aucune modification requise.
+- Données existantes en base : gérées à la lecture par la tolérance `useDitaLoader`, sans migration.
+- Toute autre partie du code construisant ou lisant `contenu_xml` (export DITA, diff de révisions) doit traiter le wrapper `<body>`.
+
+**Statut**
+Active — implémentation à valider avant déploiement
+
+---
+
 ## Règle de clôture
 
 Toute décision listée ici :

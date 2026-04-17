@@ -14,6 +14,7 @@ interface ProductStoreState {
   selectedProductId: number | null;
   setProduits: (produits: Produit[]) => void;
   setSelectedProductId: (id: number | null) => void;
+  reset: () => void;
 }
 
 const useProductStore = create<ProductStoreState>((set) => ({
@@ -21,6 +22,7 @@ const useProductStore = create<ProductStoreState>((set) => ({
   selectedProductId: null,
   setProduits: (produits) => set({ produits }),
   setSelectedProductId: (id) => set({ selectedProductId: id }),
+  reset: () => set({ produits: [], selectedProductId: null }),
 }));
 
 export default useProductStore;

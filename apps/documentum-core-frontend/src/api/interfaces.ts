@@ -13,6 +13,6 @@ export interface InterfaceUtilisateur {
 }
 
 export const getAllInterfaces = async (): Promise<InterfaceUtilisateur[]> => {
-  const response = await api.get<InterfaceUtilisateur[]>("/interfaces/");
+  const response = await api.get<InterfaceUtilisateur[]>("/api/interfaces/");
   return response.data;
 };

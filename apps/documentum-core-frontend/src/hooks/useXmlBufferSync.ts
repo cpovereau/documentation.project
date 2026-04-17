@@ -29,7 +29,8 @@ export function useXmlBufferSync(editor: Editor | null, rubriqueId: number | nul
     const onUpdate = () => {
       try {
         const json = editor.getJSON();
-        const xml = tiptapToXml(json.content ?? []);
+        const inner = tiptapToXml(json.content ?? []);
+        const xml = `<body>${inner}</body>`;
         // Marquage dirty immédiat (non-debounced) pour que le guard de navigation
         // soit actif dès la première frappe, même avant la sérialisation XML.
         setStatus(rubriqueId, "dirty");

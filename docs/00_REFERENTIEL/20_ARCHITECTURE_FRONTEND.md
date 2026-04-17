@@ -113,10 +113,30 @@ Hooks d’orchestration :
 - useSelectedProduct
 - useSelectedVersion
 
+Hooks data-fetching (TanStack Query) :
+- useQuery → lecture de données backend (liste, détail, structures)
+- useMutation → écriture (création, modification, suppression, import)
+- invalidateQueries → invalidation de cache après mutation
+- setQueryData → pré-population du cache sans appel réseau supplémentaire
+
+## QueryKeys standards
+
+```
+["projets"]                 liste projets non archivés
+["projet", id]              détail projet (cache individuel)
+["projet-structure", id]    structure (mapId + rubriques) d’un projet
+["map-structure", mapId]    rubriques d’une map — source de vérité locale
+["gammes"]  ["produits"]  ["fonctionnalites"]  ["interfaces"]
+["tags"]  ["audiences"]  ["medias"]
+["media-nom-check", ...params]   vérification nom média (requête conditionnelle)
+```
+
 ## Règles
 
 - toute logique complexe doit être dans un hook
 - aucune logique métier dans les composants
+- tout data-fetching doit utiliser TanStack Query (useQuery / useMutation)
+- exception : `useXmlBufferSync` et `useRubriqueSave` — flux XML buffer géré hors TanStack Query intentionnellement
 
 ---
 
@@ -126,10 +146,24 @@ Hooks d’orchestration :
 
 Centraliser tous les appels backend
 
+## Point d'entrée unique
+
+`src/lib/apiClient.ts` — instance Axios centralisée avec :
+- headers auth/CSRF automatiques
+- intercepteur réponse HTTP (gestion d'erreur normalisée)
+- base URL relative (pas d'URL hardcodée)
+
 ## Règles
 
-- aucun appel API dans un composant
-- aucun appel API direct sans passer par un service centralisé
+- aucun appel `api.` dans un composant ou un screen
+- aucun appel `fetch` / `axios` brut hors `apiClient`
+- toutes les routes doivent utiliser le préfixe `/api/...`
+- exception : `/csrf/` (hors API, intentionnel)
+
+## Fichiers de la couche API
+
+- `src/api/*.ts` — fonctions pures qui appellent `apiClient`
+- `src/hooks/*.ts` — hooks TanStack Query qui consomment `src/api/`
 
 ## Objectif
 
@@ -173,6 +207,26 @@ Le flux repose sur :
 
 Le buffer est la source de vérité côté frontend
 
+## Contrat `contenu_xml`
+
+Le champ `contenu_xml` d’une rubrique est un **XML bien formé à racine unique `<body>`** :
+
+```xml
+<body>
+  <p>...</p>
+  <p>...</p>
+</body>
+```
+
+Règles dérivées :
+- `tiptapToXml()` est un sérialiseur de nœuds (pas de responsabilité de wrapping).
+- `useXmlBufferSync` applique le wrapper `<body>` **avant** stockage dans le buffer.
+- Le backend (`Rubrique.clean()` via `ET.fromstring()`) exige un seul élément racine — le wrapper garantit ce contrat.
+- `useDitaLoader` applique une tolérance de chargement : si le XML lu en buffer est un fragment dégradé (détecté via `<parsererror>` DOMParser), il est wrappé `<body>` avant parsing.
+- `parseXmlToTiptap` gère nativement `<body>` : aplatit les enfants directs en nœuds TipTap.
+
+Voir `gov_decision-log.md` — `2026-04-17 – Format canonique de contenu_xml`.
+
 ---
 
 # ⚠️ Problèmes identifiés dans l’existant
@@ -188,9 +242,9 @@ Interdit
 
 ## 2. Appels API dans les composants
 
-Présents dans LeftSidebar
+~~Présents dans LeftSidebar~~ — **Résolu (Chantier 4, 2026-04-17)**
 
-Doivent être déplacés
+Tous les appels API sont maintenant dans les hooks TanStack Query.
 
 ---
 

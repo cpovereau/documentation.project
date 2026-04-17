@@ -1,23 +1,11 @@
 // src/components/ui/LoadProjectDialog.tsx
-import React, { useEffect, useMemo, useState } from "react";
-import api from "@/lib/apiClient";
+import React, { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useProjets } from "@/hooks/useProjets";
 import { toast } from "sonner";
-
-// Type minimal pour la liste (réponse de GET /projets/)
-interface Gamme {
-  id: number;
-  nom: string;
-}
-interface ProjectListItem {
-  id: number;
-  nom: string;
-  gamme: Gamme;
-  date_mise_a_jour: string;
-}
 
 interface Props {
   open: boolean;
@@ -32,42 +20,28 @@ export const LoadProjectDialog: React.FC<Props> = ({
   onSelect,
   initialSelectedId = null,
 }) => {
-  const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [selectedId, setSelectedId] = useState<string>(
     initialSelectedId ? String(initialSelectedId) : "",
   );
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
+  const { data: projects = [], isLoading: loading } = useProjets(open);
 
-    // Reset UI
-    setSelectedId(initialSelectedId ? String(initialSelectedId) : "");
-    setQuery("");
-
-    // Chargement de la liste (UI uniquement)
-    setLoading(true);
-
-    api
-      .get<ProjectListItem[]>("/api/projets/?archived=false")
-      .then((res) => {
-        setProjects(res.data);
-      })
-      .catch((err) => {
-        console.error(err);
-        toast.error("Impossible de charger la liste des projets.");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+  // Reset UI quand la modale s'ouvre
+  React.useEffect(() => {
+    if (open) {
+      setSelectedId(initialSelectedId ? String(initialSelectedId) : "");
+      setQuery("");
+    }
   }, [open, initialSelectedId]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return projects;
     return projects.filter(
-      (p) => p.nom.toLowerCase().includes(q) || (p.gamme?.nom || "").toLowerCase().includes(q),
+      (p) =>
+        p.nom.toLowerCase().includes(q) ||
+        (p.gamme?.nom || "").toLowerCase().includes(q),
     );
   }, [projects, query]);
 
@@ -76,7 +50,6 @@ export const LoadProjectDialog: React.FC<Props> = ({
       toast.error("Sélectionnez un projet à charger.");
       return;
     }
-
     onSelect(Number(selectedId));
     onClose();
   };
@@ -100,7 +73,6 @@ export const LoadProjectDialog: React.FC<Props> = ({
 
           <div>
             <Label>Projet</Label>
-            {/* Select natif (fonctionne dans les modales) */}
             <select
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
               value={selectedId}

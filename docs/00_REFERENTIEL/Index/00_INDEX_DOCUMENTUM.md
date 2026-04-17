@@ -198,6 +198,7 @@ Cette section décrit l'implémentation réelle du projet.
 * `50_CARTOGRAPHIE_FRONTEND_DESKTOP.md` : cartographie du composant Desktop
 * `51_ANALYSE_TECHNIQUE_FRONTEND_GLOBAL.md` : analyse technique globale du frontend
 * `FRONTEND_MAP_ROADMAP.md` : roadmap d'évolution du module Map côté frontend
+* `FRONTEND_CHANTIER4_SOCLE_ROADMAP.md` : roadmap Chantier 4 — apiClient centralisé, TanStack Query, zéro appel direct
 
 👉 Point d'entrée sur le fonctionnement réel du frontend.
 
@@ -336,6 +337,7 @@ Cette section regroupe les documents de pilotage opérationnel, les roadmaps et 
 | Comprendre Settings                      | `01_OPERATIONNEL/Settings/50_CARTOGRAPHIE_FRONTEND_SETTINGS.md`                     |
 | Suivre l'évolution de Settings           | `01_OPERATIONNEL/Settings/SETTINGS_ROADMAP.md`                                      |
 | Consulter les roadmaps frontend          | `01_OPERATIONNEL/CentralEditor/CENTRALEDITOR_REFACTOR_ROADMAP.md`                   |
+| Suivre le Chantier 4 — socle frontend    | `01_OPERATIONNEL/Frontend/FRONTEND_CHANTIER4_SOCLE_ROADMAP.md`                      |
 | Consulter les synthèses frontend         | `02_ANALYSE/syntheses/`                                                             |
 | Consulter les audits                     | `02_ANALYSE/audits/`                                                                |
 | Consulter l'historique des sprints       | `02_ANALYSE/archive/`                                                               |

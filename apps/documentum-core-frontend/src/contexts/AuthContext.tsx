@@ -1,6 +1,11 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { User as UserType } from "@/types/User";
+import useProjectStore from "@/store/projectStore";
+import useProductStore from "@/store/productStore";
+import useSelectionStore from "@/store/selectionStore";
+import useXmlBufferStore from "@/store/xmlBufferStore";
 
 interface User {
   id: number;
@@ -19,6 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [token, setToken] = useState<string | null>(
     localStorage.getItem("authToken")
   );
@@ -70,6 +76,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = () => {
+    // Réinitialisation de tous les stores Zustand — évite l'affichage de données
+    // d'une session précédente après reconnexion (map rubriques orphelines, etc.)
+    useProjectStore.getState().reset();
+    useProductStore.getState().reset();
+    useSelectionStore.getState().clearSelection();
+    useXmlBufferStore.getState().clear();
+    // Vider le cache TanStack Query — évite les données périmées cross-session
+    queryClient.clear();
     setToken(null);
     setUser(null);
     navigate("/login");

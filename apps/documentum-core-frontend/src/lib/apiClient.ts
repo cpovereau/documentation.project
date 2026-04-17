@@ -49,7 +49,6 @@ api.interceptors.request.use((config) => {
     } else {
       (config.headers as any)["X-CSRFToken"] = csrfToken;
     }
-    console.log("✅ X-CSRFToken injecté :", csrfToken);
   }
 
   // --- ⚠️ multipart : supprime Content-Type si FormData (Axios le recrée automatiquement)
@@ -116,6 +115,7 @@ export async function createProjectValidated(
 
 
 // --- Récupération des détails d’un projet (projet + gamme + versions + maps) ---
+// ⚠️ Route /projets/{id}/details/ sans préfixe /api/ — à confirmer backend (Chantier 4 Phase 2)
 export async function getProjectDetailsValidated(id: number): Promise<ProjectReadZ> {
   const res = await api.get(`/projets/${id}/details/`);
   return parseOrThrow(

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import axios from "axios";
+import api from "@/lib/apiClient";
 import { Routes, Route, Navigate } from "react-router-dom";
 import SessionExpiredModal from "@/components/ui/SessionExpiredModal";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -50,10 +50,8 @@ function App() {
   const { expired, setExpired } = useSessionStore();
 
   useEffect(() => {
-    axios
-      .get("http://localhost:8000/csrf/", {
-        withCredentials: true,
-      })
+    api
+      .get("/csrf/")
       .then(() => {
         console.log("[CSRF] Token CSRF récupéré avec succès");
       })

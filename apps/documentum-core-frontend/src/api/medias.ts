@@ -16,6 +16,6 @@ export interface MediaItem {
 }
 
 export const getAllMedias = async (): Promise<MediaItem[]> => {
-  const response = await api.get<MediaItem[]>("/media-items/");
+  const response = await api.get<MediaItem[]>("/api/media-items/");
   return response.data;
 };

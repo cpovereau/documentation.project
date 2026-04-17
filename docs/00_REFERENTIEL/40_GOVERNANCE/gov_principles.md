@@ -54,7 +54,26 @@ Aucun appel direct (fetch, axios brut) n’est autorisé dans :
 
 ---
 
-### 2.2 Gestion des erreurs
+## 2.2 — Accès aux API (Frontend)
+
+Toutes les interactions avec le backend doivent respecter les règles suivantes :
+
+- Tous les endpoints doivent être exposés sous le préfixe `/api/`
+- Aucun appel API direct (`fetch`, `axios`) dans les composants ou hooks métier
+- Tous les appels passent exclusivement par le client centralisé (`apiClient`)
+- Les appels doivent être encapsulés dans des hooks métier (ex : `useProjects`, `useRubriques`, etc.)
+
+❌ Interdits :
+- appels API dans les composants React
+- URLs hardcodées
+- contournement du client API centralisé
+
+👉 Cette règle est non négociable et s’applique à tout nouveau développement.
+
+
+---
+
+### 2.3 Gestion des erreurs
 Les erreurs API sont :
 - normalisées,
 - interceptées globalement,
@@ -64,7 +83,7 @@ Toute nouvelle fonctionnalité doit respecter le format d’erreur standardisé 
 
 ---
 
-### 2.3 États globaux vs locaux
+### 2.4 États globaux vs locaux
 - Un état global ne doit jamais être dupliqué en local.
 - Un état local ne doit pas devenir source de vérité globale.
 
@@ -72,7 +91,7 @@ Toute ambiguïté sur la “source de vérité” doit être résolue explicitem
 
 ---
 
-### 2.4 Performance et UX
+### 2.5 Performance et UX
 Les comportements asynchrones récurrents (analyse, saisie, vérification) doivent intégrer :
 - un mécanisme de `debounce`,
 - une réflexion UX avant toute optimisation prématurée.

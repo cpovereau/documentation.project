@@ -1,76 +1,78 @@
-import { useEffect, useState } from "react"
-import api from "@/lib/apiClient"
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/apiClient";
 
 export interface MediaItem {
-  id: number
-  nom_fichier: string
-  chemin_acces: string
-  description?: string
-  type_media: "image" | "video"
-  produit: number
-  rubrique?: number | null
+  id: number;
+  nom_fichier: string;
+  chemin_acces: string;
+  description?: string;
+  type_media: "image" | "video";
+  produit: number;
+  rubrique?: number | null;
 }
 
 interface UseMediasOptions {
-  produitId?: number
-  fonctionnaliteCode?: string
+  produitId?: number;
+  fonctionnaliteCode?: string;
   interfaceCode?: string;
-  searchTerm?: string
-  mediaRefreshKey?: number
+  searchTerm?: string;
 }
 
-export const useMedias = ({ produitId, fonctionnaliteCode, interfaceCode, searchTerm, mediaRefreshKey }: UseMediasOptions = {}) => {
-  const [medias, setMedias] = useState<MediaItem[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export const useMedias = ({
+  produitId,
+  fonctionnaliteCode,
+  interfaceCode,
+  searchTerm,
+}: UseMediasOptions = {}) => {
+  const {
+    data = [],
+    isLoading: loading,
+    error: rawError,
+    refetch,
+  } = useQuery({
+    queryKey: ["medias"],
+    queryFn: () => api.get<MediaItem[]>("/api/media-items/").then((r) => r.data),
+    staleTime: 30_000,
+  });
 
-  useEffect(() => {
-  const fetchMedias = async () => {
-    setLoading(true)
-    setError(null)
+  const medias = useMemo(() => {
+    let results = data;
 
-    try {
-      const res = await api.get<MediaItem[]>("/api/media-items/")
-      let results = res.data
-
-      // 🔎 Filtres simulés côté client
-      if (produitId) {
-        results = results.filter(m => m.produit === produitId)
-      }
-
-      if (fonctionnaliteCode) {
-      results = results.filter(m =>
-       m.nom_fichier.toLowerCase().includes(fonctionnaliteCode.toLowerCase()) ||
-       m.description?.toLowerCase().includes(fonctionnaliteCode.toLowerCase())
-      )
-      }
-
-      if (interfaceCode) {
-      results = results.filter(m =>
-       m.nom_fichier.toLowerCase().includes(interfaceCode.toLowerCase()) ||
-       m.description?.toLowerCase().includes(interfaceCode.toLowerCase())
-      )
-      }
-
-      if (searchTerm) {
-        const lowerTerm = searchTerm.toLowerCase()
-        results = results.filter(m =>
-          m.nom_fichier.toLowerCase().includes(lowerTerm) ||
-          m.description?.toLowerCase().includes(lowerTerm)
-        )
-      }
-
-      setMedias(results)
-    } catch (err: any) {
-      setError(err.message || "Erreur lors du chargement des médias")
-    } finally {
-      setLoading(false)
+    if (produitId) {
+      results = results.filter((m) => m.produit === produitId);
     }
-  }
+    if (fonctionnaliteCode) {
+      const lc = fonctionnaliteCode.toLowerCase();
+      results = results.filter(
+        (m) =>
+          m.nom_fichier.toLowerCase().includes(lc) ||
+          m.description?.toLowerCase().includes(lc),
+      );
+    }
+    if (interfaceCode) {
+      const lc = interfaceCode.toLowerCase();
+      results = results.filter(
+        (m) =>
+          m.nom_fichier.toLowerCase().includes(lc) ||
+          m.description?.toLowerCase().includes(lc),
+      );
+    }
+    if (searchTerm) {
+      const lc = searchTerm.toLowerCase();
+      results = results.filter(
+        (m) =>
+          m.nom_fichier.toLowerCase().includes(lc) ||
+          m.description?.toLowerCase().includes(lc),
+      );
+    }
 
-  fetchMedias()
-}, [produitId, fonctionnaliteCode, interfaceCode, searchTerm, mediaRefreshKey])
+    return results;
+  }, [data, produitId, fonctionnaliteCode, interfaceCode, searchTerm]);
 
+  const error = rawError
+    ? (rawError as any).message || "Erreur lors du chargement des médias"
+    : null;
 
-  return { medias, loading, error }
-}
+  return { medias, loading, error, refetch };
+};
