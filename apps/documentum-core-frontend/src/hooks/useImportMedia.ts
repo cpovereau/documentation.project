@@ -32,7 +32,7 @@ export function useImportMedia() {
       if (remplacerNomFichier) {
         formData.append("remplacer_nom_fichier", remplacerNomFichier);
       }
-      const res = await api.post("/api/import/media/", formData, {
+      const res = await api.post("/import/media/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       return res.data;

@@ -3,8 +3,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "components/ui/button";
 import { ArrowRightCircle } from "lucide-react";
 import { AuthorInfo } from "./AuthorInfo";
-import { MediaPanel, MediaItem } from "./MediaPanel";
-import { ImportModal } from "components/ui/import-modal";
+import { MediaPanel } from "./MediaPanel";
 
 interface SyncRightSidebarProps {
   isExpanded: boolean;
@@ -15,40 +14,12 @@ export const SyncRightSidebar: React.FC<SyncRightSidebarProps> = ({
   isExpanded,
   onToggle,
 }) => {
-  const [importModalOpen, setImportModalOpen] = useState(false);
-  const [importType, setImportType] = useState<"image" | "video">("image");
   const [isImageMode, setIsImageMode] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [displayMode, setDisplayMode] = useState<"grid" | "small" | "list">(
     "grid"
   );
-
-  const mediaItems: MediaItem[] = [
-    {
-      id: 1,
-      title: "Demo vidéo",
-      updatedText: "Updated yesterday",
-      imageUrl: "https://placehold.co/150x90",
-    },
-    {
-      id: 2,
-      title: "Test image",
-      updatedText: "Updated today",
-      imageUrl: "https://placehold.co/150x90",
-    },
-    {
-      id: 3,
-      title: "Un autre média",
-      updatedText: "Updated 2 days ago",
-      imageUrl: "https://placehold.co/150x90",
-    },
-  ];
-
-  const handleImportClick = () => {
-    setImportType(isImageMode ? "image" : "video");
-    setImportModalOpen(true);
-  };
 
   return (
     <>
@@ -63,7 +34,6 @@ export const SyncRightSidebar: React.FC<SyncRightSidebarProps> = ({
             <AuthorInfo auteur="Jean Dupont" date="15/04/2023" />
           </div>
           <MediaPanel
-            mediaItems={mediaItems}
             isImageMode={isImageMode}
             searchText={searchText}
             sortOrder={sortOrder}
@@ -82,7 +52,6 @@ export const SyncRightSidebar: React.FC<SyncRightSidebarProps> = ({
                 prev === "grid" ? "small" : prev === "small" ? "list" : "grid"
               );
             }}
-            onImportClick={handleImportClick}
           />
         </div>
       </div>
@@ -102,18 +71,6 @@ export const SyncRightSidebar: React.FC<SyncRightSidebarProps> = ({
         />
       </Button>
 
-      <ImportModal
-        open={importModalOpen}
-        title={
-          importType === "image" ? "Importer une image" : "Importer une vidéo"
-        }
-        accept={importType === "image" ? "image/*" : "video/*"}
-        onClose={() => setImportModalOpen(false)}
-        onNext={(file) => {
-          console.log("Fichier importé :", file);
-          setImportModalOpen(false);
-        }}
-      />
     </>
   );
 };

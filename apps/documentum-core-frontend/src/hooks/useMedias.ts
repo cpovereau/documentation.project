@@ -17,6 +17,7 @@ interface UseMediasOptions {
   fonctionnaliteCode?: string;
   interfaceCode?: string;
   searchTerm?: string;
+  typeMedia?: "image" | "video";
 }
 
 export const useMedias = ({
@@ -24,6 +25,7 @@ export const useMedias = ({
   fonctionnaliteCode,
   interfaceCode,
   searchTerm,
+  typeMedia,
 }: UseMediasOptions = {}) => {
   const {
     data = [],
@@ -39,6 +41,9 @@ export const useMedias = ({
   const medias = useMemo(() => {
     let results = data;
 
+    if (typeMedia) {
+      results = results.filter((m) => m.type_media === typeMedia);
+    }
     if (produitId) {
       results = results.filter((m) => m.produit === produitId);
     }
@@ -68,7 +73,7 @@ export const useMedias = ({
     }
 
     return results;
-  }, [data, produitId, fonctionnaliteCode, interfaceCode, searchTerm]);
+  }, [data, typeMedia, produitId, fonctionnaliteCode, interfaceCode, searchTerm]);
 
   const error = rawError
     ? (rawError as any).message || "Erreur lors du chargement des médias"

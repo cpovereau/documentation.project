@@ -62,7 +62,7 @@ export const ImportModal = ({
       setFonctionnaliteId(null);
       setInterfaceId(null);
       setPreviewUrl(null);
-      setExistingImages([]);
+      // existingImages est dérivé de nomCheckData (non un state) — pas de reset direct nécessaire
       setSelectedImageToReplace(null);
     }
   }, [open]);

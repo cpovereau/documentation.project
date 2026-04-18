@@ -650,6 +650,34 @@ Active — Phase 1 (backend) terminée. Phase 2 (frontend) à démarrer.
 
 ---
 
+## 2026-04-18 — Endpoints custom médiathèque : préfixe URL sans `/api/`
+
+**Sujet**
+Préfixe des endpoints custom médiathèque dans le routeur Django
+
+**Contexte**
+Lors du branchement API RightSidebar Phase 1, les hooks `useMediaNomCheck` et `useImportMedia` appelaient `/api/medias-check-nom/` et `/api/import/media/`. Ces routes renvoyaient 404 car les endpoints custom sont enregistrés sans préfixe `/api/` dans `documentation/urls.py`, inclus à la racine dans `documentation_project/urls.py`.
+
+**Décision**
+Les endpoints custom médiathèque sont et restent enregistrés **sans préfixe `/api/`** :
+- `GET /medias-check-nom/` → `check_media_names`
+- `POST /import/media/` → `upload_media`
+
+Le préfixe `/api/` est réservé exclusivement aux routes du `DefaultRouter` DRF (ViewSets CRUD).
+
+**Justification**
+- Cohérence avec l'architecture existante (les vues custom Django ne passent pas par le router DRF)
+- Modification du routage backend non souhaitable — les hooks frontend doivent s'y conformer
+
+**Conséquences**
+- Hooks corrigés : `useMediaNomCheck` → `/medias-check-nom/`, `useImportMedia` → `/import/media/`
+- Règle à respecter pour tout futur endpoint custom : vérifier le préfixe dans `documentation/urls.py` avant d'appeler depuis le frontend
+
+**Statut**
+Active
+
+---
+
 ## Règle de clôture
 
 Toute décision listée ici :

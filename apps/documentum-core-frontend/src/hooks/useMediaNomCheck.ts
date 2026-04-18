@@ -17,7 +17,7 @@ export function useMediaNomCheck(
   return useQuery<MediaNomCheckResult>({
     queryKey: ["media-nom-check", produitId, fonctionnaliteId, interfaceId, fileExtension],
     queryFn: async () => {
-      const res = await api.get("/api/medias-check-nom/", {
+      const res = await api.get("/medias-check-nom/", {
         params: { produit: produitId, fonctionnalite: fonctionnaliteId, interface: interfaceId },
       });
       const { prefix, existing = [] } = res.data;

@@ -16,51 +16,60 @@ L'évolution est organisée en **4 phases** :
 
 ---
 
-# ⚠️ État actuel (2026-04-16)
+# ✅ État actuel (2026-04-18)
 
 ### Ce qui fonctionne
 - Affichage correct en mode **ancré** (panneau fixe droit, toggle expansion)
 - Affichage correct en mode **flottant** (fenêtre libre via `createPortal`, drag, resize bords gauche/droit)
 - Passage ancré ↔ flottant opérationnel
 - `MediaPanel` : filtres type (image/vidéo), recherche texte, tri, modes d'affichage (grille/compact/liste)
+- **API médiathèque branchée** — `useMedias` connecté à `/api/media-items/` via `apiClient`
+- **Filtre `type_media`** actif — affichage séparé images / vidéos selon toggle
+- **Import fonctionnel** — `useImportMedia` + `useMediaNomCheck` corrigés et opérationnels
+- **Invalidation cache post-import** — `queryClient.invalidateQueries(["medias"])` au lieu de `mediaRefreshKey`
+- **Modules mutualisés** — `MediaPanel` identique entre `RightSidebar` (Desktop) et `SyncRightSidebar` (ProductDocSync)
 
-### Ce qui ne fonctionne pas
-- **Données entièrement hardcodées** : 8 `MediaItem` statiques avec URLs placeholder (`placehold.co`)
-- **Aucune API branchée** : aucun appel vers un endpoint de médiathèque
-- **Pagination non implémentée** : variable `setPage` déclarée mais jamais utilisée
-- **Aucune action sur les médias** : pas d'insertion dans l'éditeur, pas de prévisualisation réelle
+### Ce qui reste à faire
+- **Pagination non implémentée** (Phase 2)
+- **Aucune insertion dans l'éditeur** (Phase 3 — dépend de CentralEditor Phase 4 ✅)
+- **Aucune action sur les médias** : prévisualisation plein écran (Phase 4)
 
 ---
 
-# 🔜 Phase 1 — Branchement API médiathèque (À FAIRE — priorité haute)
+# ✅ Phase 1 — Branchement API médiathèque (TERMINÉE — 2026-04-18)
 
-### 🎯 Objectifs
-- Remplacer les données hardcodées par un chargement depuis le backend.
-- Rendre le panneau fonctionnel pour les utilisateurs.
+### 🎯 Objectifs atteints
+- Données hardcodées remplacées par un chargement depuis le backend.
+- Panneau fonctionnel pour les utilisateurs — affichage, filtre, import opérationnels.
 
-### 🧩 Tâches
+### 🧩 Tâches réalisées
 
-#### 1.1 — Définir et implémenter l'endpoint backend
+#### 1.1 — Endpoint backend (existait déjà)
 
-- [ ] Décider de la structure de l'endpoint (ex. `GET /api/medias/`)
-- [ ] Définir le `MediaItem` DTO côté backend (id, titre, type, url, date_modification)
-- [ ] Implémenter le `ViewSet` Django correspondant
-- [ ] Gérer l'upload de médias (`POST /api/medias/`)
+- [x] Endpoint `GET /api/media-items/` — `MediaViewSet` DRF opérationnel
+- [x] Upload via `POST /import/media/` — `upload_media` view opérationnelle
+- [x] Génération de nom via `GET /medias-check-nom/` — `check_media_names` opérationnelle
 
-#### 1.2 — Créer le hook de chargement frontend
+#### 1.2 — Hook de chargement frontend
 
-- [ ] Créer `useMediaList(search, sortOrder, type)` — `GET /api/medias/?search=...&type=...&ordering=...`
-- [ ] Gérer les états `loading`, `error`, `items`
-- [ ] Remplacer le tableau `mediaItems` hardcodé par `useMediaList`
+- [x] `useMedias` connecté à `/api/media-items/` via `apiClient`
+- [x] Filtrage client-side : `produitId`, `fonctionnaliteCode`, `interfaceCode`, `searchTerm`, `typeMedia`
+- [x] `useImportMedia` — URL corrigée (`/import/media/` au lieu de `/api/import/media/`)
+- [x] `useMediaNomCheck` — URL corrigée (`/medias-check-nom/` au lieu de `/api/medias-check-nom/`)
 
-#### 1.3 — Brancher dans `RightSidebar`
+#### 1.3 — Nettoyage et branchement
 
-- [ ] Supprimer la déclaration locale `const mediaItems: MediaItem[] = [...]`
-- [ ] Brancher les props `searchText`, `sortOrder`, `isImageMode` sur les paramètres de `useMediaList`
-- [ ] Gérer l'état de chargement (skeleton ou spinner dans `MediaPanel`)
+- [x] `RightSidebar` : données mock supprimées, état cassé `const [setPage] = useState(1)` supprimé
+- [x] `SyncRightSidebar` : données mock supprimées, doublon `ImportModal` local supprimé
+- [x] `MediaPanel` : filtre `typeMedia` branché depuis `isImageMode`, sort non mutatif corrigé
+- [x] Invalidation cache post-import via `queryClient.invalidateQueries(["medias"])` (remplace `mediaRefreshKey`)
+
+#### 1.4 — Correction bug `import-modal.tsx`
+
+- [x] `setExistingImages([])` supprimé du `useEffect` (n'était pas un state — variable dérivée de `nomCheckData`)
 
 ### 📝 Notes
-L'endpoint backend n'existe pas encore. Cette phase est bloquée par la décision d'architecture côté backend (scope du module médiathèque). Voir `03_PILOTAGE/30_PILOTAGE_PROJET.md` pour la priorisation.
+Les endpoints custom (`/medias-check-nom/`, `/import/media/`) sont enregistrés **sans préfixe `/api/`** dans `documentation/urls.py`. Les hooks corrigés en conséquence.
 
 ---
 

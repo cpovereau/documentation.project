@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "components/ui/button";
-import { MediaPanel, MediaItem } from "components/ui/MediaPanel";
+import { MediaPanel } from "components/ui/MediaPanel";
 import { ArrowRightCircle, Move, ArrowLeftFromLine } from "lucide-react";
 
 interface RightSidebarProps {
@@ -36,58 +36,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     edge: null as "left" | "right" | null,
   });
 
-  const mediaItems: MediaItem[] = [
-    {
-      id: 1,
-      title: "Demo vidéo",
-      updatedText: "Updated yesterday",
-      imageUrl: "https://placehold.co/150x90",
-    },
-    {
-      id: 2,
-      title: "Test image",
-      updatedText: "Updated today",
-      imageUrl: "https://placehold.co/150x90",
-    },
-    {
-      id: 3,
-      title: "Un autre média",
-      updatedText: "Updated 2 days ago",
-      imageUrl: "https://placehold.co/150x90",
-    },
-    {
-      id: 4,
-      title: "Vidéo projet",
-      updatedText: "Updated 4 days ago",
-      imageUrl: "https://placehold.co/150x90",
-    },
-    {
-      id: 5,
-      title: "Capture ADM menu",
-      updatedText: "Updated 1 week ago",
-      imageUrl: "https://placehold.co/150x90",
-    },
-    {
-      id: 6,
-      title: "BOU Export",
-      updatedText: "Updated 3 days ago",
-      imageUrl: "https://placehold.co/150x90",
-    },
-    {
-      id: 7,
-      title: "USA Paramètres",
-      updatedText: "Updated yesterday",
-      imageUrl: "https://placehold.co/150x90",
-    },
-    {
-      id: 8,
-      title: "PLA Planning",
-      updatedText: "Updated today",
-      imageUrl: "https://placehold.co/150x90",
-    },
-  ];
-
-  const [setPage] = useState(1);
 
   const toggleSwitch = useCallback(() => setIsImageMode((prev) => !prev), []);
 
@@ -165,7 +113,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 
   const mediaPanel = (
     <MediaPanel
-      mediaItems={mediaItems}
       isImageMode={isImageMode}
       searchText={searchText}
       sortOrder={sortOrder}

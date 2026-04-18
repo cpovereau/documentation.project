@@ -5,6 +5,7 @@
 // =====================================================
 
 import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -64,6 +65,7 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
   const [filterKeyword, setFilterKeyword] = useState<string>("");
 
   const { data, isLoading } = useAllDictionnaireData();
+  const queryClient = useQueryClient();
 
   // chargement des produits
   const produitId =
@@ -87,19 +89,19 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
   const isFreeTextSearch = activeFilter === null;
   const searchTerm = isFreeTextSearch ? searchText : "";
 
-  //  Actualisation suite import d'image
-  const [mediaRefreshKey, setMediaRefreshKey] = useState(0);
+  // filtre par type de média
+  const typeMedia: "image" | "video" = isImageMode ? "image" : "video";
 
   const { medias } = useMedias({
     produitId,
     fonctionnaliteCode,
     interfaceCode,
     searchTerm,
-    mediaRefreshKey,
+    typeMedia,
   });
 
-  // tri
-  const filteredMedia = medias.sort((a, b) =>
+  // tri (copie pour ne pas muter le tableau React Query)
+  const filteredMedia = [...medias].sort((a, b) =>
     sortOrder === "asc"
       ? a.nom_fichier.localeCompare(b.nom_fichier)
       : b.nom_fichier.localeCompare(a.nom_fichier)
@@ -123,9 +125,9 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
       produits: data.produits,
       fonctionnalites: data.fonctionnalites,
       interfaces: data.interfaces,
-      onConfirm: (params) => {
-        console.log("📤 Média importé :", params);
-        setMediaRefreshKey((k) => k + 1);
+      onConfirm: () => {
+        // Invalide le cache pour forcer un refetch propre de la liste des médias
+        queryClient.invalidateQueries({ queryKey: ["medias"] });
       },
     });
   };

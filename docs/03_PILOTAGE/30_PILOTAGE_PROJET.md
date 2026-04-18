@@ -1,6 +1,6 @@
 # 🧭 30 — Pilotage du projet Documentum
 
-📅 Dernière mise à jour : 2026-04-17 (Chantier 4 — clôturé ✅ | Bugs XML + déconnexion corrigés)
+📅 Dernière mise à jour : 2026-04-18 (RightSidebar Phase 1 — branchement API médiathèque ✅)
 
 ---
 
@@ -81,27 +81,28 @@ Trois axes :
 
 ## ProductDocSync
 📄 [docs/01_OPERATIONNEL/ProductDocSync/PRODUCTDOCSYNC_ROADMAP.md](../01_OPERATIONNEL/ProductDocSync/PRODUCTDOCSYNC_ROADMAP.md)
-📊 Phase 1 partielle — API fonctionnalités branchée, versions bloquées
+📊 Phases 1 et 2 terminées — backend + frontend branchés (2026-04-18)
 
 | Phase | Statut |
 |---|---|
-| Phase 1 — Branchement API fonctionnalités | ⚠️ Partiel (mutations réordonnancement non persistées) |
-| Phase 2 — Branchement API produits & versions | ⚠️ Bloqué (arbitrage métier `VersionProjet` vs `Produit`) |
+| Phase 1 — Branchement API fonctionnalités | ✅ Terminée (2026-04-18) |
+| Phase 2 — Branchement API produits & versions | ✅ Terminée (2026-04-18) — `VersionProduit` + `EvolutionProduit` livrés (21/21 tests) |
+| Phase B — Nettoyage code legacy (Phase A validée) | 📋 À faire |
 | Phase 3 — ImpactDocumentaire modèle + API | 📋 À faire (prérequis Nexus M1) |
-| Phase 4 — Plan de test & carte d'impact | 📋 À faire |
+| Phase 4 — Plan de test & carte d'impact | 📋 À faire (hors périmètre V1) |
 | Phase 5 — Nettoyage & stabilisation | 📋 À faire |
 
 ---
 
 ## RightSidebar
 📄 [docs/01_OPERATIONNEL/RightSidebar/RIGHTSIDEBAR_ROADMAP.md](../01_OPERATIONNEL/RightSidebar/RIGHTSIDEBAR_ROADMAP.md)
-📊 Données entièrement hardcodées — aucune API branchée
+📊 Phase 1 terminée — API médiathèque branchée, import fonctionnel, mutualisé Desktop/ProductDocSync
 
 | Phase | Statut |
 |---|---|
-| Phase 1 — Branchement API médiathèque | 🚧 À faire (priorité haute) |
+| Phase 1 — Branchement API médiathèque | ✅ Terminée (2026-04-18) |
 | Phase 2 — Pagination et chargement différé | 📋 À faire |
-| Phase 3 — Intégration CentralEditor (insertion image) | 📋 À faire |
+| Phase 3 — Intégration CentralEditor (insertion image) | 📋 À faire (prérequis : CentralEditor Phase 4 ✅) |
 | Phase 4 — Évolutions UX | ⬜ Non prioritaire |
 
 ---
@@ -120,21 +121,22 @@ Trois axes :
 # 🔗 Dépendances
 
 ```
-CentralEditor Phase 4
+CentralEditor Phase 4 ✅
     ↓ (buffer XML stabilisé)
-RightSidebar Phase 3 (insertion image)
+RightSidebar Phase 1 ✅ → Phase 3 (insertion image) ← déblocable
     ↓
-Chantier 9 — Import PDF (CentralEditor + images prêts)
+Chantier 9 — Import PDF (CentralEditor + RightSidebar Phase 1 prêts ✅)
 
-ProductDocSync Phase 2
-    → bloqué par arbitrage métier VersionProjet ↔ Produit
-
+ProductDocSync Phases 1+2 ✅
+    ↓
+ProductDocSync Phase B (nettoyage legacy) ← à faire
+    ↓
 ProductDocSync Phase 3 (ImpactDocumentaire)
-    → prérequis : modèle backend M1 (gap analysis)
-    → prérequis : CentralEditor Phase 4 stable
+    → prérequis : modèle backend M1 (à implémenter)
+    → prérequis : CentralEditor Phase 4 ✅
 
 Journalisation (Chantier 6)
-    → prérequis : socle hooks métier (Chantier 4)
+    → prérequis : socle hooks métier (Chantier 4) ✅
 ```
 
 | Module | Dépend de |
@@ -153,10 +155,13 @@ Journalisation (Chantier 6)
 1. [FAIT]       CentralEditor Phases 4+5 — sauvegarde backend, validation XML, guard navigation
 2. [FAIT]       Chantier 4 — Socle frontend (apiClient, TanStack Query, zéro appel direct)
 3. [FAIT]       Correctifs bloquants — XML invalide, chargement rubrique, vidage session
-4. [MAINTENANT] ProductDocSync — débloquer versions + réordonnancement persisté
-5. [APRÈS]      RightSidebar Phase 1 — branchement API médiathèque
-6. [MOYEN TERME] ImpactDocumentaire + Journalisation
-7. [LONG TERME]  Base Métier (Phase 3 Nexus) + Nexus complet
+4. [FAIT]       ProductDocSync Phases 1+2 — VersionProduit + EvolutionProduit (backend + frontend)
+5. [FAIT]       RightSidebar Phase 1 — branchement API médiathèque
+6. [MAINTENANT] ProductDocSync Phase B — nettoyage legacy (Phase A validée en prod)
+7. [APRÈS]      ProductDocSync Phase 3 — ImpactDocumentaire (backend M1 + frontend)
+               OU RightSidebar Phase 3 — insertion image CentralEditor (déblocable)
+8. [MOYEN TERME] Journalisation (Chantier 6) + Autosave CentralEditor
+9. [LONG TERME]  Export DITA-OT + Base Métier (Phase 3 Nexus) + Nexus complet
 ```
 
 ---
@@ -183,9 +188,9 @@ Journalisation (Chantier 6)
 - Initialisation XML racine valide
 
 **Ce qui manque pour débloquer Phase 2 :**
-- Modèle `ImpactDocumentaire` backend (M1 gap analysis)
-- Arbitrage métier `VersionProjet` ↔ `Produit`
-- ProductDocSync persistance mutations
+- Modèle `ImpactDocumentaire` backend (M1 gap analysis) ← reste à faire
+- ~~Arbitrage métier `VersionProjet` ↔ `Produit`~~ — résolu (2026-04-18)
+- ~~ProductDocSync persistance mutations~~ — résolu (2026-04-18)
 
 ---
 
@@ -212,39 +217,43 @@ Journalisation (Chantier 6)
 | ~~Duplication d'état frontend~~ | ~~🟠 Important~~ | Résolu — Chantier 4 (TanStack Query, hooks normalisés) |
 | ~~Render loop LeftSidebar~~ | ~~🔴 Critique~~ | Résolu — `EMPTY_RUBRIQUES` stable dans `useMapStructure.ts` (2026-04-17) |
 | ~~Vidage session à la déconnexion~~ | ~~🟠 Important~~ | Résolu — `AuthContext.logout()` vide les stores + QueryClient cache (2026-04-17) |
-| ProductDocSync persistance | 🟠 Important | Réordonnancement local non persisté |
+| ~~ProductDocSync persistance~~ | ~~🟠 Important~~ | Résolu — `EvolutionProduit.ordre` + `reorder_evolutions_produit()` (2026-04-18) |
 
 ---
 
 # 📋 Backlog priorisé
 
 ## 🔥 Haute priorité
-- **ProductDocSync Phase 2** — arbitrage VersionProjet ↔ Produit + réordonnancement persisté ← **MAINTENANT**
+- **ProductDocSync Phase B** — nettoyage code legacy (après validation en environnement réel) ← **MAINTENANT**
+- **ProductDocSync Phase 3** — ImpactDocumentaire (modèle backend M1 + API + frontend) ← valeur Nexus centrale
 
 ## ⚙️ Priorité moyenne
-- RightSidebar Phase 1 — branchement API médiathèque
-- Chantier 6 — Journalisation (après Chantier 4)
-- ImpactDocumentaire — modèle backend + API
+- **RightSidebar Phase 3** — insertion image dans CentralEditor (déblocable — prérequis levés ✅)
+- RightSidebar Phase 2 — pagination et chargement différé
+- Chantier 6 — Journalisation (prérequis Chantier 4 ✅)
 - API export + pipeline DITA-OT (Phase 1 Nexus)
 - Autosave CentralEditor
 
 ## 🧩 Priorité basse
 - Chantier 9 — Import PDF
 - Map Sprint 5 — drag & drop cross-niveau, rendu racine
-- UX avancée (modales, accessibilité)
+- Widget Tableau de bord (composant 3 tailles — futur)
+- UX avancée / Claude Design (responsive tablette/smartphone)
 - Phase 3 Nexus — Base Métier
 
 ---
 
 # 🚀 Prochaine action
 
-👉 **ProductDocSync Phase 2 — arbitrage VersionProjet ↔ Produit**
+👉 **ProductDocSync Phase B + Phase 3 — nettoyage legacy puis ImpactDocumentaire**
 
-Le socle frontend est stabilisé. Les bugs bloquants sont corrigés. La prochaine étape est le déblocage de ProductDocSync :
+ProductDocSync Phases 1 et 2 sont livrées (backend 21/21 tests + frontend Phase A buildé). La prochaine étape :
 
-1. Trancher l'arbitrage métier `VersionProjet` vs `Produit` (source de vérité pour les versions)
-2. Rendre le réordonnancement des fonctionnalités persistant (mutations non persistées actuellement)
-3. Connecter l'écran ProductDocSync à l'API versions
+1. **Phase B** — valider le comportement en environnement réel, puis supprimer le code legacy (useState versions, useFonctionnaliteList comme source features). Prompt Claude Code prêt.
+2. **Phase 3** — implémenter le modèle `ImpactDocumentaire` backend (M1) + exposition API + branchement frontend dans `SyncBottombar`. C'est l'entité centrale de la valeur Nexus.
+
+En parallèle ou en alternative :
+- **RightSidebar Phase 3** — insertion image dans CentralEditor est désormais déblocable (prérequis levés ✅).
 
 Roadmap : [PRODUCTDOCSYNC_ROADMAP.md](../01_OPERATIONNEL/ProductDocSync/PRODUCTDOCSYNC_ROADMAP.md)
 
@@ -270,6 +279,7 @@ Roadmap : [PRODUCTDOCSYNC_ROADMAP.md](../01_OPERATIONNEL/ProductDocSync/PRODUCTD
 | 2026-04-17 | Correctif Bug 2 — Vidage session à la déconnexion (stores + QueryClient) | ✅ Terminé |
 | 2026-04-18 | ProductDocSync — backend `VersionProduit` + `EvolutionProduit` (21/21 tests) | ✅ Terminé |
 | 2026-04-18 | ProductDocSync — frontend Phase A (hooks + handlers branchés, build 0 erreur) | ✅ Terminé |
+| 2026-04-18 | RightSidebar Phase 1 — branchement API médiathèque (Desktop + ProductDocSync mutualisés) | ✅ Terminé |
 
 ---
 
