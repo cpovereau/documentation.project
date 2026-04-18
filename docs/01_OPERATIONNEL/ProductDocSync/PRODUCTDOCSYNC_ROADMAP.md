@@ -3,6 +3,8 @@
 Document de référence pour suivre l'évolution de l'écran `ProductDocSync` et de ses sous-composants (`SyncLeftSidebar`, `SyncEditor`, `SyncBottombar`, `SyncRightSidebar`, `ImpactMapModal`, `TestPlanModal`).  
 Ce document est synthétique, durable, et conçu pour un travail non linéaire dans le temps.
 
+> 📄 **Spécification métier** : [PRODUCTDOCSYNC_SPEC_METIER.md](PRODUCTDOCSYNC_SPEC_METIER.md) — entités métier, acteurs, flux, règles et points ouverts (arbitrages à trancher).
+
 ---
 
 # 🧭 Vue d'ensemble du plan
@@ -17,34 +19,33 @@ L'évolution est organisée en **5 phases** :
 
 ---
 
-# ⚠️ État actuel (2026-04-17)
+# ✅ État actuel (2026-04-18 — Phase A Phases 1 + 2 livrée)
 
 ### Ce qui fonctionne
 - Layout complet en 4 zones : `SyncLeftSidebar`, `SyncEditor`, `SyncBottombar`, `SyncRightSidebar`
-- Navigation entre fonctionnalités (sélection, expansion, collapse)
-- Réordonnancement drag & drop des fonctionnalités (local — persistance non implémentée, pas de champ `ordre` backend)
-- Indentation / désindentation des fonctionnalités (UI locale, mono-niveau — cadrage 2026-04-16)
-- Copier / coller une fonctionnalité → colle via `POST /api/fonctionnalites/` (persisté)
-- Suppression d'une fonctionnalité → archive via `PATCH /api/fonctionnalites/{id}/archive/` (persisté)
-- Ajout d'une fonctionnalité → dialog + `POST /api/fonctionnalites/` (persisté)
-- **Produits chargés depuis `GET /api/produits/`** via `useProduits` (plus hardcodé)
-- **Fonctionnalités chargées depuis `GET /api/fonctionnalites/`** via `useFonctionnaliteList` (plus hardcodé)
-- Ajout d'une version (incrémentation locale du numéro mineur — bloqué, voir ci-dessous)
+- Navigation entre évolutions (sélection, expansion, collapse)
+- **Réordonnancement drag & drop persisté** → `PATCH /api/evolutions-produit/reorder/` via `useEvolutionProduitReorder` ✅
+- Copier / coller une évolution → colle via `POST /api/evolutions-produit/` (persisté) ✅
+- Archivage d'une évolution → `PATCH /api/evolutions-produit/{id}/archive/` (persisté) ✅
+- Ajout d'une évolution → dialog (Fonctionnalite + type + description) + `POST /api/evolutions-produit/` (persisté) ✅
+- **Produits chargés depuis `GET /api/produits/`** via `useProduits`
+- **Versions chargées depuis `GET /api/versions-produit/?produit={id}`** via `useVersionProduitList` ✅ (plus hardcodé)
+- **EvolutionProduit chargées depuis `GET /api/evolutions-produit/?version_produit={id}`** via `useEvolutionProduitList` ✅
+- **Création de version** → dialog + `POST /api/versions-produit/` via `useVersionProduitCreate` ✅ (plus incrémentation locale)
+- **Publication de version** → `POST /api/versions-produit/{id}/publier/` + toast succès/erreur ✅ (plus `alert()`)
 - Bascule type d'article (évolution / correctif) dans `SyncEditor`
 - Redimensionnement vertical de `SyncBottombar` par drag
 - `ImpactMapModal` : ouverture / fermeture
 - `TestPlanModal` : ouverture / fermeture / réordonnancement des tâches
 
 ### Ce qui ne fonctionne pas / reste à faire
-- **Versions hardcodées** : `VersionProjet` est lié à `Projet`, pas à `Produit` — arbitrage métier nécessaire avant branchement API
-- **Publication de version** → `alert()` navigateur (bloqué, même raison)
-- **Réordonnancement** non persisté : pas de champ `ordre` dans le modèle `Fonctionnalite`
-- **Génération du plan de test** → fermeture modale sans action backend
-- **`ImpactDocumentaire`** : modèle absent du backend (M1 dans le gap analysis)
+- **`ImpactDocumentaire`** : modèle backend Phase 3 — non démarrée
+- **Génération du plan de test** → fermeture modale sans action backend (Phase 4)
+- **Fonctionnalites du référentiel** : pas de filtre `?produit=` côté backend — filtré en frontend
 
 ---
 
-# ✅ Phase 1 — Branchement API fonctionnalités (PARTIEL)
+# ✅ Phase 1 — Branchement API évolutions (LIVRÉ — 2026-04-18)
 
 ### 🎯 Objectifs
 - Charger les fonctionnalités depuis `FonctionnaliteViewSet` (déjà disponible côté backend).
@@ -54,32 +55,33 @@ L'évolution est organisée en **5 phases** :
 
 ### 🧩 Tâches
 
-#### 1.1 — Chargement initial
+> ⚠️ **RÉVISION REQUISE (v0.2 spec — 2026-04-18)** : suite à l'introduction de `EvolutionProduit`, les tâches de la Phase 1 qui portaient sur `Fonctionnalite` comme unité d'évolution sont à réviser. `Fonctionnalite` est désormais un référentiel stable — les évolutions sont portées par `EvolutionProduit`. Voir `PRODUCTDOCSYNC_SPEC_METIER.md` et `gov_decision-log.md`.
 
-- [x] Créer le hook `useFonctionnaliteList(produitId)` → `GET /api/fonctionnalites/?archived=false`
-- [x] Remplacer le `useState<FeatureItem[]>([...])` hardcodé par `useFonctionnaliteList`
-- [x] Gérer les états `loading`, `error` (conditionné par `showFeatures`)
-- [x] Mapper les champs backend (`id`, `nom`, `code`, `id_fonctionnalite`) vers `FeatureItem` frontend
-- [ ] Filtrage backend par produit (`?produit={id}`) — actuellement filtré côté frontend
+#### 1.1 — Chargement initial (EvolutionProduit)
 
-#### 1.2 — Persistance des mutations
+- [x] Créer `src/api/versionsProduit.ts` — types `EvolutionProduit` + fonction `getEvolutionsProduit`
+- [x] Créer `useEvolutionProduitList(versionProduitId)` → `GET /api/evolutions-produit/?version_produit={id}`
+- [x] Mapper `EvolutionProduit` vers `FeatureItem` (nom = `fonctionnalite_nom`, type → `hasEvolution`/`hasCorrectif`)
+- [ ] Filtrage backend par produit (`?produit={id}`) sur `Fonctionnalite` — toujours côté frontend
 
-- [x] `handleAddFeature` → `POST /api/fonctionnalites/` + invalidation cache React Query
-- [x] `handleDeleteFeature(id)` → `PATCH /api/fonctionnalites/{id}/archive/` (DELETE retourne 405)
-- [ ] `handleReorder(newItems)` → non implémenté, pas de champ `ordre` dans le modèle backend
+#### 1.2 — Persistance des mutations (EvolutionProduit)
+
+- [x] `handleAddFeature` → dialog (Fonctionnalite + type + description) + `POST /api/evolutions-produit/` ✅
+- [x] `handleDeleteFeature` → `PATCH /api/evolutions-produit/{id}/archive/` via `useEvolutionProduitArchive` ✅
+- [x] `handleReorder(newItems)` → `PATCH /api/evolutions-produit/reorder/` via `useEvolutionProduitReorder` ✅
+- [x] Copier / coller → copie une `EvolutionProduit` avec même `fonctionnalite` + type ✅
 - [ ] `handleIndent(id)` / `handleOutdent(id)` → non implémenté, cadrage mono-niveau (2026-04-16)
 
 #### 1.3 — Nettoyage
 
-- [x] Supprimer `console.log("Fonctionnalité collée :", newFeature.name)` — supprimé
-- [ ] Déplacer le type `MinimalTask` (défini localement avec TODO) vers `src/types/`
+- [x] Type `MinimalTask` gardé en local (Phase A) — à déplacer vers `src/types/` (Phase 5)
 
 ### 📝 Notes
-Le filtrage par produit est actuellement fait côté frontend (`filter(f => f.produit === produitId)`). Ajouter `?produit={id}` côté backend réduira les données chargées. `level` reste une abstraction UI fixée à 1 (mono-niveau) — pas de hiérarchie backend.
+Suite à la décision du 2026-04-18, l'arbre affiché dans `SyncLeftSidebar` représente des `EvolutionProduit` (et non plus des `Fonctionnalite`). `Fonctionnalite` est sélectionnée lors de la création d'une `EvolutionProduit` depuis un référentiel.
 
 ---
 
-# ⚠️ Phase 2 — Branchement API produits et versions (PARTIEL — versions bloquées)
+# ✅ Phase 2 — Branchement API produits et versions (LIVRÉ — 2026-04-18)
 
 ### 🎯 Objectifs
 - Charger les produits disponibles depuis le référentiel DataTab.
@@ -96,22 +98,23 @@ Le filtrage par produit est actuellement fait côté frontend (`filter(f => f.pr
 
 #### 2.2 — Chargement versions
 
-- [ ] Créer le hook `useVersionProduitList(produitId)` → endpoint à définir
-- [ ] Remplacer `useState(["1.0", "1.1", "1.2"])` hardcodé par ce hook
-- [ ] **BLOQUÉ** : `VersionProjet` est lié à `Projet` (pas à `Produit`) — mauvais modèle pour ProductDocSync ; nécessite arbitrage métier sur l'entité "version Produit"
+- [x] Créer `useVersionProduitList(produitId)` → `GET /api/versions-produit/?produit={id}` ✅
+- [x] Remplacer `useState(["1.0", "1.1", "1.2"])` hardcodé par ce hook ✅
+- [x] `selectedVersion` = ID backend en string (valeur VersionSelect) ; label = `numero` ✅
 
 #### 2.3 — Création de version
 
-- [ ] `handleAddVersion` → `POST` vers l'endpoint "version Produit" (à définir)
-- [ ] **BLOQUÉ** : même raison que 2.2 — incrémentation locale maintenue en attendant
+- [x] `handleAddVersion` → dialog (numéro de version) + `POST /api/versions-produit/` via `useVersionProduitCreate` ✅
 
 #### 2.4 — Publication de version
 
-- [ ] `handlePublishVersion` → remplacer `alert()` par appel backend + toast
-- [ ] **BLOQUÉ** : dépend de la définition du modèle "version Produit"
+- [x] `handlePublishVersion` → `POST /api/versions-produit/{id}/publier/` + toast succès/erreur ✅
+- [x] Guard : statut `publiee` vérifié avant appel — toast d'erreur si déjà publiée ✅
 
 ### 📝 Notes
-`VersionProjet.projet` pointe sur `Projet`, pas sur `Produit`. Brancher ProductDocSync sur `VersionProjet` serait une mauvaise hypothèse métier. L'entité "version Produit" reste à définir avec l'équipe avant toute implémentation.
+**Arbitrage tranché (2026-04-18)** : `VersionProduit` est une entité indépendante liée à `Produit` (pas à `Projet`). Les cycles documentaire et produit restent découplés. Voir `gov_decision-log.md` et `PRODUCTDOCSYNC_SPEC_METIER.md § 8.1`.
+
+> ⚠️ Prérequis impératif : le modèle backend `VersionProduit` et ses endpoints doivent être documentés dans `10_BACKEND_CANONIQUE.md` **avant** toute implémentation frontend (règle de gouvernance).
 
 ---
 
@@ -127,9 +130,9 @@ Le filtrage par produit est actuellement fait côté frontend (`filter(f => f.pr
 
 #### 3.1 — Backend : modèle `ImpactDocumentaire`
 
-- [ ] Créer le modèle `ImpactDocumentaire` : `ÉvolutionProduit` → `Rubrique` avec statuts `à_faire / en_cours / prêt / validé`
-- [ ] Exposer `GET/POST/PATCH /api/impacts/` (filtrable par fonctionnalité et rubrique)
-- [ ] Documenter dans `01_OPERATIONNEL/Backend/` après implémentation
+- [ ] Créer le modèle `ImpactDocumentaire` : `EvolutionProduit` → `Rubrique` avec statuts `a_faire / en_cours / pret / valide / ignore`
+- [ ] Exposer `GET/POST/PATCH/DELETE /api/impacts/` (filtrable par `evolution_produit` et `rubrique`)
+- [ ] Modèle et endpoints documentés dans `10_BACKEND_CANONIQUE.md § 9.3` ✅
 
 #### 3.2 — Frontend : intégration dans `SyncBottombar`
 

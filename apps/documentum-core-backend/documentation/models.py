@@ -287,6 +287,73 @@ class MapRubrique(models.Model):
         )
 
 
+# --- ProductDocSync : VersionProduit ---
+
+class VersionProduit(models.Model):
+    STATUT_CHOICES = [
+        ("en_preparation", "En préparation"),
+        ("publiee", "Publiée"),
+        ("archivee", "Archivée"),
+    ]
+
+    produit = models.ForeignKey(
+        "Produit", on_delete=models.CASCADE, related_name="versions"
+    )
+    numero = models.CharField(max_length=50)
+    statut = models.CharField(
+        max_length=20, choices=STATUT_CHOICES, default="en_preparation"
+    )
+    date_publication = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("produit", "numero")]
+        verbose_name = "Version Produit"
+        verbose_name_plural = "Versions Produit"
+
+    def __str__(self):
+        return f"{self.produit.nom} — v{self.numero} ({self.statut})"
+
+
+# --- ProductDocSync : EvolutionProduit ---
+
+class EvolutionProduit(models.Model):
+    TYPE_CHOICES = [
+        ("evolution", "Évolution"),
+        ("correctif", "Correctif"),
+    ]
+    STATUT_CHOICES = [
+        ("draft", "Brouillon"),
+        ("valide", "Validé"),
+    ]
+
+    version_produit = models.ForeignKey(
+        "VersionProduit", on_delete=models.CASCADE, related_name="evolutions"
+    )
+    fonctionnalite = models.ForeignKey(
+        "Fonctionnalite", on_delete=models.PROTECT, related_name="evolutions"
+    )
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    description = models.TextField(blank=True, default="")
+    ordre = models.PositiveIntegerField(default=0)
+    statut = models.CharField(
+        max_length=20, choices=STATUT_CHOICES, default="draft"
+    )
+    is_archived = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["ordre"]
+        verbose_name = "Évolution Produit"
+        verbose_name_plural = "Évolutions Produit"
+
+    def __str__(self):
+        return (
+            f"{self.get_type_display()} — {self.fonctionnalite.nom}"
+            f" (v{self.version_produit.numero})"
+        )
+
+
 # --- Médias ---
 class Media(models.Model):
     TYPE_MEDIA_CHOICES = [

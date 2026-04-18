@@ -9,6 +9,8 @@ from .views import (
     projet_structure_view,
     RubriqueViewSet,
     VersionProjetViewSet,
+    VersionProduitViewSet,
+    EvolutionProduitViewSet,
     FonctionnaliteViewSet,
     AudienceViewSet,
     TagViewSet,
@@ -48,6 +50,8 @@ router.register(r"tags", TagViewSet)
 router.register(r"profils-publication", ProfilPublicationViewSet)
 router.register(r"interfaces", InterfaceUtilisateurViewSet)
 router.register(r"media-items", MediaViewSet)
+router.register(r"versions-produit", VersionProduitViewSet, basename="versionproduit")
+router.register(r"evolutions-produit", EvolutionProduitViewSet, basename="evolutionproduit")
 
 urlpatterns = [
     path("health/", healthcheck, name="healthcheck"),

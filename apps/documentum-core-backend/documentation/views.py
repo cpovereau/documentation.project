@@ -23,8 +23,10 @@ from rest_framework.exceptions import ValidationError
 from django.db.models import Max
 from rest_framework.parsers import MultiPartParser
 from .models import (
+    EvolutionProduit,
     Projet,
     VersionProjet,
+    VersionProduit,
     Gamme,
     Produit,
     Map,
@@ -61,6 +63,9 @@ from .serializers import (
     MapStructureReorderSerializer,
     FonctionnaliteSerializer,
     VersionProjetSerializer,
+    VersionProduitSerializer,
+    EvolutionProduitSerializer,
+    ReorderEvolutionsProduitSerializer,
     AudienceSerializer,
     AudienceCreateSerializer,
     TagSerializer,
@@ -88,6 +93,8 @@ from .services import (
     reorder_map_rubriques,
     publish_project,
     get_publication_diff,
+    publier_version_produit,
+    reorder_evolutions_produit,
 )
 from .utils import compute_xml_hash
 from .exporters import export_map_to_dita
@@ -1021,6 +1028,100 @@ def generate_dita(request):
         fonctionnalites=fonctionnalites,
     )
     return Response({"xml": xml})
+
+
+# ---------------------------------------------------------------------------
+# ProductDocSync — VersionProduit et EvolutionProduit
+# ---------------------------------------------------------------------------
+
+class VersionProduitViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour VersionProduit.
+    Toute logique métier est déléguée aux services.
+
+    Filtrage : GET /api/versions-produit/?produit={id}
+    Par défaut, les versions archivées sont exclues (sauf ?archived=true).
+    """
+    serializer_class = VersionProduitSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = VersionProduit.objects.select_related("produit").all()
+        produit_id = self.request.query_params.get("produit")
+        if produit_id:
+            qs = qs.filter(produit_id=produit_id)
+        archived = self.request.query_params.get("archived")
+        if archived != "true":
+            qs = qs.exclude(statut="archivee")
+        return qs
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {"error": "Suppression interdite. Modifiez le statut via PATCH."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
+    @action(detail=True, methods=["post"], url_path="publier")
+    def publier(self, request, pk=None):
+        """POST /api/versions-produit/{id}/publier/ — délègue à publier_version_produit()."""
+        try:
+            version = publier_version_produit(version_id=int(pk))
+        except VersionProduit.DoesNotExist:
+            return Response(
+                {"detail": "Version introuvable."}, status=status.HTTP_404_NOT_FOUND
+            )
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        logger.info(
+            "[VersionProduit] Version ID=%s publiée par %s.", pk, request.user.username
+        )
+        return Response(
+            VersionProduitSerializer(version).data, status=status.HTTP_200_OK
+        )
+
+
+class EvolutionProduitViewSet(ArchivableModelViewSet):
+    """
+    ViewSet pour EvolutionProduit.
+    Hérite de ArchivableModelViewSet pour l'action /archive/.
+    Toute logique métier de réordonnancement est déléguée à reorder_evolutions_produit().
+
+    Filtrage : GET /api/evolutions-produit/?version_produit={id}
+    Par défaut, les évolutions archivées sont exclues (sauf ?archived=true).
+    """
+    queryset = EvolutionProduit.objects.select_related(
+        "version_produit", "fonctionnalite"
+    ).all()
+    serializer_class = EvolutionProduitSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = EvolutionProduit.objects.select_related(
+            "version_produit", "fonctionnalite"
+        ).all()
+        version_produit_id = self.request.query_params.get("version_produit")
+        if version_produit_id:
+            qs = qs.filter(version_produit_id=version_produit_id)
+        archived = self.request.query_params.get("archived")
+        if archived != "true":
+            qs = qs.filter(is_archived=False)
+        return qs
+
+    @action(detail=False, methods=["patch"], url_path="reorder")
+    def reorder(self, request):
+        """PATCH /api/evolutions-produit/reorder/ — délègue à reorder_evolutions_produit()."""
+        serializer = ReorderEvolutionsProduitSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            reorder_evolutions_produit(
+                ordered_ids=serializer.validated_data["orderedIds"]
+            )
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        logger.info(
+            "[EvolutionProduit] Réordonnancement par %s.", request.user.username
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # ---------------------------------------------------------------------------

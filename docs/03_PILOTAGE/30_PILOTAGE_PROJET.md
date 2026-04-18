@@ -268,6 +268,8 @@ Roadmap : [PRODUCTDOCSYNC_ROADMAP.md](../01_OPERATIONNEL/ProductDocSync/PRODUCTD
 | 2026-04-17 | Chantier 4 — Socle frontend (apiClient, TanStack Query, zéro appel direct) | ✅ Terminé |
 | 2026-04-17 | Correctif Bug 1 — XML invalide (wrapper `<body>`, fetch backend, attributs null) | ✅ Terminé |
 | 2026-04-17 | Correctif Bug 2 — Vidage session à la déconnexion (stores + QueryClient) | ✅ Terminé |
+| 2026-04-18 | ProductDocSync — backend `VersionProduit` + `EvolutionProduit` (21/21 tests) | ✅ Terminé |
+| 2026-04-18 | ProductDocSync — frontend Phase A (hooks + handlers branchés, build 0 erreur) | ✅ Terminé |
 
 ---
 

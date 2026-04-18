@@ -509,7 +509,144 @@ Le champ `contenu_xml` d'une rubrique doit **toujours** contenir un XML bien for
 - Toute autre partie du code construisant ou lisant `contenu_xml` (export DITA, diff de révisions) doit traiter le wrapper `<body>`.
 
 **Statut**
-Active — implémentation à valider avant déploiement
+Active — validée le 2026-04-18
+
+**Validation (2026-04-18)**
+- `useXmlBufferSync` : wrapping `<body>` confirmé avant stockage dans le buffer ✅
+- `useDitaLoader` : tolérance appliquée sur fragment XML sans racine (données dégradées) ✅
+- `LeftSidebar` : template d'initialisation utilise bien `<body>` ✅
+- Round-trip complet (édition → sauvegarde → rechargement → vérification contenu) : OK ✅
+
+---
+
+## 2026-04-18 – Entité VersionProduit indépendante de VersionProjet
+
+**Sujet**
+Modèle de versioning côté produit dans ProductDocSync.
+
+**Contexte**
+ProductDocSync gère les versions d'un logiciel (ex. "v2.1") et leurs fonctionnalités associées. L'entité existante `VersionProjet` est liée à `Projet` (cycle documentaire). Brancher ProductDocSync sur `VersionProjet` aurait été une erreur métier fondamentale : les deux cycles de vie sont indépendants.
+
+**Décision**
+Créer une entité `VersionProduit` **indépendante**, liée à `Produit` (et non à `Projet`).
+
+Modèle cible :
+- `produit` : ForeignKey → `Produit`
+- `numero` : CharField (ex. `"2.1"`)
+- `statut` : Choices `en_preparation` / `publiee` / `archivee`
+- `date_publication` : DateTimeField nullable
+- Contrainte d'unicité : `(produit, numero)`
+
+Endpoints canoniques à créer :
+- `GET /api/versions-produit/?produit={id}` — liste les versions d'un produit
+- `POST /api/versions-produit/` — crée une version
+- `PATCH /api/versions-produit/{id}/` — met à jour (ex. numéro, statut)
+- `POST /api/versions-produit/{id}/publier/` — publie la version (statut → `publiee`, horodatage)
+
+**Justification**
+- `VersionProjet` appartient au cycle éditorial (publication documentaire) — il ne doit pas être pollué par le cycle produit.
+- Une `VersionProduit` peut coexister avec plusieurs `VersionProjet` sans dépendance structurelle.
+- La séparation respecte le principe fondamental de découplage des cycles de vie (cf. `10_VERSIONING_DOCUMENTAIRE.md`).
+- Cohérent avec le principe `structure ≠ contenu` étendu ici à `versioning documentaire ≠ versioning produit`.
+
+**Conséquences**
+- Backend : nouveau modèle `VersionProduit` + migration + `VersionProduitViewSet` + service `publier_version_produit()`.
+- `10_BACKEND_CANONIQUE.md` : documenter les nouveaux endpoints avant implémentation frontend.
+- `10_CARTOGRAPHIE_BACKEND_CANONIQUE_EXPOSE.md` : ajouter les routes `/api/versions-produit/*`.
+- Frontend : hook `useVersionProduitList(produitId)` + `useVersionProduitCreate()`.
+- `handleAddVersion` et `handlePublishVersion` dans ProductDocSync peuvent être branchés sur l'API.
+- Phase 2 de `PRODUCTDOCSYNC_ROADMAP.md` est débloquée.
+- `PRODUCTDOCSYNC_SPEC_METIER.md` section 8.1 est résolue.
+
+**Statut**
+Active — implémentation à faire (backend en premier, frontend ensuite)
+
+---
+
+## 2026-04-18 – EvolutionProduit comme entité centrale du suivi de version
+
+**Sujet**
+Modèle de suivi de version dans ProductDocSync — introduction de l'entité `EvolutionProduit`.
+
+**Contexte**
+La v0.1 de la spec attribuait à `Fonctionnalite` le double rôle de référentiel stable et d'unité d'évolution versionnée. Ce couplage posait un problème : une même fonctionnalité peut être concernée par plusieurs évolutions dans des versions différentes, et son historique devenait difficile à tracer sans dupliquer les données.
+
+**Décision**
+Introduire `EvolutionProduit` comme entité centrale du suivi de version, et redéfinir `Fonctionnalite` comme entité de référentiel stable.
+
+Séparation des rôles :
+- `Fonctionnalite` : référentiel pérenne des fonctionnalités d'un produit (géré dans Settings > DataTab).
+- `EvolutionProduit` : occurrence d'évolution ou de correctif dans une `VersionProduit` spécifique, qui référence une `Fonctionnalite`.
+- `ImpactDocumentaire` : lie désormais une `EvolutionProduit` à une `Rubrique` (et non plus `Fonctionnalite` → `Rubrique`).
+
+Modèle `EvolutionProduit` :
+- `version_produit` : ForeignKey → `VersionProduit`
+- `fonctionnalite` : ForeignKey → `Fonctionnalite` (référentiel)
+- `type` : Choices `evolution` / `correctif`
+- `description` : TextField
+- `ordre` : PositiveIntegerField
+- `statut` : Choices `draft` / `valide`
+
+Statut `ignore` ajouté à `ImpactDocumentaire` : permet de marquer un impact comme non pertinent sans le supprimer.
+
+**Justification**
+- Sépare proprement le référentiel (stable, multi-versions) de l'événement versionné (spécifique à une version).
+- Permet de tracer l'historique d'une fonctionnalité à travers plusieurs versions sans duplication.
+- Cohérent avec le principe de séparation des responsabilités (référentiel ≠ événement).
+
+**Conséquences**
+- Backend : nouveau modèle `EvolutionProduit` + migration + `EvolutionProduitViewSet` + service `reorder_evolutions_produit()`.
+- `ImpactDocumentaire` : clé étrangère à modifier de `Fonctionnalite` → `EvolutionProduit`.
+- `10_BACKEND_CANONIQUE.md` § 9 : mettre à jour le modèle `EvolutionProduit` et les endpoints.
+- `PRODUCTDOCSYNC_ROADMAP.md` : phases 1 et 3 impactées (les tâches liées à `Fonctionnalite` comme unité d'évolution sont à réviser).
+- Le champ `ordre` initialement prévu sur `Fonctionnalite` est déplacé sur `EvolutionProduit`.
+- `TestPlanModal` est exclu du périmètre V1.
+
+**Statut**
+Active — implémentation à faire (backend en premier)
+
+---
+
+## 2026-04-18 – Implémentation backend VersionProduit et EvolutionProduit
+
+**Sujet**
+Décisions d'implémentation non triviales prises lors de la création des modèles `VersionProduit` et `EvolutionProduit`.
+
+**Contexte**
+Les modèles, services et endpoints définis dans `10_BACKEND_CANONIQUE.md` §§ 9.1 et 9.2 ont été implémentés. Plusieurs choix techniques méritent d'être tracés.
+
+**Décisions**
+
+1. **`EvolutionProduit.description` : `blank=True, default=""` sans `null=True`**
+   - Convention Django : les TextFields n'utilisent pas `null=True` — la chaîne vide représente l'absence de valeur.
+   - Le référentiel décrit le champ comme "nullable, blank" dans une perspective métier. En base, `null=False` avec `default=""` est équivalent et conforme aux conventions Django (linter S6553).
+
+2. **`EvolutionProduit.is_archived` ajouté au modèle**
+   - La spec définit `PATCH /{id}/archive/` sans mentionner explicitement `is_archived`. Le champ a été ajouté pour s'aligner sur le pattern `ArchivableModelViewSet` déjà utilisé par `Fonctionnalite`, `Gamme`, etc.
+   - Alternative rejetée : ajouter un statut `archive` dans les choices `EvolutionProduit.statut`. Cela aurait mélangé le statut métier (draft/valide) avec l'état de suppression logique.
+
+3. **`VersionProduitViewSet` n'hérite PAS de `ArchivableModelViewSet`**
+   - L'archivage d'une `VersionProduit` se fait via `PATCH statut=archivee` (validé dans le serializer), pas via un endpoint `/archive/`. La spec le confirme.
+   - `ArchivableModelViewSet` s'appuie sur `is_archived` — champ absent de `VersionProduit` intentionnellement (le statut est la source de vérité).
+
+4. **Validation de publication dans le serializer, pas dans le service**
+   - Le serializer `VersionProduitSerializer.validate()` bloque `statut=publiee` via PATCH et l'archivage d'une version déjà publiée.
+   - Le service `publier_version_produit()` gère les mêmes cas pour les appels directs (tests service). Défense en profondeur.
+
+5. **`reorder_evolutions_produit()` : pas de validation cross-version**
+   - Le service n'exige pas que tous les IDs appartiennent à la même `VersionProduit`. C'est la responsabilité du client (frontend). Ajouter cette validation serait une sur-spécification non demandée dans le référentiel.
+
+6. **`VersionProduitViewSet.get_queryset()` : exclusion des archivées par défaut**
+   - `GET /api/versions-produit/` exclut les versions archivées sauf `?archived=true`. Cohérent avec la spec ("non archivées par défaut") et avec le comportement de `ArchivableModelViewSet.get_queryset()` sur les autres entités.
+
+**Conséquences**
+- Migration `0012_versionproduit_evolutionproduit.py` appliquée.
+- 21 tests d'intégration verts couvrant tous les invariants de la spec.
+- `10_CARTOGRAPHIE_BACKEND_CANONIQUE_EXPOSE.md` mis à jour (§§ 3.7, 3.8, §4).
+- Frontend : peut brancher `handleAddVersion`, `handlePublishVersion` sur les endpoints canoniques.
+
+**Statut**
+Active — Phase 1 (backend) terminée. Phase 2 (frontend) à démarrer.
 
 ---
 

@@ -6,7 +6,7 @@
 >
 > **Périmètre backend :** `ProjetViewSet`, `MapViewSet`, `RubriqueViewSet`, `FonctionnaliteViewSet`, `MediaItemViewSet`, vues import — apps `projets`, `maps`, `rubriques`, `documentation`, `medias`
 >
-> **Dernière mise à jour** : 2026-04-17 (ajout routes médias + import — Chantier 4)
+> **Dernière mise à jour** : 2026-04-18 (ajout routes ProductDocSync — VersionProduit + EvolutionProduit)
 
 ---
 
@@ -123,6 +123,44 @@ Ce document **ne décrit pas** :
 
 ---
 
+### 🗓 3.7 VersionProduit (ProductDocSync)
+
+> Exposé via `VersionProduitViewSet` — DELETE retourne HTTP 405 ; archivage via `PATCH statut=archivee`.
+> La publication passe exclusivement par `/publier/` (service `publier_version_produit()`).
+
+| Méthode | Route | Vue | Service | Rôle |
+|--------|------|-----|--------|------|
+| GET | `/api/versions-produit/` | `VersionProduitViewSet.list` | — | Liste (`?produit={id}`, hors archivées par défaut) |
+| POST | `/api/versions-produit/` | `VersionProduitViewSet.create` | — | Créer une version (`produit`, `numero`) |
+| PATCH | `/api/versions-produit/{id}/` | `VersionProduitViewSet.partial_update` | — | Mettre à jour (numéro, `statut=archivee` si non publiée) |
+| POST | `/api/versions-produit/{id}/publier/` | `VersionProduitViewSet.publier` | `publier_version_produit()` | Publier la version (irréversible) |
+
+**Invariants** :
+- `statut=publiee` ne peut être positionné qu'via `/publier/` — bloqué à la validation si PATCH.
+- Archivage interdit si `statut=publiee`.
+- `unique_together(produit, numero)` — erreur 400 si doublon.
+
+---
+
+### 🔄 3.8 EvolutionProduit (ProductDocSync)
+
+> Exposé via `EvolutionProduitViewSet` (hérite de `ArchivableModelViewSet`).
+> Réordonnancement délégué au service `reorder_evolutions_produit()`.
+
+| Méthode | Route | Vue | Service | Rôle |
+|--------|------|-----|--------|------|
+| GET | `/api/evolutions-produit/` | `EvolutionProduitViewSet.list` | — | Liste (`?version_produit={id}`, hors archivées par défaut) |
+| POST | `/api/evolutions-produit/` | `EvolutionProduitViewSet.create` | — | Créer une évolution (`version_produit`, `fonctionnalite`, `type`) |
+| PATCH | `/api/evolutions-produit/{id}/` | `EvolutionProduitViewSet.partial_update` | — | Mettre à jour (description, type, statut) |
+| PATCH | `/api/evolutions-produit/{id}/archive/` | `EvolutionProduitViewSet.archive` | — | Archiver (suppression logique via `is_archived`) |
+| PATCH | `/api/evolutions-produit/reorder/` | `EvolutionProduitViewSet.reorder` | `reorder_evolutions_produit()` | Réordonner — payload `{"orderedIds": [...]}` |
+
+**Invariants** :
+- `is_archived=True` exclut l'évolution de la liste par défaut (sauf `?archived=true`).
+- `reorder_evolutions_produit()` : transaction atomique, tous les IDs doivent exister.
+
+---
+
 ## 4. Services métiers utilisés
 
 | Service | Rôle |
@@ -133,6 +171,8 @@ Ce document **ne décrit pas** :
 | `reorder_map_rubriques()` | Réorganisation |
 | `indent_map_rubrique()` | Indentation |
 | `outdent_map_rubrique()` | Désindentation |
+| `publier_version_produit(version_id)` | Publication atomique VersionProduit (statut + horodatage) |
+| `reorder_evolutions_produit(ordered_ids)` | Réordonnancement atomique EvolutionProduit |
 
 ---
 

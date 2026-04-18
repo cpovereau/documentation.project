@@ -18,6 +18,9 @@ import type { FeatureItem } from "types/FeatureItem";
 import { toast } from "sonner";
 import { useProduits } from "@/hooks/useDictionnaireHooks";
 import { useFonctionnaliteList } from "hooks/useFonctionnaliteList";
+import { useVersionProduitList, useVersionProduitCreate, useVersionProduitPublier } from "@/hooks/useVersionProduit";
+import { useEvolutionProduitList, useEvolutionProduitCreate, useEvolutionProduitArchive, useEvolutionProduitReorder } from "@/hooks/useEvolutionProduit";
+import type { EvolutionProduit } from "@/api/versionsProduit";
 
 // TODO(backend): MinimalTask à déplacer dans src/types/ une fois stabilisé
 type MinimalTask = {
@@ -27,21 +30,14 @@ type MinimalTask = {
 
 export const ProductDocSync: React.FC = () => {
   // ── Source de vérité produit : number | null ─────────────────────────────
-  // selectedProductId est l'identifiant technique backend.
-  // La conversion UI string ↔ number est déléguée à SyncLeftSidebar (point unique).
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
 
-  // ── Source de vérité version : string local ──────────────────────────────
-  // NOTE : "version Produit" n'a pas d'entité backend directe à ce stade.
-  // Le modèle VersionProjet (GET /api/versions/) est lié à Projet, pas à Produit :
-  //   VersionProjet.projet → Projet (pas de FK vers Produit).
-  // Brancher ProductDocSync sur VersionProjet serait une mauvaise hypothèse.
-  // La gestion des versions reste locale jusqu'à arbitrage métier sur l'entité cible.
-  // TODO(Phase 2 — bloqué): définir l'entité "version Produit" avec l'équipe, puis
-  //   créer useVersionProduitList(selectedProductId) et handleAddVersion vers POST API.
+  // ── Source de vérité version : string (ID de VersionProduit en string) ───
+  // La valeur dans VersionSelect est toujours un string.
+  // On utilise l'ID backend comme valeur, et le numero comme label.
+  // selectedVersionId est dérivé ci-dessous pour les appels API.
   const [selectedVersion, setSelectedVersion] = useState("");
-  const [versions, setVersions] = useState(["1.0", "1.1", "1.2"]);
-  const versionOptions = versions.map((v) => ({ value: v, label: v }));
+  const selectedVersionId = selectedVersion ? parseInt(selectedVersion, 10) : null;
 
   // ── Produits depuis l'API ────────────────────────────────────────────────
   const { data: produits = [] } = useProduits();
@@ -50,27 +46,44 @@ export const ProductDocSync: React.FC = () => {
     label: p.nom,
   }));
 
-  // Label du produit sélectionné (résolu depuis les données API)
   const selectedProductLabel =
     produits.find((p) => p.id === selectedProductId)?.nom ?? "";
 
-  // ── Fonctionnalités depuis l'API ─────────────────────────────────────────
+  // ── Versions depuis l'API (Phase 2) ─────────────────────────────────────
+  const { versions, isLoading: versionsLoading } = useVersionProduitList(selectedProductId);
+  const versionOptions = versions.map((v) => ({
+    value: String(v.id),
+    label: v.numero,
+  }));
+
+  const selectedVersionData = versions.find((v) => v.id === selectedVersionId) ?? null;
+
+  // ── Hooks mutations VersionProduit ───────────────────────────────────────
+  const { createVersion, isCreating: isCreatingVersion } = useVersionProduitCreate();
+  const { publierVersion, isPublishing } = useVersionProduitPublier();
+
+  // ── EvolutionProduit depuis l'API (Phase 1 révisée) ──────────────────────
   const {
+    evolutions,
     features,
-    isLoading: featuresLoading,
-    isError: featuresError,
-    addFeature,
-    archiveFeature,
-    isAdding,
-  } = useFonctionnaliteList(selectedProductId);
+    isLoading: evolutionsLoading,
+    isError: evolutionsError,
+  } = useEvolutionProduitList(selectedVersionId);
+
+  const { addEvolution, isAdding } = useEvolutionProduitCreate();
+  const { archiveEvolution } = useEvolutionProduitArchive();
+  const { reorderEvolutions } = useEvolutionProduitReorder();
+
+  // ── Fonctionnalites du référentiel (pour le dialog d'ajout d'évolution) ──
+  // Utilisation de useFonctionnaliteList pour accéder au référentiel stable.
+  const { features: fonctionnaliteItems } = useFonctionnaliteList(selectedProductId);
 
   // ── États UI ─────────────────────────────────────────────────────────────
   const [selectedFeature, setSelectedFeature] = useState<number | null>(null);
   const [isLeftSidebarExpanded, setIsLeftSidebarExpanded] = useState(true);
   const [isRightSidebarExpanded, setIsRightSidebarExpanded] = useState(true);
-  const [copiedFeature, setCopiedFeature] = useState<FeatureItem | null>(null);
+  const [copiedEvolution, setCopiedEvolution] = useState<EvolutionProduit | null>(null);
 
-  // Layout : SyncBottombar (tableau) = haut/principal, SyncEditor = bas/secondaire.
   // TODO(Phase 5): TOTAL_HEIGHT calculé une seule fois au montage — ajouter resize listener si nécessaire
   const TOTAL_HEIGHT = window.innerHeight - 130;
   const [bottomBarHeight, setBottomBarHeight] = useState(
@@ -81,85 +94,134 @@ export const ProductDocSync: React.FC = () => {
   // Fonctionnalités visibles uniquement si Produit ET Version sont sélectionnés
   const showFeatures =
     selectedProductId !== null &&
-    selectedVersion !== "" &&
-    !featuresLoading &&
-    !featuresError;
+    selectedVersionId !== null &&
+    !evolutionsLoading &&
+    !evolutionsError;
 
   // ── Changement de produit ────────────────────────────────────────────────
   const handleSelectProduct = (id: number | null) => {
     setSelectedProductId(id);
-    setSelectedVersion(""); // reset : les versions seront dépendantes du produit
+    setSelectedVersion(""); // reset : les versions sont liées au produit
     setSelectedFeature(null);
   };
 
-  // ── Versions (gestion locale — voir NOTE ci-dessus) ──────────────────────
+  // ── Dialog : ajout d'une version ─────────────────────────────────────────
+  const [showAddVersionDialog, setShowAddVersionDialog] = useState(false);
+  const [newVersionNumero, setNewVersionNumero] = useState("");
+
   const handleAddVersion = () => {
-    // Comportement temporaire : incrémentation locale du numéro mineur.
-    // TODO(Phase 2 — bloqué): remplacer par POST vers l'endpoint "version Produit" défini.
-    const last = versions[versions.length - 1];
-    const [major, minor] = last.split(".").map(Number);
-    const newVersion = `${major}.${minor + 1}`;
-    setVersions([...versions, newVersion]);
-    setSelectedVersion(newVersion);
-  };
-
-  const handlePublishVersion = () => {
-    // TODO(Phase 2): remplacer par POST /api/publier-version/{id}/ + toast
-    alert(
-      `Le suivi de ${selectedProductLabel} version ${selectedVersion} a été publié !`
-    );
-  };
-
-  // ── Dialog : ajout d'une fonctionnalité ──────────────────────────────────
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [newFeatureName, setNewFeatureName] = useState("");
-
-  const handleAddFeature = () => {
     if (selectedProductId === null) return;
-    setNewFeatureName("");
-    setShowAddDialog(true);
+    setNewVersionNumero("");
+    setShowAddVersionDialog(true);
   };
 
-  const handleConfirmAddFeature = () => {
-    if (!newFeatureName.trim() || selectedProductId === null) return;
-    addFeature(
-      { nom: newFeatureName.trim(), produitId: selectedProductId },
+  const handleConfirmAddVersion = () => {
+    if (!newVersionNumero.trim() || selectedProductId === null) return;
+    createVersion(
+      { produit: selectedProductId, numero: newVersionNumero.trim() },
       {
         onSuccess: (created) => {
-          setSelectedFeature(created.id);
-          setShowAddDialog(false);
-          setNewFeatureName("");
+          setSelectedVersion(String(created.id));
+          setShowAddVersionDialog(false);
+          setNewVersionNumero("");
         },
       }
     );
   };
 
-  // ── Archivage (remplace DELETE — HTTP 405) ───────────────────────────────
+  // ── Publication de version ───────────────────────────────────────────────
+  const handlePublishVersion = () => {
+    if (selectedVersionId === null || selectedProductId === null) {
+      toast.error("Sélectionnez une version avant de publier.");
+      return;
+    }
+    if (selectedVersionData?.statut === "publiee") {
+      toast.error("Cette version est déjà publiée.");
+      return;
+    }
+    publierVersion(selectedVersionId, selectedProductId, {
+      onSuccess: (published) => {
+        toast.success(
+          `${selectedProductLabel} v${published.numero} publiée avec succès.`
+        );
+      },
+    });
+  };
+
+  // ── Dialog : ajout d'une évolution ───────────────────────────────────────
+  const [showAddEvolutionDialog, setShowAddEvolutionDialog] = useState(false);
+  const [newEvolutionFonctionnaliteId, setNewEvolutionFonctionnaliteId] = useState<number | null>(null);
+  const [newEvolutionType, setNewEvolutionType] = useState<"evolution" | "correctif">("evolution");
+  const [newEvolutionDescription, setNewEvolutionDescription] = useState("");
+
+  const handleAddFeature = () => {
+    if (selectedVersionId === null) return;
+    setNewEvolutionFonctionnaliteId(null);
+    setNewEvolutionType("evolution");
+    setNewEvolutionDescription("");
+    setShowAddEvolutionDialog(true);
+  };
+
+  const handleConfirmAddEvolution = () => {
+    if (!newEvolutionFonctionnaliteId || selectedVersionId === null) return;
+    addEvolution(
+      {
+        version_produit: selectedVersionId,
+        fonctionnalite: newEvolutionFonctionnaliteId,
+        type: newEvolutionType,
+        description: newEvolutionDescription.trim(),
+      },
+      {
+        onSuccess: (created) => {
+          setSelectedFeature(created.id);
+          setShowAddEvolutionDialog(false);
+        },
+      }
+    );
+  };
+
+  // ── Archivage ─────────────────────────────────────────────────────────────
   const handleDeleteFeature = (id: number) => {
-    archiveFeature(id);
+    if (selectedVersionId === null) return;
+    archiveEvolution(id, selectedVersionId);
     if (selectedFeature === id) setSelectedFeature(null);
   };
 
-  // ── Copier / coller ──────────────────────────────────────────────────────
+  // ── Copier / coller ───────────────────────────────────────────────────────
   const handleCopyFeature = (id: number) => {
-    const feature = features.find((f) => f.id === id);
-    if (feature) {
-      setCopiedFeature({ ...feature });
-      toast.success(`Fonctionnalité « ${feature.name} » copiée`);
+    const evolution = evolutions.find((e) => e.id === id);
+    if (evolution) {
+      setCopiedEvolution(evolution);
+      const nom = evolution.fonctionnalite_nom ?? `Évolution #${id}`;
+      toast.success(`Évolution « ${nom} » copiée`);
     }
   };
 
   const handlePasteFeature = () => {
-    if (!copiedFeature || selectedProductId === null) return;
-    addFeature(
-      { nom: `${copiedFeature.name} (copie)`, produitId: selectedProductId },
-      { onSuccess: (created) => setSelectedFeature(created.id) }
+    if (!copiedEvolution || selectedVersionId === null) return;
+    addEvolution(
+      {
+        version_produit: selectedVersionId,
+        fonctionnalite: copiedEvolution.fonctionnalite,
+        type: copiedEvolution.type,
+        description: copiedEvolution.description
+          ? `${copiedEvolution.description} (copie)`
+          : "(copie)",
+      },
+      {
+        onSuccess: (created) => setSelectedFeature(created.id),
+      }
     );
   };
 
-  // ── Réordonnancement : désactivé (pas de champ 'ordre' backend) ──────────
-  // TODO(Phase 1.2): implémenter si champ 'ordre' ajouté au modèle Fonctionnalite
-  const handleReorder = (_newItems: FeatureItem[]) => {};
+  // ── Réordonnancement : persisté via PATCH /reorder/ ──────────────────────
+  const handleReorder = (newItems: FeatureItem[]) => {
+    if (selectedVersionId === null) return;
+    reorderEvolutions(
+      { orderedIds: newItems.map((item) => item.id) },
+      selectedVersionId
+    );
+  };
 
   // ── Expand / collapse : dormant en mono-niveau ───────────────────────────
   const handleToggleExpand = (_id: number, _expand: boolean) => {};
@@ -196,7 +258,10 @@ export const ProductDocSync: React.FC = () => {
             onSelectProduct={handleSelectProduct}
             productOptions={productOptions}
             selectedVersion={selectedVersion}
-            setSelectedVersion={setSelectedVersion}
+            setSelectedVersion={(val) => {
+              setSelectedVersion(val);
+              setSelectedFeature(null);
+            }}
             versionOptions={versionOptions}
             onAddVersion={handleAddVersion}
             onPublish={handlePublishVersion}
@@ -218,7 +283,7 @@ export const ProductDocSync: React.FC = () => {
             open={showImpactMap}
             onClose={() => setShowImpactMap(false)}
             product={selectedProductLabel}
-            version={selectedVersion}
+            version={selectedVersionData?.numero ?? selectedVersion}
             height={impactMapHeight}
             onGenerateTestPlan={handleGenerateTestPlan}
           />
@@ -267,38 +332,131 @@ export const ProductDocSync: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Dialog : ajout d'une fonctionnalité ─────────────────────────────── */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      {/* ── Dialog : ajout d'une version ────────────────────────────────────── */}
+      <Dialog open={showAddVersionDialog} onOpenChange={setShowAddVersionDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Nouvelle fonctionnalité</DialogTitle>
+            <DialogTitle>Nouvelle version</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
               <label className="text-sm font-medium block mb-1">
-                Nom de la fonctionnalité
+                Numéro de version
               </label>
               <Input
                 autoFocus
-                placeholder="Ex : Gestion des utilisateurs"
-                value={newFeatureName}
-                onChange={(e) => setNewFeatureName(e.target.value)}
+                placeholder="Ex : 2.1"
+                value={newVersionNumero}
+                onChange={(e) => setNewVersionNumero(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleConfirmAddFeature();
+                  if (e.key === "Enter") handleConfirmAddVersion();
                 }}
               />
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <Button
                 variant="outline"
-                onClick={() => setShowAddDialog(false)}
+                onClick={() => setShowAddVersionDialog(false)}
               >
                 Annuler
               </Button>
               <Button
                 variant="primary"
-                disabled={!newFeatureName.trim() || isAdding}
-                onClick={handleConfirmAddFeature}
+                disabled={!newVersionNumero.trim() || isCreatingVersion}
+                onClick={handleConfirmAddVersion}
+              >
+                {isCreatingVersion ? "Création…" : "Créer"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog : ajout d'une évolution ──────────────────────────────────── */}
+      <Dialog open={showAddEvolutionDialog} onOpenChange={setShowAddEvolutionDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Nouvelle évolution</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            {/* Sélection de la fonctionnalité du référentiel */}
+            <div>
+              <label className="text-sm font-medium block mb-1">
+                Fonctionnalité (référentiel)
+              </label>
+              <select
+                className="w-full border rounded px-3 py-2 text-sm"
+                value={newEvolutionFonctionnaliteId ?? ""}
+                onChange={(e) =>
+                  setNewEvolutionFonctionnaliteId(
+                    e.target.value ? parseInt(e.target.value, 10) : null
+                  )
+                }
+              >
+                <option value="">Sélectionner une fonctionnalité…</option>
+                {fonctionnaliteItems.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Type */}
+            <div>
+              <label className="text-sm font-medium block mb-1">Type</label>
+              <div className="flex gap-3">
+                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="evolutionType"
+                    value="evolution"
+                    checked={newEvolutionType === "evolution"}
+                    onChange={() => setNewEvolutionType("evolution")}
+                  />
+                  Évolution
+                </label>
+                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="evolutionType"
+                    value="correctif"
+                    checked={newEvolutionType === "correctif"}
+                    onChange={() => setNewEvolutionType("correctif")}
+                  />
+                  Correctif
+                </label>
+              </div>
+            </div>
+
+            {/* Description (optionnel) */}
+            <div>
+              <label className="text-sm font-medium block mb-1">
+                Description{" "}
+                <span className="text-xs text-gray-400 font-normal">
+                  (optionnel)
+                </span>
+              </label>
+              <textarea
+                className="w-full border rounded px-3 py-2 text-sm resize-none"
+                rows={3}
+                placeholder="Décrivez l'évolution ou le correctif…"
+                value={newEvolutionDescription}
+                onChange={(e) => setNewEvolutionDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="outline"
+                onClick={() => setShowAddEvolutionDialog(false)}
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="primary"
+                disabled={!newEvolutionFonctionnaliteId || isAdding}
+                onClick={handleConfirmAddEvolution}
               >
                 {isAdding ? "Ajout…" : "Ajouter"}
               </Button>

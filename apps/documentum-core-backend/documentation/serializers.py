@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from .models import (
     Audience,
+    EvolutionProduit,
     Fonctionnalite,
     Gamme,
     InterfaceUtilisateur,
@@ -17,6 +18,7 @@ from .models import (
     Tag,
     TypeRubrique,
     VersionProjet,
+    VersionProduit,
 )
 
 
@@ -321,6 +323,81 @@ class MapStructureAttachSerializer(serializers.Serializer):
     rubrique_id = serializers.IntegerField()
     parent_id = serializers.IntegerField(required=False, allow_null=True)
     ordre = serializers.IntegerField(required=False, allow_null=True)
+
+
+# ---------------------------------------------------------------------------
+# ProductDocSync — VersionProduit
+# ---------------------------------------------------------------------------
+
+class VersionProduitSerializer(serializers.ModelSerializer):
+    produit_nom = serializers.CharField(source="produit.nom", read_only=True)
+
+    class Meta:
+        model = VersionProduit
+        fields = [
+            "id",
+            "produit",
+            "produit_nom",
+            "numero",
+            "statut",
+            "date_publication",
+            "created_at",
+        ]
+        read_only_fields = ["date_publication", "created_at"]
+
+    def validate(self, data):
+        # La publication passe exclusivement par /publier/ — jamais via PATCH directement.
+        if data.get("statut") == "publiee":
+            raise serializers.ValidationError(
+                {"statut": "Utilisez l'endpoint /publier/ pour publier une version."}
+            )
+        # L'archivage n'est autorisé que si la version n'est pas encore publiée.
+        instance = self.instance
+        if instance and data.get("statut") == "archivee" and instance.statut == "publiee":
+            raise serializers.ValidationError(
+                {"statut": "Impossible d'archiver une version déjà publiée."}
+            )
+        return data
+
+
+# ---------------------------------------------------------------------------
+# ProductDocSync — EvolutionProduit
+# ---------------------------------------------------------------------------
+
+class EvolutionProduitSerializer(serializers.ModelSerializer):
+    fonctionnalite_nom = serializers.CharField(
+        source="fonctionnalite.nom", read_only=True
+    )
+    version_numero = serializers.CharField(
+        source="version_produit.numero", read_only=True
+    )
+
+    class Meta:
+        model = EvolutionProduit
+        fields = [
+            "id",
+            "version_produit",
+            "version_numero",
+            "fonctionnalite",
+            "fonctionnalite_nom",
+            "type",
+            "description",
+            "ordre",
+            "statut",
+            "is_archived",
+            "created_at",
+        ]
+        read_only_fields = ["is_archived", "created_at"]
+
+
+class ReorderEvolutionsProduitSerializer(serializers.Serializer):
+    orderedIds = serializers.ListField(
+        child=serializers.IntegerField(),
+        allow_empty=False,
+    )
+
+
+# ---------------------------------------------------------------------------
 
 
 class RevisionRubriqueSerializer(serializers.ModelSerializer):

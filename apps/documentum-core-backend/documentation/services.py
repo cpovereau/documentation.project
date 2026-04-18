@@ -5,7 +5,17 @@ from django.db.models import Max, F, Subquery, OuterRef
 from django.utils.timezone import now
 from rest_framework.exceptions import ValidationError
 
-from .models import Map, MapRubrique, Projet, Rubrique, RevisionRubrique, VersionProjet, PublicationSnapshot
+from .models import (
+    EvolutionProduit,
+    Map,
+    MapRubrique,
+    Projet,
+    Rubrique,
+    RevisionRubrique,
+    VersionProjet,
+    VersionProduit,
+    PublicationSnapshot,
+)
 from .utils import get_active_version, compute_xml_hash
 from .exporters import export_map_to_dita
 
@@ -824,3 +834,78 @@ def get_publication_diff(*, projet: Projet, map_obj: Map) -> dict:
         },
         "detail": changes,
     }
+
+
+# ---------------------------------------------------------------------------
+# ProductDocSync — VersionProduit et EvolutionProduit
+# ---------------------------------------------------------------------------
+
+@transaction.atomic
+def publier_version_produit(version_id: int) -> VersionProduit:
+    """
+    Publie une VersionProduit : statut → publiee, date_publication = now().
+
+    Invariants :
+    - Seul un statut en_preparation peut être publié.
+    - La publication est irréversible (pas de retour à en_preparation).
+    - select_for_update() sérialise les publications concurrentes.
+
+    Lève ValidationError si la version est déjà publiée ou archivée.
+    """
+    version = VersionProduit.objects.select_for_update().get(pk=version_id)
+
+    if version.statut == "publiee":
+        raise ValidationError({"detail": "Cette version est déjà publiée."})
+
+    if version.statut == "archivee":
+        raise ValidationError({"detail": "Impossible de publier une version archivée."})
+
+    version.statut = "publiee"
+    version.date_publication = now()
+    version.save(update_fields=["statut", "date_publication"])
+
+    logger.info(
+        "[VersionProduit] Version ID=%s publiée (produit_id=%s, numero=%s).",
+        version.pk,
+        version.produit_id,
+        version.numero,
+    )
+    return version
+
+
+@transaction.atomic
+def reorder_evolutions_produit(ordered_ids: list) -> None:
+    """
+    Recalcule les valeurs `ordre` des EvolutionProduit selon l'ordre fourni.
+
+    Invariants :
+    - Tous les IDs doivent exister en base.
+    - L'ordre est réindexé à partir de 0 selon la position dans ordered_ids.
+    - select_for_update() sérialise les réordonnements concurrents.
+    - bulk_update() pose une seule requête UPDATE par lot.
+
+    Lève ValidationError si un ID est introuvable.
+    """
+    if not ordered_ids:
+        raise ValidationError({"detail": "La liste orderedIds ne peut pas être vide."})
+
+    evolutions = {
+        e.id: e
+        for e in EvolutionProduit.objects.select_for_update().filter(id__in=ordered_ids)
+    }
+
+    missing = [eid for eid in ordered_ids if eid not in evolutions]
+    if missing:
+        raise ValidationError(
+            {"detail": f"EvolutionProduit introuvable(s) : {missing}."}
+        )
+
+    for ordre, evolution_id in enumerate(ordered_ids):
+        evolutions[evolution_id].ordre = ordre
+
+    EvolutionProduit.objects.bulk_update(list(evolutions.values()), ["ordre"])
+
+    logger.info(
+        "[EvolutionProduit] Réordonnancement de %s évolutions.",
+        len(ordered_ids),
+    )

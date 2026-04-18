@@ -222,6 +222,7 @@ Cette section décrit l'implémentation réelle du projet.
 
 * `50_CARTOGRAPHIE_FRONTEND_PRODUCTDOCSYNC.md` : cartographie de l'écran ProductDocSync (données hardcodées, aucune API branchée)
 * `PRODUCTDOCSYNC_ROADMAP.md` : roadmap & suivi (5 phases — branchement API, ImpactDocumentaire, plan de test)
+* `PRODUCTDOCSYNC_SPEC_METIER.md` : spécification métier de ProductDocSync — entités (Produit, VersionProduit, Fonctionnalité, ImpactDocumentaire), acteurs, flux, règles métier, points ouverts
 
 👉 Écran de pilotage documentaire Nexus. Backend `FonctionnaliteViewSet` disponible, branchement à faire (P4 gap analysis).
 
@@ -333,6 +334,7 @@ Cette section regroupe les documents de pilotage opérationnel, les roadmaps et 
 | Comprendre RightSidebar                  | `01_OPERATIONNEL/RightSidebar/50_CARTOGRAPHIE_FRONTEND_RIGHTSIDEBAR.md`             |
 | Suivre l'évolution de RightSidebar       | `01_OPERATIONNEL/RightSidebar/RIGHTSIDEBAR_ROADMAP.md`                              |
 | Comprendre ProductDocSync                | `01_OPERATIONNEL/ProductDocSync/50_CARTOGRAPHIE_FRONTEND_PRODUCTDOCSYNC.md`         |
+| Comprendre les règles métier ProductDocSync | `01_OPERATIONNEL/ProductDocSync/PRODUCTDOCSYNC_SPEC_METIER.md`                   |
 | Suivre l'évolution de ProductDocSync     | `01_OPERATIONNEL/ProductDocSync/PRODUCTDOCSYNC_ROADMAP.md`                          |
 | Comprendre Settings                      | `01_OPERATIONNEL/Settings/50_CARTOGRAPHIE_FRONTEND_SETTINGS.md`                     |
 | Suivre l'évolution de Settings           | `01_OPERATIONNEL/Settings/SETTINGS_ROADMAP.md`                                      |

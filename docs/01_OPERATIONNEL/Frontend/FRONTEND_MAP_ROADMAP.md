@@ -116,6 +116,54 @@ La sélection différée après création (`pendingSelectId`) utilise `setSelect
 
 ---
 
+## 🐛 Bugs identifiés à corriger (Map / ProductDocSync)
+
+Ces bugs sont documentés ici pour traçabilité. Ils doivent être résolus dans **ProductDocSync Phase 5** (nettoyage technique).
+
+| Bug | Composant | Description | Impact |
+|---|---|---|---|
+| Double `$$` dans template literal | `SyncRightSidebar` | `` `$${isRightSidebarExpanded ? "w-[248px]" : "w-0"}` `` — double `$` : la classe Tailwind ne s'applique probablement pas | UI : sidebar droite ne se redimensionne pas correctement |
+| `TOTAL_HEIGHT` recalculé au montage uniquement | `ProductDocSync` | `const TOTAL_HEIGHT = window.innerHeight - 130` calculé une seule fois — non réactif au redimensionnement de la fenêtre | UX : hauteur incorrecte après resize |
+
+👉 Ces corrections sont indépendantes de la logique métier et peuvent être traitées à tout moment (ProductDocSync Phase 5).
+
+---
+
+## 🚀 Chantiers transverses frontend à venir
+
+### Widget Tableau de bord
+
+Créer un composant widget réutilisable existant en **3 tailles** (S / M / L), destiné à être intégré dans les espaces « Tableaux de bord » de tous les modules Documentum Nexus.
+
+**Principes :**
+- Chaque module expose ses propres widgets (avancement, métriques, alertes…).
+- Les espaces tableaux de bord sont **personnalisables** par l'utilisateur.
+- Les tableaux de bord sont les portes d'entrée de chaque module.
+- Le composant widget est partagé (bibliothèque de composants commune à tous les modules).
+
+**À définir :**
+- Anatomie du widget : header (titre + icône), body (contenu variable), footer (lien/action).
+- Comportement responsive selon la taille (S : indicateur simple, M : liste courte, L : tableau ou graphe).
+- Système de grille pour l'espace tableau de bord (drag & drop de positionnement ?).
+
+**Prérequis :** aucun — peut démarrer indépendamment du reste.
+
+---
+
+### Claude Design — Évolutions UX/UI
+
+Trois axes de travail UX à adresser avec l'aide de Claude Design :
+
+1. **Évolution ergonomique de l'IHM actuel** — audit de l'interface Desktop + ProductDocSync, propositions d'amélioration de la cohérence visuelle, des patterns d'interaction, de la hiérarchie de l'information.
+
+2. **Affichage React en mode tablette et smartphone** — responsive design, adaptation des vues principales (CentralEditor, Map, ProductDocSync) pour une expérience mobile acceptable.
+
+3. **Préparation des interfaces des futurs modules Nexus** — design system cohérent pour les modules à venir (Production, Support, Portail...), en anticipant les patterns communs (tableaux de bord, widgets, navigation inter-modules).
+
+**Prérequis :** aucun — travail de conception indépendant de l'implémentation en cours.
+
+---
+
 ## 🧭 Ordre recommandé de traitement
 
 1. ✅ Stabilisation de la Map (Sprint 1–3)

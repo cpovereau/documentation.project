@@ -4,9 +4,9 @@
 >
 > **Statut** : document normatif — fait foi pour toute évolution backend et sert de socle d’alignement pour le frontend
 >
-> **Périmètre backend :** `ProjetViewSet`, `MapViewSet`, `RubriqueViewSet` — apps `projets`, `maps`, `rubriques`
+> **Périmètre backend :** `ProjetViewSet`, `MapViewSet`, `RubriqueViewSet`, `VersionProduitViewSet`, `FonctionnaliteViewSet` — apps `projets`, `maps`, `rubriques`, `produits`
 >
-> **Dernière mise à jour** : 2026-04-16
+> **Dernière mise à jour** : 2026-04-18
 
 ---
 
@@ -200,6 +200,107 @@ Payload minimal :
 - ✅ Services métiers atomiques
 - ✅ Transactions explicites
 - ✅ Nommage strict et cohérent
+
+---
+
+## 9. Pilotage documentaire — ProductDocSync (2026-04-18)
+
+> ⚠️ Les entités de cette section sont **à implémenter**. Ce document les définit avant toute implémentation frontend, conformément à la règle de gouvernance.
+
+### 9.1. Entité `VersionProduit`
+
+**Décision** : cf. `gov_decision-log.md` — 2026-04-18.
+
+`VersionProduit` représente une version logicielle d'un `Produit`. Elle est **indépendante** de `VersionProjet` (cycle documentaire) — les deux cycles de vie ne sont pas couplés.
+
+**Modèle Django** :
+
+| Champ | Type | Contraintes |
+|---|---|---|
+| `produit` | ForeignKey → `Produit` | `on_delete=CASCADE`, `related_name='versions'` |
+| `numero` | CharField(50) | ex. `"2.1"` |
+| `statut` | CharField(choices) | `en_preparation` / `publiee` / `archivee` — défaut : `en_preparation` |
+| `date_publication` | DateTimeField | nullable, blank |
+| `created_at` | DateTimeField | auto_now_add |
+
+Contrainte d'unicité : `unique_together = [('produit', 'numero')]`
+
+**Règles métier** :
+- Seule l'action `/publier/` peut passer une version au statut `publiee`.
+- La publication est irréversible (pas de retour à `en_preparation`).
+- Archivage via `PATCH statut=archivee` uniquement si version non `publiee`.
+
+**Service** : `publier_version_produit(version_id)` — atomic, pose `statut=publiee` + `date_publication=now()`.
+
+**Endpoints canoniques** :
+
+| Méthode | Endpoint | Rôle |
+|---|---|---|
+| `GET` | `/api/versions-produit/?produit={id}` | Liste les versions d'un produit (non archivées par défaut) |
+| `POST` | `/api/versions-produit/` | Crée une nouvelle version |
+| `PATCH` | `/api/versions-produit/{id}/` | Met à jour (numéro, statut `archivee`) |
+| `POST` | `/api/versions-produit/{id}/publier/` | Publie la version via `publier_version_produit()` |
+
+**Règle ViewSet** : aucune logique métier dans le ViewSet — tout dans `services.publier_version_produit()`.
+
+---
+
+### 9.2. Entité `EvolutionProduit`
+
+**Décision** : cf. `gov_decision-log.md` — 2026-04-18.
+
+`EvolutionProduit` est l'unité centrale du suivi de version. Elle représente une occurrence d'évolution ou de correctif dans une `VersionProduit`, en référençant une `Fonctionnalite` du référentiel.
+
+**Modèle Django** :
+
+| Champ | Type | Contraintes |
+|---|---|---|
+| `version_produit` | ForeignKey → `VersionProduit` | `on_delete=CASCADE`, `related_name='evolutions'` |
+| `fonctionnalite` | ForeignKey → `Fonctionnalite` | `on_delete=PROTECT`, `related_name='evolutions'` |
+| `type` | CharField(choices) | `evolution` / `correctif` |
+| `description` | TextField | nullable, blank |
+| `ordre` | PositiveIntegerField | défaut : `0` |
+| `statut` | CharField(choices) | `draft` / `valide` — défaut : `draft` |
+| `created_at` | DateTimeField | auto_now_add |
+
+**Endpoints canoniques** :
+
+| Méthode | Endpoint | Rôle |
+|---|---|---|
+| `GET` | `/api/evolutions-produit/?version_produit={id}` | Liste les évolutions d'une version |
+| `POST` | `/api/evolutions-produit/` | Crée une évolution |
+| `PATCH` | `/api/evolutions-produit/{id}/` | Met à jour (description, type, statut) |
+| `PATCH` | `/api/evolutions-produit/{id}/archive/` | Archive (suppression logique) |
+| `PATCH` | `/api/evolutions-produit/reorder/` | Payload `{ "orderedIds": [...] }` — réordonne en transaction |
+
+**Service** : `reorder_evolutions_produit(ordered_ids)` — atomic, recalcule les valeurs `ordre`.
+
+---
+
+### 9.3. ImpactDocumentaire
+
+**Modèle Django** (à créer — Phase 3 roadmap) :
+
+| Champ | Type | Contraintes |
+|---|---|---|
+| `evolution_produit` | ForeignKey → `EvolutionProduit` | `on_delete=CASCADE`, `related_name='impacts'` |
+| `rubrique` | ForeignKey → `Rubrique` | `on_delete=CASCADE` |
+| `statut` | CharField(choices) | `a_faire` / `en_cours` / `pret` / `valide` / `ignore` — défaut : `a_faire` |
+| `created_at` | DateTimeField | auto_now_add |
+| `updated_at` | DateTimeField | auto_now |
+
+Contrainte d'unicité : `unique_together = [('evolution_produit', 'rubrique')]`
+
+**Endpoints canoniques** :
+
+| Méthode | Endpoint | Rôle |
+|---|---|---|
+| `GET` | `/api/impacts/?evolution_produit={id}` | Liste les impacts d'une évolution |
+| `POST` | `/api/impacts/` | Déclare un impact |
+| `PATCH` | `/api/impacts/{id}/` | Met à jour le statut |
+| `DELETE` | `/api/impacts/{id}/` | Supprime un impact |
+
+**Règle** : `ImpactDocumentaire` ne modifie jamais le contenu XML d'une rubrique — il est une déclaration de travail à faire.
 
 ---
 
