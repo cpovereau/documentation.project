@@ -1,64 +1,64 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { toast } from "sonner";
+import type { ImpactDocumentaire } from "@/api/impacts";
 import { Card } from "components/ui/card";
 import { ToolbarCorrection } from "./ToolbarCorrection";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { getAllExtensions } from "@/extensions/allExtensions";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import TextAlign from "@tiptap/extension-text-align";
 import { Button } from "components/ui/button";
 import { FindReplaceDialog } from "components/ui/FindReplaceDialog";
+import { useState } from "react";
 import { useContentChangeTracker } from "hooks/useContentChangeTracker";
 import { useGrammarChecker } from "hooks/useGrammarChecker";
-import { useSpeechCommands } from "hooks/useSpeechCommands";
 import { useEditorHistoryTracker } from "hooks/useEditorHistoryTracker";
 import { useFindReplaceTipTap } from "hooks/useFindReplaceTipTap";
+import EditorToolbar from "components/ui/CentralEditor/EditorToolbar";
+import BlockTypeMenu from "components/ui/CentralEditor/BlockTypeMenu";
+import HistoryPanel from "components/ui/CentralEditor/EditorPanels/HistoryPanel";
+import { useDictation } from "components/ui/CentralEditor/hooks/useDictation";
 
 interface SyncEditorProps {
   selectedType: "evolution" | "correctif";
   onTypeChange: (type: "evolution" | "correctif") => void;
+  /** Type de l'EvolutionProduit sélectionnée — dérivé depuis l'API, lecture seule. */
+  evolutionType: "evolution" | "correctif" | null;
   height: number;
+  selectedImpact: ImpactDocumentaire | null;
+  onNotesChange: (impactId: number, notes: string) => void;
 }
 
 export const SyncEditor: React.FC<SyncEditorProps> = ({
   selectedType,
   onTypeChange,
+  evolutionType,
   height,
+  selectedImpact,
+  onNotesChange,
 }) => {
-  const [color, setColor] = useState("#000000");
+  const isNotesMode = selectedImpact !== null;
 
-  // État pour le contenu de l'éditeur
+  // ── Contenu TipTap (suivi pour dirty detection) ──────────────────────────
   const [content, setContent] = useState("");
 
-  // État pour la navigation dans les corrections
+  // Baseline pour la dirty detection en mode notes
+  const notesBaselineRef = useRef<string>("");
+
+  // ── Navigation ToolbarCorrection ─────────────────────────────────────────
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [totalCount] = useState(1); // ou 0 par défaut
-
-  // Fonctions pour la navigation dans les corrections
-  const handlePrevious = () => {
-    if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
-  };
-
-  const handleNext = () => {
-    if (currentIndex < totalCount - 1) setCurrentIndex(currentIndex + 1);
-  };
-
-  const handleShowView = () => {
-    alert("Affichage du suivi complet (à venir)");
-  };
-
+  const [totalCount] = useState(1);
   const hasPrevious = currentIndex > 0;
   const hasNext = currentIndex < totalCount - 1;
+  const handlePrevious = () => { if (currentIndex > 0) setCurrentIndex(currentIndex - 1); };
+  const handleNext = () => { if (currentIndex < totalCount - 1) setCurrentIndex(currentIndex + 1); };
+  const handleShowView = () => { alert("Affichage du suivi complet (à venir)"); };
 
-  // Initialisation de l'éditeur avec les extensions nécessaires
+  // ── Instance TipTap ──────────────────────────────────────────────────────
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        bold: false,
-        italic: false,
-      }),
+      StarterKit.configure({ bold: false, italic: false }),
       TextStyle,
       Color,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
@@ -66,21 +66,28 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
     content: "",
     editorProps: {
       attributes: {
-        class:
-          "prose max-w-none p-4 min-h-[400px] overflow-auto border-none outline-none",
+        class: "prose max-w-none p-4 min-h-[200px] overflow-auto border-none outline-none",
       },
     },
-    onUpdate: ({ editor }) => {
-      setContent(editor.getHTML());
-    },
+    onUpdate: ({ editor }) => setContent(editor.getHTML()),
   });
 
-  useGrammarChecker(editor);
-  useSpeechCommands(editor);
-  useFindReplaceTipTap(editor);
-  useEditorHistoryTracker();
+  // ── Chargement des notes dans TipTap à chaque changement d'impact ────────
+  useEffect(() => {
+    if (!editor || !isNotesMode) return;
+    editor.commands.setContent(selectedImpact.notes || "");
+    // Capture le HTML résultant comme baseline (setContent est synchrone ProseMirror)
+    notesBaselineRef.current = editor.getHTML();
+  }, [selectedImpact?.id, editor]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Recherche et remplacement de texte
+  const notesHasChanges = isNotesMode && content !== notesBaselineRef.current;
+
+  // ── Hooks TipTap ──────────────────────────────────────────────────────────
+  useGrammarChecker(editor);
+  const { isRecording, handleStartDictation, handleStopDictation } = useDictation(editor);
+  const { historyLog, logAction, clearHistory, isHistoryOpen, setIsHistoryOpen } =
+    useEditorHistoryTracker();
+
   const [isFindOpen, setIsFindOpen] = useState(false);
   const [findValue, setFindValue] = useState("");
   const [replaceValue, setReplaceValue] = useState("");
@@ -88,168 +95,112 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
 
   const { hasChanges, resetInitialContent } = useContentChangeTracker(content);
 
-  // Fonction pour gérer l'enregistrement du correctif
   const onSaveCorrection = () => {
     toast.promise(new Promise((resolve) => setTimeout(resolve, 800)), {
       loading: "Enregistrement du correctif...",
       success: "Correctif enregistré avec succès !",
-      error: "Échec de l’enregistrement",
+      error: "Échec de l'enregistrement",
     });
+    if (editor) resetInitialContent();
+  };
 
-    if (editor) {
-      const current = editor.getHTML();
-      resetInitialContent(); // pour désactiver le bouton
-    }
+  const handleSaveNotes = () => {
+    if (!selectedImpact) return;
+    onNotesChange(selectedImpact.id, content);
+    notesBaselineRef.current = content;
   };
 
   if (!editor) return null;
 
   return (
     <Card
-      className="flex flex-col w-full border-none shadow-none overflow-auto"
+      className="flex flex-col w-full border-none shadow-none overflow-hidden"
       style={{ height }}
     >
-      <ToolbarCorrection
-        selectedType={selectedType}
-        onTypeChange={onTypeChange}
-        currentIndex={currentIndex}
-        totalCount={totalCount}
-        hasPrevious={hasPrevious}
-        hasNext={hasNext}
-        onPrevious={handlePrevious}
-        onNext={handleNext}
-        onShowView={handleShowView}
-      />
-      {/* Toolbar secondaire */}
-      <div className="h-[50px] border-b px-4 mx-[30px] bg-[#fcfcfc] flex items-center gap-0">
-        {/* Undo / Redo */}
-        <button
-          onClick={() => editor?.chain().focus().undo().run()}
-          title="Annuler"
-          className="w-8 h-10 text-[16px] font-semibold flex items-center justify-center hover:bg-gray-200"
-        >
-          ↺
-        </button>
-        <button
-          onClick={() => editor.chain().focus().redo().run()}
-          title="Rétablir"
-          className="w-8 h-10 text-[16px] font-semibold flex items-center justify-center hover:bg-gray-200"
-        >
-          ↻
-        </button>
+      {/* ── Bandeau contextuel (mode notes uniquement) ─────────────────────── */}
+      {isNotesMode && (
+        <div className="border-b px-6 py-2 bg-blue-50 flex items-center gap-3 shrink-0">
+          <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+            Notes de rédaction
+          </span>
+          <span className="text-sm text-gray-800 font-medium">
+            {selectedImpact.rubrique_titre}
+          </span>
+          {evolutionType !== null && (
+            <span className="ml-auto text-xs text-gray-400 italic">
+              {evolutionType === "evolution" ? "Évolution" : "Correctif"}
+            </span>
+          )}
+        </div>
+      )}
 
-        {/* Séparateur */}
-        <div className="border-l h-6 mx-2 border-gray-300" />
-
-        {/* Mise en forme */}
-        <button
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          title="Gras"
-          className={`w-8 h-10 text-[16px] font-semibold flex items-center justify-center hover:bg-gray-200 ${
-            editor.isActive("bold") ? "bg-gray-200 font-bold" : ""
-          }`}
-        >
-          B
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          title="Italique"
-          className={`w-8 h-10 text-[16px] font-semibold flex items-center justify-center hover:bg-gray-200 ${
-            editor.isActive("italic") ? "bg-gray-200 italic" : ""
-          }`}
-        >
-          I
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          title="Souligné"
-          className={`w-8 h-10 text-[16px] font-semibold flex items-center justify-center hover:bg-gray-200 ${
-            editor.isActive("underline") ? "bg-gray-200 underline" : ""
-          }`}
-        >
-          U
-        </button>
-
-        {/* Séparateur */}
-        <div className="border-l h-6 mx-2 border-gray-300" />
-
-        {/* Alignements */}
-        <button
-          onClick={() => editor.chain().focus().setTextAlign("left").run()}
-          title="Aligner à gauche"
-          className="w-8 h-10 text-[16px] flex items-center justify-center hover:bg-gray-200"
-        >
-          ⯇
-        </button>
-        <button
-          onClick={() => editor.chain().focus().setTextAlign("center").run()}
-          title="Centrer"
-          className="w-8 h-10 text-[16px] flex items-center justify-center hover:bg-gray-200"
-        >
-          ≡
-        </button>
-        <button
-          onClick={() => editor.chain().focus().setTextAlign("right").run()}
-          title="Aligner à droite"
-          className="w-8 h-10 text-[16px] flex items-center justify-center hover:bg-gray-200"
-        >
-          ⯈
-        </button>
-
-        {/* Séparateur */}
-        <div className="border-l h-6 mx-2 border-gray-300" />
-
-        {/* Couleur */}
-        <input
-          type="color"
-          value={color}
-          onChange={(e) => {
-            setColor(e.target.value);
-            editor.chain().focus().setColor(e.target.value).run();
-          }}
-          className="h-8 w-10 mt-[2px]"
+      {/* ── ToolbarCorrection — toujours en lecture seule (indicateur API) ──── */}
+      <div className="pointer-events-none">
+        <ToolbarCorrection
+          selectedType={evolutionType ?? "evolution"}
+          onTypeChange={onTypeChange}
+          currentIndex={currentIndex}
+          totalCount={totalCount}
+          hasPrevious={hasPrevious}
+          hasNext={hasNext}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          onShowView={handleShowView}
         />
+      </div>
 
-        {/* Séparateur */}
-        <div className="border-l h-6 mx-2 border-gray-300" />
+      {/* ── EditorToolbar — visible en mode notes, masqué en mode vide ──────── */}
+      {isNotesMode && (
+        <EditorToolbar
+          editor={editor}
+          isRecording={isRecording}
+          onStartDictation={handleStartDictation}
+          onStopDictation={handleStopDictation}
+          openFindDialog={() => setIsFindOpen(true)}
+          openHistoryDialog={() => setIsHistoryOpen(true)}
+          logAction={logAction}
+          BlockTypeMenu={<BlockTypeMenu editor={editor} />}
+        />
+      )}
 
-        {/* Recherche */}
-        <button
-          onClick={() => setIsFindOpen(true)}
-          title="Rechercher / Remplacer"
-          className="ml-2 px-3 py-1 rounded bg-gray-100 hover:bg-blue-100 text-gray-700"
-        >
-          🔍 Rechercher / Remplacer
-        </button>
+      {/* ── Zone contenu : message (mode vide) ou éditeur (mode notes) ──────── */}
+      {!isNotesMode ? (
+        <div className="flex flex-1 items-center justify-center min-h-0">
+          <p className="text-sm text-gray-400 italic">
+            Sélectionnez une rubrique dans le tableau pour rédiger ses notes.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden px-[30px]">
+          <EditorContent
+            editor={editor}
+            className="flex-1 min-h-0"
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="off"
+          />
+        </div>
+      )}
 
-        {/* Enregistrement */}
-        <div className="ml-auto mr-[36px]">
+      {/* ── Pied de carte ──────────────────────────────────────────────────── */}
+      {isNotesMode ? (
+        <div className="flex items-center justify-end px-6 py-2 border-t bg-[#fcfcfc] shrink-0">
           <Button
-            onClick={onSaveCorrection}
-            disabled={!hasChanges}
-            className={`px-5 h-11 mt-1 mb-1 py-0 rounded-xl border border-solid shadow-[0px_1px_2px_#1a1a1a14] transition-colors duration-300 ${
-              hasChanges
-                ? "bg-[#15803d] hover:bg-[#166534]"
-                : "bg-gray-400 cursor-not-allowed"
+            onClick={handleSaveNotes}
+            disabled={!notesHasChanges}
+            className={`px-5 h-9 rounded-xl border shadow-sm transition-colors duration-300 ${
+              notesHasChanges
+                ? "bg-[#15803d] hover:bg-[#166534] text-white"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
-            Enregistrer
+            Enregistrer les notes
           </Button>
         </div>
-      </div>
+      ) : null}
 
-      {/* Zone éditable principale */}
-      <div className="flex flex-col flex-1 min-h-0 overflow-hidden px-[30px]">
-        <EditorContent
-          editor={editor}
-          className="flex-1 min-h-0"
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
-          autoComplete="off"
-        />
-      </div>
-
+      {/* ── Dialogs ──────────────────────────────────────────────────────────── */}
       {isFindOpen && (
         <FindReplaceDialog
           findValue={findValue}
@@ -260,6 +211,15 @@ export const SyncEditor: React.FC<SyncEditorProps> = ({
           onReplace={() => replace(findValue, replaceValue)}
           onReplaceAll={() => replaceAll(findValue, replaceValue)}
           onClose={() => setIsFindOpen(false)}
+        />
+      )}
+
+      {isHistoryOpen && (
+        <HistoryPanel
+          isOpen={true}
+          onClose={() => setIsHistoryOpen(false)}
+          history={historyLog}
+          onClear={clearHistory}
         />
       )}
     </Card>

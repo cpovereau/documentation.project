@@ -8,16 +8,43 @@
 > l'ajout de l'entité **EvolutionProduit** comme unité centrale du suivi de version,
 > et la redéfinition de **Fonctionnalite** en entité de référentiel stable.
 
+> 📌 **Positionnement Nexus (décision 2026-04-18)** : `ProductDocSync` est la **spécialisation actuelle** du module générique **Pilotage documentaire** pour le contexte `ingenierie_logicielle`. Ce document décrit cette spécialisation. Le schéma générique est documenté dans `10_MODELE_METIER_DOCUMENTUM.md` et `documentum_architecture_technique_modulaire.md`.
+
 ---
 
 # 1. Objet du document
 
-Ce document décrit les spécifications métier de l'écran ProductDocSync dans Documentum Nexus.
-Il constitue la référence pour comprendre les entités manipulées, les acteurs impliqués, les flux de travail et les règles métier à implémenter.
+Ce document décrit les spécifications métier de l'écran **ProductDocSync** dans Documentum Nexus.
+
+`ProductDocSync` est la **spécialisation actuelle** du module générique **Pilotage documentaire** pour le contexte `ingenierie_logicielle`. Il constitue la référence pour comprendre les entités manipulées, les acteurs impliqués, les flux de travail et les règles métier à implémenter dans ce contexte.
+
+Le schéma conceptuel générique (ObjetMétier → ÉvénementMétier → ImpactDocumentaire) est documenté dans `10_MODELE_METIER_DOCUMENTUM.md` et `documentum_architecture_technique_modulaire.md`.
 
 ---
 
 # 2. Positionnement dans Documentum Nexus
+
+## 2.0 Positionnement dans Nexus — généralisation
+
+Le module **Pilotage documentaire** est un module générique de Documentum Nexus. Il permet de piloter les impacts documentaires issus d'événements métier, quel que soit le contexte d'usage.
+
+**Schéma générique :**
+
+```text
+ObjetMétier → ÉvénementMétier → ImpactDocumentaire → Rubrique
+```
+
+**Spécialisation logicielle (`ProductDocSync`) :**
+
+| Abstraction générique | Entité logicielle |
+|---|---|
+| `ObjetMétier` | `Fonctionnalité` |
+| `ÉvénementMétier` | `EvolutionProduit` |
+| `ImpactDocumentaire` | `ImpactDocumentaire` (pivot inchangé) |
+
+`ProductDocSync` est aujourd'hui la seule implémentation du module Pilotage documentaire. D'autres spécialisations sont possibles à terme (juridique, industrielle, support…), chacune activée via un `context_produit` différent.
+
+---
 
 ## 2.1 Vue d'ensemble de l'application
 
@@ -26,7 +53,7 @@ Documentum est un CCMS (Component Content Management System) basé sur DITA XML.
 L'application est organisée autour de deux écrans principaux accessibles selon le profil utilisateur :
 
 - **Page Documentation (CentralEditor)** — gestion de la documentation structurée, édition de rubriques DITA XML, publication multi-formats. 1 Projet = 1 documentation.
-- **Page ProductDocSync** — gestion des documentations liées aux versions logicielles (documentation utilisateur et suivi de version).
+- **Page ProductDocSync** — module Pilotage documentaire dans le contexte Ingénierie Logicielle (gestion des documentations liées aux versions logicielles).
 
 Un espace **Tableau de bord** transversal sera ajouté ultérieurement. Il sera le point d'entrée commun à tous les modules, composé de widgets de pilotage personnalisables.
 

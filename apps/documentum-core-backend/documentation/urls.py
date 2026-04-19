@@ -11,6 +11,7 @@ from .views import (
     VersionProjetViewSet,
     VersionProduitViewSet,
     EvolutionProduitViewSet,
+    ImpactDocumentaireViewSet,
     FonctionnaliteViewSet,
     AudienceViewSet,
     TagViewSet,
@@ -52,6 +53,7 @@ router.register(r"interfaces", InterfaceUtilisateurViewSet)
 router.register(r"media-items", MediaViewSet)
 router.register(r"versions-produit", VersionProduitViewSet, basename="versionproduit")
 router.register(r"evolutions-produit", EvolutionProduitViewSet, basename="evolutionproduit")
+router.register(r"impacts", ImpactDocumentaireViewSet, basename="impactdocumentaire")
 
 urlpatterns = [
     path("health/", healthcheck, name="healthcheck"),

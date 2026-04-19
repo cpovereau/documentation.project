@@ -159,6 +159,32 @@ Payload minimal :
 
 ---
 
+### 5.3. Endpoint usages — où une rubrique est utilisée
+
+```
+GET /api/rubriques/{id}/usages/
+```
+
+Retourne la liste des Maps qui contiennent cette rubrique via `MapRubrique`.
+Requête optimisée : une seule requête `select_related("map__projet")`.
+
+**Réponse** :
+
+```json
+[
+  {
+    "map_id": 12,
+    "map_nom": "Carte master",
+    "projet_id": 3,
+    "projet_nom": "Projet Alpha"
+  }
+]
+```
+
+Retourne `[]` si la rubrique n'est rattachée à aucune map.
+
+---
+
 ## 6. DTO et contrats d’échange
 
 ### 6.1. DTO de structure
@@ -279,26 +305,47 @@ Contrainte d'unicité : `unique_together = [('produit', 'numero')]`
 
 ### 9.3. ImpactDocumentaire
 
-**Modèle Django** (à créer — Phase 3 roadmap) :
+**Statut** : Implémenté — migrations `0013_impactdocumentaire` + `0014_impactdocumentaire_notes` appliquées (2026-04-18)
+
+**Modèle Django** :
 
 | Champ | Type | Contraintes |
 |---|---|---|
 | `evolution_produit` | ForeignKey → `EvolutionProduit` | `on_delete=CASCADE`, `related_name='impacts'` |
-| `rubrique` | ForeignKey → `Rubrique` | `on_delete=CASCADE` |
-| `statut` | CharField(choices) | `a_faire` / `en_cours` / `pret` / `valide` / `ignore` — défaut : `a_faire` |
-| `created_at` | DateTimeField | auto_now_add |
-| `updated_at` | DateTimeField | auto_now |
+| `rubrique` | ForeignKey → `Rubrique` | `on_delete=PROTECT`, `related_name='impacts_produit'` |
+| `statut` | CharField(20, choices) | `a_faire` / `en_cours` / `pret` / `valide` / `ignore` — défaut : `a_faire` |
+| `notes` | TextField | `blank=True, default=""` — consigne de rédaction spécifique à cette rubrique |
+| `created_at` | DateTimeField | `auto_now_add=True` |
+| `updated_at` | DateTimeField | `auto_now=True` |
 
 Contrainte d'unicité : `unique_together = [('evolution_produit', 'rubrique')]`
+
+Note : `rubrique` utilise `on_delete=PROTECT` (pas `CASCADE`) — suppression d'une Rubrique bloquée si des impacts existent.
 
 **Endpoints canoniques** :
 
 | Méthode | Endpoint | Rôle |
 |---|---|---|
-| `GET` | `/api/impacts/?evolution_produit={id}` | Liste les impacts d'une évolution |
-| `POST` | `/api/impacts/` | Déclare un impact |
-| `PATCH` | `/api/impacts/{id}/` | Met à jour le statut |
+| `GET` | `/api/impacts/` | Liste tous les impacts |
+| `GET` | `/api/impacts/?evolution_produit={id}` | Filtre par évolution |
+| `GET` | `/api/impacts/?rubrique={id}` | Filtre par rubrique |
+| `POST` | `/api/impacts/` | Crée un impact (statut initial : `a_faire`) |
+| `PATCH` | `/api/impacts/{id}/update_statut/` | Met à jour le statut via service |
+| `PATCH` | `/api/impacts/{id}/update_notes/` | Met à jour les notes via service |
+| `PUT/PATCH` | `/api/impacts/{id}/` | Mise à jour standard DRF |
 | `DELETE` | `/api/impacts/{id}/` | Supprime un impact |
+
+**Actions custom** :
+- `PATCH /api/impacts/{id}/update_statut/` — Body : `{ "statut": "en_cours" }` — délègue à `update_statut_impact()`
+- `PATCH /api/impacts/{id}/update_notes/` — Body : `{ "notes": "..." }` (blank autorisé) — délègue à `update_notes_impact()`
+
+**Services** :
+
+| Fonction | Signature | Rôle |
+|---|---|---|
+| `create_impact_documentaire` | `(evolution_produit_id, rubrique_id) → ImpactDocumentaire` | Crée un impact, lève `ValidationError` si doublon |
+| `update_statut_impact` | `(impact_id, statut) → ImpactDocumentaire` | Met à jour le statut, valide le choix |
+| `update_notes_impact` | `(impact_id, notes) → ImpactDocumentaire` | Met à jour les notes (blank autorisé) |
 
 **Règle** : `ImpactDocumentaire` ne modifie jamais le contenu XML d'une rubrique — il est une déclaration de travail à faire.
 

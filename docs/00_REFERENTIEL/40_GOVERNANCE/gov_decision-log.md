@@ -27,6 +27,90 @@ Chaque décision suit le format suivant :
 
 ---
 
+## 2026-04-19 – ProductDocSync Phase 4 : saut partiel et blocage TestPlanModal
+
+**Sujet**  
+Décision de sauter la Phase 4 de ProductDocSync et de bloquer `TestPlanModal` §4.1
+
+**Contexte**  
+La Phase 4 visait deux objectifs : (1) alimenter `ImpactMapModal` avec des données réelles, (2) brancher `TestPlanModal` sur un backend de génération de plan de test. §4.2 a été livré en avance dans Phase 3 §3.3. §4.1 nécessite un backend de "Gestion de Production" qui n'existe pas encore dans Nexus.
+
+**Décision**  
+- Phase 4 considérée comme **partiellement livrée** et sautée.
+- §4.1 (`TestPlanModal` backend) : **bloqué** jusqu'au développement du module **Gestion de Production** de Documentum Nexus. Aucune implémentation frontend ne sera conduite avant que ce module soit spécifié et livré.
+- §4.3 (vue multi-évolutions dans `ImpactMapModal`) : **reporté** — la carte d'impact fonctionne pour une évolution sélectionnée ; l'extension à la vue "version produit complète" est une amélioration future à planifier dans une itération dédiée.
+
+**Justification**  
+- Implémenter `TestPlanModal` sans backend réel produirait un stub non maintenable.
+- Le module Gestion de Production est une dépendance métier non négociable (plan de test = objet de production, pas de documentation pure).
+- La vue multi-évolutions est une amélioration non bloquante.
+
+**Conséquences**  
+- `TestPlanModal` reste en mode stub (`console.log`) jusqu'à livraison Gestion de Production.
+- `ImpactMapModal` affiche les impacts d'une seule `EvolutionProduit` à la fois.
+- La prochaine action ProductDocSync est **Phase 5** (nettoyage & stabilisation).
+- Le module Gestion de Production est ajouté au backlog Nexus comme prérequis §4.1.
+
+**Statut** Active
+
+---
+
+## 2026-04-19 – RightSidebar Phase 3 : insertion image dans CentralEditor
+
+**Sujet**
+Couplage RightSidebar (médiathèque) ↔ CentralEditor (éditeur TipTap) pour l'insertion d'une image DITA depuis le panel média.
+
+**Contexte**
+RightSidebar et CentralEditor sont des composants sibling dans Desktop. Aucun mécanisme n'existait pour passer un `MediaItem` sélectionné depuis la médiathèque vers l'éditeur. Le mode floating (portal) de RightSidebar rendait le prop drilling techniquement fragile.
+
+**Décision**
+- Couplage via un store Zustand dédié : `usePendingMediaStore` (`pendingImage / setPendingImage / clearPendingImage`).
+- UX : bouton "Insérer" explicite sur chaque `MediaCard` (le clic image existant → `ImagePreview` n'est pas modifié).
+- `SyncEditor` : hors scope (éditeur HTML libre, pas DITA — Image extension non chargée).
+- Fix sérialisation : `tiptapToXml.ts` gère désormais `image` en cas spécial — l'attribut TipTap interne `src` est renommé en `href` à la sérialisation, conformément au format DITA canonique `<image href="..." alt="..." />`.
+- `Desktop.tsx` : aucune modification (le store est le pont — Desktop reste découplé).
+
+**Justification**
+- Le store Zustand est le pattern établi dans le projet pour les états transverses (cf. `useSelectionStore`, `useXmlBufferStore`).
+- Le prop drilling aurait nécessité de modifier Desktop pour passer un callback RightSidebar → CentralEditor, fragilisant la composition et rendant le mode floating plus complexe.
+- Le fix `src` → `href` est non négociable : le backend Django et les outils DITA attendent `href` sur `<image>`.
+
+**Conséquences**
+- `src/store/usePendingMediaStore.ts` créé.
+- `MediaCard`, `MediaPanel`, `RightSidebar` : prop `onInsertImage` propagée jusqu'au store.
+- `CentralEditor` : `useEffect` sur `pendingImage` → `editor.chain().focus().setImage(...)` → `clearPendingImage()`.
+- Round-trip XML → TipTap → XML : `<image href="FILE.png" alt="FILE.png" />` préservé.
+
+**Statut** Active
+
+---
+
+## 2026-04-19 – Blocage outdent sur nœud de premier niveau
+
+**Sujet**  
+Correction du bug "Plusieurs racines documentaires détectées"
+
+**Contexte**  
+Un nœud de niveau 2 (enfant direct de la racine documentaire) pouvait être désindentté, ce qui lui assignait `parent = null` et créait une deuxième racine. L'erreur se manifestait dans `mapRubriquesToMapItems` à la reconstruction des `MapItem`.
+
+**Décision**  
+- Bloquer l'outdent à deux niveaux :
+  1. **Frontend** : `canOutdent` vérifie que `parent.parentId != null` (pas de second root) ; guard dans `handleOutdent` avant appel API.
+  2. **Backend** : `outdent_map_rubrique` lève `ValidationError` si `grandparent is None`.
+- Principe : défense en profondeur — le frontend empêche l'action, le backend rejette en dernier recours.
+
+**Justification**  
+La racine documentaire est un invariant structurel de la map. Il ne peut exister qu'un seul nœud sans parent. Toute opération produisant un second nœud sans parent est structurellement invalide.
+
+**Conséquences**  
+- `MapItem.tsx` : `canOutdent(item, items)` — signature étendue
+- `LeftSidebar.tsx` : guard pré-appel API dans `handleOutdent`
+- `services.py` : guard post-verrouillage parent dans `outdent_map_rubrique`
+
+**Statut** Active
+
+---
+
 ## 2024-11-17 – Architecture générale Documentum
 
 **Sujet**  
@@ -675,6 +759,217 @@ Le préfixe `/api/` est réservé exclusivement aux routes du `DefaultRouter` DR
 
 **Statut**
 Active
+
+---
+
+## 2026-04-18 – Implémentation backend ImpactDocumentaire (Phase 3)
+
+**Sujet**
+Décisions d'implémentation prises lors de la création du modèle `ImpactDocumentaire`, ses services, son ViewSet et sa migration.
+
+**Contexte**
+Phase 3 du roadmap ProductDocSync. `ImpactDocumentaire` est l'entité centrale de la valeur Nexus : elle relie une `EvolutionProduit` à une `Rubrique` avec un statut de pilotage documentaire. Modèle et endpoints documentés dans `10_BACKEND_CANONIQUE.md § 9.3` avant implémentation.
+
+**Décisions**
+
+1. **`rubrique` : `on_delete=PROTECT` (pas `CASCADE`)**
+   - La spec mentionne `on_delete=CASCADE`. Décision : utiliser `PROTECT` pour éviter la suppression silencieuse d'impacts documentaires lors de la suppression d'une rubrique.
+   - Un impact représente un engagement de travail documentaire — perdre cet historique par cascade serait une perte métier. La rubrique doit d'abord être détachée de ses impacts.
+
+2. **`create_impact_documentaire` : vérification applicative AVANT insertion DB**
+   - La contrainte `unique_together` au niveau DB aurait suffi (DRF la détecte aussi via `UniqueTogetherValidator` automatique du serializer ModelSerializer).
+   - La vérification applicative dans le service est une défense en profondeur pour les appels directs au service hors API (tests service, tâches asynchrones futures).
+
+3. **Action `update_statut` dédiée plutôt que PATCH standard**
+   - Choix : `PATCH /api/impacts/{id}/update_statut/` plutôt que `PATCH /api/impacts/{id}/`.
+   - Justification : la mise à jour du statut est l'opération principale sur `ImpactDocumentaire`. Une action dédiée la rend explicite, valide le choix via `ChoiceField`, et délègue au service — pas de logique dans le ViewSet.
+   - Le PATCH standard DRF reste accessible pour les autres champs si besoin.
+
+4. **Filtrage double : `?evolution_produit` ET `?rubrique`**
+   - Les deux filtres sont orthogonaux et cumulables (`AND`).
+   - `?evolution_produit` : usage principal (SyncBottombar — "quelles rubriques sont impactées par cette évolution ?")
+   - `?rubrique` : usage secondaire (analytics — "quelle évolution impacte cette rubrique ?")
+
+5. **Tests : Rubrique créée avec `contenu_xml` XML valide**
+   - `Rubrique.clean()` valide le XML via `ET.fromstring()`. Les fixtures de test utilisent `<topic><title>Test</title></topic>`.
+   - Pas de mock du model.clean() — les tests d'intégration testent le système complet.
+
+**Conséquences**
+- Migration `0013_impactdocumentaire.py` appliquée.
+- 7 tests d'intégration verts (`ImpactDocumentaireAPITest`), total 28 tests ProductDocSync OK.
+- `10_BACKEND_CANONIQUE.md § 9.3` complété avec endpoints réels, services et notes.
+- Frontend Phase 3 peut désormais brancher `SyncBottombar` sur `GET /api/impacts/?evolution_produit={id}` et `PATCH /api/impacts/{id}/update_statut/`.
+
+**Statut**
+Active — Phase 3 backend terminée. Phase 3 frontend SyncBottombar livré (voir entrée 2026-04-18 – Phase 3 frontend). ImpactMapModal reste en Phase 4.
+
+---
+
+## 2026-04-18 – Généralisation Nexus par contexte produit
+
+**Décision**
+- Introduction du concept de context_produit
+- Généralisation de ProductDocSync → Pilotage documentaire
+- Généralisation du modèle :
+  - Fonctionnalité → ObjetMétier
+  - ÉvolutionProduit → ÉvénementMétier
+
+**Impact**
+- architecture modulaire Nexus
+- modèle métier Documentum
+- frontend (activation des modules)
+- nomenclature des modules
+
+**Statut**
+Active
+
+---
+
+## 2026-04-18 – Phase 3 frontend ImpactDocumentaire livré (SyncBottombar)
+
+**Sujet**
+Branchement du composant `SyncBottombar` sur l'API `ImpactDocumentaire` — remplacement de l'état local par des données persistées.
+
+**Contexte**
+Phase 3 frontend du roadmap ProductDocSync. Le backend ImpactDocumentaire étant livré (`/api/impacts/`), le composant `SyncBottombar` consommait encore un état React local (`ImpactItem[]`) sans persistance. L'objectif est de brancher tous les handlers sur les endpoints canoniques.
+
+**Décisions**
+
+1. **`useRubriqueListForImpact` créé dans `useImpactDocumentaire.ts` (staleTime 60s)**
+   - La liste des rubriques pour le dialog d'ajout d'impact est chargée une fois et mise en cache 60 secondes.
+   - Justification : les rubriques changent rarement dans un contexte de session ProductDocSync — une requête par session suffit. `staleTime 10_000` (pattern standard des autres hooks) aurait provoqué des rechargements inutiles à chaque ouverture du dialog.
+   - Alternative rejetée : hook dédié `useRubriqueList` dans un fichier séparé. Rejeté car l'usage est spécifique aux impacts — aucun autre composant ne l'utilise pour l'instant.
+
+2. **`selectedEvolutionId` passé depuis `ProductDocSync` vers `SyncBottombar`**
+   - `selectedFeature` (type `number | null`) dans `ProductDocSync` est l'ID de l'`EvolutionProduit` sélectionnée — c'est exactement `selectedEvolutionId`.
+   - Pas de dérivation nécessaire : le même état sert les deux usages (sidebar gauche + bottombar).
+   - `SyncBottombar` reçoit `selectedEvolutionId` et désactive le bouton `+` si null.
+
+3. **`ImpactItem` local supprimé — remplacé par `ImpactDocumentaire` de `src/api/impacts.ts`**
+   - Le type local avait des champs spécifiques à l'UI (featureName, type, titre) qui ne correspondent pas au modèle backend.
+   - `ImpactDocumentaire` expose `rubrique_titre` (dénormalisé côté backend) — aucun mapping nécessaire.
+   - Le tableau `SyncBottombar` est simplifié : Rubrique impactée / Statut / Actions (suppression).
+
+4. **`features: FeatureItem[]` supprimé de `SyncBottombarProps`**
+   - Cette prop alimentait le select "fonctionnalité" de l'ancien dialog d'ajout. Avec `ImpactDocumentaire`, le dialog sélectionne une rubrique (chargée via `useRubriqueListForImpact`), pas une fonctionnalité.
+   - Le composant est désormais autonome : il charge ses propres données via les hooks.
+
+5. **Dialog d'ajout : sélection de rubrique sur `GET /api/rubriques/`**
+   - Limitation connue : la liste retourne toutes les rubriques non archivées, sans filtre par projet.
+   - Justification Phase 3 : la relation Produit → Projet n'est pas encore modélisée côté frontend. Un filtre par projet sera ajouté en Phase 4 si la relation est exposée.
+
+**Conséquences**
+- `src/api/impacts.ts` créé — types `StatutImpact`, `ImpactDocumentaire`, 4 fonctions API.
+- `src/hooks/useImpactDocumentaire.ts` créé — 5 hooks TanStack Query v5 avec invalidation ciblée.
+- `SyncBottombar.tsx` réécrit — 0 état local métier, tout via hooks.
+- `ProductDocSync.tsx` : prop `features` retirée du call `<SyncBottombar>`, `selectedEvolutionId` ajouté.
+- Build Vite : 2265 modules, 0 erreur.
+
+**Statut**
+Active — Phase 3 frontend SyncBottombar livré. ImpactMapModal avec données réelles reste en Phase 4.
+
+---
+
+## 2026-04-18 – Stratégie de suggestion des rubriques impactées dans ImpactDocumentaire
+
+**Sujet**
+Stratégie de suggestion automatique des rubriques cibles lors de la création d'un `ImpactDocumentaire`.
+
+**Contexte**
+En V1, l'utilisateur sélectionne manuellement la rubrique impactée dans un select exhaustif (`GET /api/rubriques/`). Cette approche est fonctionnelle mais peu ergonomique : un projet peut contenir des centaines de rubriques. Deux options d'amélioration ont été évaluées :
+
+- **Option A — Auto-détection textuelle** : analyser le contenu des rubriques pour détecter des correspondances avec la description de l'évolution.
+- **Option B — Suggestion par historique** : si une `Fonctionnalite` a déjà impacté une `Rubrique` dans une version précédente, la proposer comme suggestion lors de la création d'un nouvel `ImpactDocumentaire` pour la même `Fonctionnalite`.
+
+**Décision**
+
+- **V1 (actuel)** : sélection manuelle de la rubrique cible par l'utilisateur.
+- **V1.1 (planifié)** : suggestion automatique par historique — requête `GET /api/impacts/?fonctionnalite={id}` (ou jointure via `EvolutionProduit`) pour pré-cocher les rubriques déjà associées à cette fonctionnalité dans des versions antérieures.
+- **Horizon Nexus** : couche IA de suggestion de rubriques impactées — point ouvert, à spécifier dans une décision dédiée avant toute implémentation.
+
+**Justification**
+L'Option A (auto-détection textuelle) est rejetée : taux de faux positifs élevé, coût algorithmique non négligeable, résultat difficile à expliquer à l'utilisateur. L'Option B (historique) est pertinente métier, déterministe, et ne nécessite aucun modèle IA — elle exploite des données déjà persistées.
+
+**Conséquences**
+- V1.1 requiert un endpoint ou une jointure exposant l'historique des impacts par `Fonctionnalite`.
+- Aucune modification backend pour V1 — la suggestion est côté frontend (filtre sur les impacts existants).
+- Le scope Nexus (IA) fera l'objet d'une entrée dédiée dans ce log avant implémentation.
+
+**Statut**
+Active — V1 implémentée. V1.1 à planifier (pas de milestone défini). Nexus IA : point ouvert.
+
+---
+
+## 2026-04-18 – Champ `notes` sur ImpactDocumentaire
+
+**Sujet**
+Ajout d'un champ `notes` au modèle `ImpactDocumentaire` pour capturer les consignes de rédaction spécifiques à chaque rubrique impactée.
+
+**Contexte**
+Une `EvolutionProduit` peut impacter N rubriques, chacune avec une expression documentaire différente de la modification. Exemple : une mise à jour d'un module — la description dans l'écran de saisie diffère de celle dans le rapport de conformité, qui diffère elle-même de celle dans la fiche employé. Le champ `description` de `EvolutionProduit` capture la description globale de l'évolution, pas les instructions spécifiques à chaque rubrique.
+
+**Décision**
+Ajouter `notes = models.TextField(blank=True, default="")` sur `ImpactDocumentaire`.
+
+Les deux niveaux de notes coexistent et sont complémentaires :
+- `EvolutionProduit.description` = description globale de l'évolution (contexte produit)
+- `ImpactDocumentaire.notes` = consigne de rédaction spécifique à cette rubrique (instruction documentaire)
+
+Convention Django respectée : `TextField` sans `null=True` — la chaîne vide représente l'absence de note (cf. décision 2026-04-18 – Implémentation backend VersionProduit et EvolutionProduit, point 1).
+
+**Justification**
+Sans ce champ, la nuance rédactionnelle par rubrique est perdue — l'auteur documentaire n'a pas de guidage précis sur ce qu'il doit modifier dans chaque rubrique. Le champ est facultatif (`blank=True`) : il n'alourdit pas le workflow pour les impacts simples.
+
+**Conséquences**
+- Migration `0014_impactdocumentaire_notes` à créer.
+- `ImpactDocumentaireSerializer` : ajouter `notes` dans `fields`.
+- `SyncBottombar` : afficher/éditer `notes` dans le tableau ou un panneau de détail (à spécifier en Phase 4).
+- Aucune modification des services — `notes` est un champ libre sans règle métier.
+
+**Statut**
+Active — implémentation backend à faire (migration `0014`). Frontend Phase 4.
+
+---
+
+## 2026-04-18 – Format de stockage des notes ImpactDocumentaire : HTML TipTap
+
+**Sujet**
+Format de données utilisé pour stocker le contenu du champ `ImpactDocumentaire.notes`.
+
+**Contexte**
+`SyncEditor` utilise TipTap pour l'édition. Deux options de sérialisation étaient possibles pour persister les notes : HTML (sortie native TipTap) ou DITA XML (format canonique Documentum).
+
+**Décision**
+Le champ `notes` stocke du **HTML TipTap** — pas du DITA XML.
+
+**Justification**
+Les notes d'impact sont des consignes de rédaction à usage interne du suivi de version. Elles ne sont pas destinées à être :
+- réutilisées dans d'autres rubriques ou documents,
+- publiées dans un format exporté (PDF, HTML, SCORM),
+- parsées ou transformées par le pipeline DITA-OT.
+
+Structurer ces notes en DITA XML n'apporterait aucune valeur métier et imposerait une contrainte inutile à l'auteur. Le HTML TipTap est suffisant, lisible, et directement rendu par l'éditeur.
+
+**Conséquences**
+- `ImpactDocumentaire.notes` = `TextField` acceptant du HTML — aucune validation XML.
+- `SyncEditor` en mode notes : `editor.getHTML()` est la source de vérité à persister.
+- `getAllExtensions()` peut être utilisé dans SyncEditor mais les extensions DITA (Body, Section, Steps…) ne produiront jamais de valeur dans ce contexte. Une version allégée `getRichTextExtensions()` (StarterKit + TextStyle + Color + TextAlign + GrammarHighlight) est recommandée pour une future refactorisation — non prioritaire.
+- **Règle** : ne jamais appeler `editor.getJSON()` ni tenter de sérialiser en DITA XML depuis SyncEditor.
+
+**Statut**
+Active.
+
+## 2026-04-19 – NodeView React requis pour l'extension Image TipTap
+
+Décision : l'extension Image doit exposer un NodeView React
+pour que TipTap puisse rendre les balises <image> dans l'éditeur.
+Sans NodeView, le node est ignoré silencieusement à l'affichage.
+
+Règle : toute extension TipTap gérant un élément visuel
+doit implémenter un NodeView — ne pas se fier au rendu HTML natif.
+
+**Statut**
+Active.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## 1. Objet du document
 
-Ce document formalise une **architecture technique modulaire** dans laquelle **Documentum** n’est plus seulement un outil documentaire, mais le **noyau de connaissance produit** d’un ensemble plus large.
+Ce document formalise une **architecture technique modulaire** dans laquelle **Documentum** n’est plus seulement un outil documentaire, mais le **noyau de connaissance** d’un ensemble plus large, applicable à différents contextes métier.
 
 L’objectif n’est pas de fusionner tous les besoins dans un seul monolithe, mais d’organiser plusieurs modules spécialisés autour d’un **socle documentaire central**, exposé par API.
 
@@ -25,6 +25,8 @@ Autour de lui gravitent plusieurs modules spécialisés :
 ### Principe directeur
 
 Chaque module a une responsabilité claire.
+
+Un **`context_produit`** détermine quel sous-ensemble de modules est activé pour une instance Nexus donnée. L'architecture est donc à la fois **modulaire** et **contextuelle** : un même noyau Documentum peut être exploité avec des modules différents selon le métier ou le cas d'usage.
 
 **Documentum ne remplace pas** :
 - un CRM
@@ -104,28 +106,46 @@ Cœur documentaire et référentiel de connaissance.
 
 ---
 
-## 5.2 Module B — Product Knowledge / Pilotage produit
+## 5.2 Module B — Pilotage documentaire
 
 ### Rôle
-Suivre les évolutions produit et leurs impacts documentaires.
+Suivre les événements métier et leurs impacts documentaires, quel que soit le contexte d'usage.
 
-### Responsabilités
-- gestion des fonctionnalités
-- gestion des évolutions (corrections, améliorations, nouveautés)
-- rattachement à une version cible
-- calcul ou déclaration des impacts documentaires
+### Principe générique
+
+Ce module fonctionne selon un schéma invariant :
+
+```text
+ObjetMétier
+  → ÉvénementMétier
+      → ImpactDocumentaire
+          → Rubrique
+```
+
+### Spécialisation actuelle — contexte Ingénierie Logicielle
+
+L'implémentation actuelle (`ProductDocSync`) instancie ce schéma avec :
+- `Fonctionnalité` comme `ObjetMétier`
+- `ÉvolutionProduit` comme `ÉvénementMétier`
+- `ImpactDocumentaire` → lien vers une `Rubrique`
+
+### Responsabilités (génériques)
+- gestion des objets métier (fonctionnalités, produits, dossiers…)
+- gestion des événements (évolutions, correctifs, incidents, changements réglementaires…)
+- rattachement à une version ou échéance cible
+- déclaration des impacts documentaires
 - suivi du statut de couverture documentaire
 
 ### Remarque
 Ce module peut être :
-- intégré fonctionnellement à Documentum au départ
-- puis isolé ensuite comme sous-module métier distinct
+- intégré fonctionnellement à Documentum au départ (cas actuel)
+- puis isolé ensuite comme sous-module métier distinct selon le contexte
 
-### Données clés
+### Données clés (spécialisation logicielle actuelle)
 - produit
-- version cible
-- fonctionnalité
-- évolution
+- version cible (`VersionProduit`)
+- fonctionnalité (`Fonctionnalité` = `ObjetMétier`)
+- évolution (`ÉvolutionProduit` = `ÉvénementMétier`)
 - criticité
 - statut documentaire
 
@@ -212,6 +232,42 @@ Transformer une partie de la documentation en contenu pédagogique.
 
 ### Positionnement
 Peut rester un sous-domaine de publication de Documentum dans un premier temps.
+
+---
+
+## 5.6b Module — Gestion de production
+
+### Rôle
+Suivre les cycles de production métier (fabrication, services, procédures).
+
+### Responsabilités
+- gestion des ordres ou cycles de production
+- suivi des défauts, non-conformités ou incidents qualité
+- lien avec la documentation technique et les procédures
+- alimentation du module Pilotage documentaire en événements métier
+
+### Positionnement
+- module spécialisé activé selon le `context_produit`
+- vision cible — pas encore implémenté
+
+---
+
+## 5.6c Module — Publipostage
+
+### Rôle
+Produire des documents personnalisés par fusion entre modèles documentaires et données métier ou client.
+
+### Responsabilités
+- gestion de modèles de fusion (templates)
+- gestion des champs de fusion et des sources de données
+- fusion automatisée ou à la demande
+- génération de documents personnalisés (courriers, notices, attestations, rapports…)
+- lien possible avec la Base Métier et le module IA
+
+### Positionnement
+- module activé selon le `context_produit`
+- vision cible — pas encore implémenté
+- alimenté par Documentum Core (structure) + données métier externes ou Base Métier
 
 ---
 
@@ -314,26 +370,33 @@ Les pivots métier du système cible sont :
 
 ## 7.2 Relation pivot centrale
 
-La relation structurante du système est la suivante :
+### Schéma générique (tout contexte)
 
 ```text
 RéférentielMétier
   -> RègleMétier
       -> VersionRègleMétier
           -> (influence)
-              Fonctionnalité
-                  -> ÉvolutionProduit
+              ObjetMétier
+                  -> ÉvénementMétier
                       -> ImpactDocumentaire
                           -> Rubrique
                               -> RévisionRubrique
                                   -> Publication
 ```
 
-### Lecture métier
+### Spécialisation actuelle — contexte Ingénierie Logicielle
+
+```text
+ObjetMétier       → Fonctionnalité
+ÉvénementMétier   → ÉvolutionProduit
+```
+
+Lecture métier (contexte actuel) :
 - une règle métier influence une ou plusieurs fonctionnalités
 - une évolution produit peut être contrainte ou déclenchée par une règle métier
-- une évolution touche une fonctionnalité
-- une évolution génère un impact documentaire
+- une évolution touche une fonctionnalité (`ObjetMétier`)
+- une évolution (`ÉvénementMétier`) génère un impact documentaire
 - un impact concerne une ou plusieurs rubriques
 - une rubrique évolue via des révisions
 - une publication fige un état exploitable
@@ -619,7 +682,7 @@ Les décisions suivantes devront être confirmées formellement :
 3. Les modules externes communiquent par API, jamais par accès direct à la base.
 4. L’IA consomme une connaissance dérivée, jamais la donnée brute non gouvernée comme vérité.
 5. Le portail client ne consomme que des contenus validés et publiés.
-6. Le pivot métier principal est : **Fonctionnalité ↔ Impact documentaire ↔ Rubrique ↔ Publication**.
+6. Le pivot métier principal est : **ObjetMétier → ÉvénementMétier → ImpactDocumentaire → Rubrique → Publication**. Dans le contexte Ingénierie Logicielle : Fonctionnalité → ÉvolutionProduit → ImpactDocumentaire.
 7. La Base Métier est la source de vérité des règles métier
 8. L’IA ne peut proposer que des évolutions, jamais les valider
 
@@ -627,13 +690,13 @@ Les décisions suivantes devront être confirmées formellement :
 
 ## 14. Conclusion
 
-La vision cible n’est pas celle d’un outil unique, mais celle d’un **écosystème modulaire centré sur la connaissance produit**.
+La vision cible n’est pas celle d’un outil unique, mais celle d’un **écosystème modulaire et contextuel centré sur la connaissance documentaire et métier**.
 
 Dans cette architecture :
 
 - **Documentum** est le noyau de vérité documentaire
 - la **Base Métier** est le noyau de vérité métier
-- le pilotage produit apporte l’intention de changement
+- le **Pilotage documentaire** apporte l’intention de changement (via les événements métier du contexte actif)
 - le support apporte la réalité terrain
 - l’IA augmente l’exploitation de la connaissance
 - le portail client restitue la valeur

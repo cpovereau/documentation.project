@@ -64,12 +64,21 @@ Elle repose sur :
 📌 Référence : `20_SECURITE_SYSTEME.md`
 
 ### 4. Vue d’ensemble des modules
-- Documentum Core
-- Product Knowledge
-- Base Métier
-- Support ITIL
-- IA / Knowledge Engine
-- Portail client
+
+L’activation des modules Nexus dépend du **`context_produit`** configuré pour une instance donnée. Tous les modules ne sont pas actifs dans tous les cas d’usage.
+
+Modules du socle Nexus :
+- **Documentum Core** — noyau documentaire (toujours actif)
+- **Pilotage documentaire** — module générique de suivi des impacts et des évolutions métier
+  → spécialisation actuelle : `ProductDocSync` (contexte Ingénierie Logicielle)
+- **Base Métier** — source de vérité des règles et référentiels métier
+- **Support / Tickets** — gestion des incidents, demandes et anomalies (ITIL)
+- **Gestion de production** — suivi des cycles de production métier
+- **Publipostage** — fusion documentaire à partir de modèles et de données métier/client
+- **IA / Knowledge Engine** — indexation et exploitation de la connaissance structurée
+- **Portail client** — exposition des contenus publiés vers l’extérieur
+
+👉 Voir section « Notion de `context_produit` » ci-après pour le mécanisme d’activation des modules.
 
 🔐 Couche transverse — Sécurité
 
@@ -97,6 +106,29 @@ Elle garantit :
 - appliquer les règles de sécurité globales
 - respecter les contrôles d’accès
 - garantir l’isolation des données manipulées
+
+### 5b. Notion de `context_produit`
+
+Le `context_produit` est le mécanisme qui détermine quel sous-ensemble de modules Nexus est activé pour un usage donné.
+
+**Rôle :**
+- activer ou désactiver des modules selon le métier ou le cas d'usage
+- influencer la navigation et les écrans visibles
+- conditionner les flux disponibles dans l'interface
+- déterminer les modèles métier spécialisés utilisés
+
+**Exemples de contextes :**
+- `ingenierie_logicielle` — active Pilotage documentaire (ProductDocSync), VersionProduit, EvolutionProduit
+- `juridique` — activera à terme le pilotage par dossiers et évolutions réglementaires
+- `industrie` — activera à terme le suivi par produit physique et défauts qualité
+- `publipostage` — active le module Publipostage (modèles, champs de fusion, données client)
+
+**Principe :**
+Un même socle Documentum Core peut être exploité avec des modules différents selon le contexte activé.
+
+👉 Le `context_produit` est un paramètre de configuration d'instance, pas une propriété dynamique au niveau utilisateur.
+
+---
 
 ### 6. Schéma global du système
 - diagramme d’architecture
@@ -235,9 +267,12 @@ Décrire les flux fonctionnels majeurs du système.
 - publication
 - archivage
 
-### 3. Flux ProductDocSync
-- fonctionnalités
+### 3. Flux Pilotage documentaire
+- objets métier (fonctionnalités dans le contexte logiciel)
+- événements métier (évolutions, correctifs)
 - impacts documentaires
+
+> Implémentation actuelle : `ProductDocSync` (contexte Ingénierie Logicielle)
 
 ### 4. Flux support ↔ documentation
 - ticket → doc
@@ -263,19 +298,23 @@ Définir le socle frontend et les règles UX.
 ## Rubriques
 
 ### 1. Écrans principaux
-- Desktop
-- ProductDocSync
-- Dashboard Nexus (à venir)
+- Desktop (CentralEditor)
+- Pilotage documentaire (écran actuel : `ProductDocSync`, contexte Ingénierie Logicielle)
+- Dashboard Nexus (à venir) — tableau de bord contextuel
 
 ### 2. Navigation globale
 - parcours utilisateur
 - transitions d’état
+- navigation conditionnelle selon le `context_produit`
 
 ### 3. États globaux
+- `contextProduit` — détermine les modules et écrans accessibles
 - produit sélectionné
 - version
-- fonctionnalité
+- objet métier (fonctionnalité dans le contexte logiciel)
 - rubrique
+
+> Les écrans et flux disponibles ne sont pas universels : ils dépendent du `context_produit` actif pour l’instance.
 
 ### 4. Composants structurants
 - arbres

@@ -6,6 +6,7 @@ export * from "./interfaces"
 export * from "./medias";
 export * from "./gammes";
 export * from "./versionsProduit";
+export * from "./impacts";
 // export * from "./documents";   // à venir
 // export * from "./rubriques";   // si besoin plus tard
 

@@ -37,7 +37,7 @@ Le système repose sur 4 axes principaux :
 1. **Organisation documentaire**
 2. **Contenu éditorial**
 3. **Versioning & publication**
-4. **Pilotage documentaire (ProductDocSync)**
+4. **Pilotage documentaire** (module générique — spécialisation actuelle : `ProductDocSync` pour le contexte Ingénierie Logicielle)
 
 ---
 
@@ -162,41 +162,62 @@ Phase de publication :
 
 ---
 
-# 🎯 4. Pilotage documentaire (ProductDocSync)
+# 🎯 4. Pilotage documentaire
 
 ---
 
-## Entités
+## Schéma générique
 
-- Fonctionnalité
-- ImpactDocumentaire
+Le pilotage documentaire suit un schéma invariant, quel que soit le contexte métier :
 
----
+```text
+ObjetMétier
+  → ÉvénementMétier
+      → ImpactDocumentaire
+          → Rubrique
+```
 
-## Logique
+## Spécialisation actuelle — contexte Ingénierie Logicielle
 
-Fonctionnalité
-└── ImpactDocumentaire
-    └── Rubrique concernée
+| Abstraction générique | Spécialisation logicielle |
+|---|---|
+| `ObjetMétier` | `Fonctionnalité` |
+| `ÉvénementMétier` | `ÉvolutionProduit` |
+| `ImpactDocumentaire` | `ImpactDocumentaire` (pivot inchangé) |
+
+## Exemples de spécialisations possibles
+
+| Contexte | ObjetMétier | ÉvénementMétier |
+|---|---|---|
+| Ingénierie logicielle | Fonctionnalité | ÉvolutionProduit / Correctif |
+| Industrie | Produit physique | Défaut qualité / Évolution |
+| Juridique | Dossier / Règle | Évolution réglementaire |
+| Support | Ticket récurrent | Signalement / Incident |
+
+## Entités actuelles
+
+- `Fonctionnalité` (ObjetMétier — spécialisation logicielle)
+- `EvolutionProduit` (ÉvénementMétier — spécialisation logicielle)
+- `ImpactDocumentaire` (pivot central — inchangé)
 
 ---
 
 ## Rôle
 
-- identifier les besoins de mise à jour
-- suivre l’état de la documentation
+- identifier les besoins de mise à jour documentaire
+- suivre l’état de la documentation liée aux événements métier
 
 ---
 
 ## Invariants
 
-- ProductDocSync :
+- Le module Pilotage documentaire :
   - ne modifie pas le contenu XML
   - ne crée pas de révision
 
-- Impact :
-  - représente un besoin
-  - pas une modification
+- `ImpactDocumentaire` :
+  - représente un besoin de mise à jour
+  - pas une modification directe de contenu
 
 ---
 

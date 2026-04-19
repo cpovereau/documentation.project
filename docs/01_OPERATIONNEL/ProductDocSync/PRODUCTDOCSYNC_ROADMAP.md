@@ -11,35 +11,45 @@ Ce document est synthétique, durable, et conçu pour un travail non linéaire d
 
 L'évolution est organisée en **5 phases** :
 
-1. **Phase 1 — Branchement API fonctionnalités (PARTIEL ✅)**
-2. **Phase 2 — Branchement API produits et versions (PARTIEL ⚠️ — versions bloquées)**
-3. **Phase 3 — ImpactDocumentaire : modèle et API (À FAIRE — prérequis Nexus)**
-4. **Phase 4 — Plan de test et carte d'impact (À FAIRE)**
-5. **Phase 5 — Nettoyage et stabilisation technique (À FAIRE)**
+1. **Phase 1 — Branchement API évolutions (LIVRÉ ✅)**
+2. **Phase 2 — Branchement API produits et versions (LIVRÉ ✅)**
+3. **Phase 3 — ImpactDocumentaire : modèle, API, SyncBottombar, ImpactMapModal, Notes, Usages (LIVRÉ ✅)**
+4. **Phase 4 — Plan de test et carte d'impact (PARTIELLEMENT LIVRÉ ⚠️)**
+5. **Phase 5 — Nettoyage et stabilisation technique (LIVRÉ ✅ — 2026-04-19)**
 
 ---
 
-# ✅ État actuel (2026-04-18 — Phase A Phases 1 + 2 livrée)
+# ✅ État actuel (2026-04-19 — Phases 1, 2, 3 livrées intégralement)
 
 ### Ce qui fonctionne
 - Layout complet en 4 zones : `SyncLeftSidebar`, `SyncEditor`, `SyncBottombar`, `SyncRightSidebar`
 - Navigation entre évolutions (sélection, expansion, collapse)
-- **Réordonnancement drag & drop persisté** → `PATCH /api/evolutions-produit/reorder/` via `useEvolutionProduitReorder` ✅
-- Copier / coller une évolution → colle via `POST /api/evolutions-produit/` (persisté) ✅
+- **Réordonnancement drag & drop persisté** → `PATCH /api/evolutions-produit/reorder/` ✅
+- Copier / coller une évolution → `POST /api/evolutions-produit/` (persisté) ✅
 - Archivage d'une évolution → `PATCH /api/evolutions-produit/{id}/archive/` (persisté) ✅
-- Ajout d'une évolution → dialog (Fonctionnalite + type + description) + `POST /api/evolutions-produit/` (persisté) ✅
-- **Produits chargés depuis `GET /api/produits/`** via `useProduits`
-- **Versions chargées depuis `GET /api/versions-produit/?produit={id}`** via `useVersionProduitList` ✅ (plus hardcodé)
-- **EvolutionProduit chargées depuis `GET /api/evolutions-produit/?version_produit={id}`** via `useEvolutionProduitList` ✅
-- **Création de version** → dialog + `POST /api/versions-produit/` via `useVersionProduitCreate` ✅ (plus incrémentation locale)
-- **Publication de version** → `POST /api/versions-produit/{id}/publier/` + toast succès/erreur ✅ (plus `alert()`)
+- Ajout d'une évolution → dialog + `POST /api/evolutions-produit/` (persisté) ✅
+- **Produits** depuis `GET /api/produits/` via `useProduits` ✅
+- **Versions** depuis `GET /api/versions-produit/?produit={id}` via `useVersionProduitList` ✅
+- **EvolutionProduit** depuis `GET /api/evolutions-produit/?version_produit={id}` via `useEvolutionProduitList` ✅
+- **Création de version** → `POST /api/versions-produit/` via `useVersionProduitCreate` ✅
+- **Publication de version** → `POST /api/versions-produit/{id}/publier/` + toast ✅
+- **ImpactDocumentaire dans `SyncBottombar`** — branché API ✅
+  - Chargement → `GET /api/impacts/?evolution_produit={id}` via `useImpactList` ✅
+  - Ajout d'impact → dialog rubrique + `POST /api/impacts/` via `useImpactCreate` ✅
+  - Mise à jour statut inline → `PATCH /api/impacts/{id}/update_statut/` via `useImpactUpdateStatut` ✅
+  - Suppression → `DELETE /api/impacts/{id}/` via `useImpactDelete` ✅
+  - Sélection ligne → highlight visuel + `onImpactSelect` → `selectedImpact` dans ProductDocSync ✅
+  - Usages rubrique → `GET /api/rubriques/{id}/usages/` via `useRubriqueUsages` + panneau inline ✅
+- **Notes d'impact dans `SyncEditor`** — édition via TipTap (§ 3.4) ✅
+  - Clic sur ligne → SyncEditor charge les notes dans TipTap avec Toolbar complète + dictée ✅
+  - Bandeau contextuel (rubrique, type) en lecture seule ✅
+  - Bouton "Enregistrer les notes" → `PATCH /api/impacts/{id}/update_notes/` ✅
 - Bascule type d'article (évolution / correctif) dans `SyncEditor`
 - Redimensionnement vertical de `SyncBottombar` par drag
-- `ImpactMapModal` : ouverture / fermeture
+- `ImpactMapModal` : graphe ReactFlow avec données réelles (§3.3) — sélection nœuds → plan de test ✅
 - `TestPlanModal` : ouverture / fermeture / réordonnancement des tâches
 
 ### Ce qui ne fonctionne pas / reste à faire
-- **`ImpactDocumentaire`** : modèle backend Phase 3 — non démarrée
 - **Génération du plan de test** → fermeture modale sans action backend (Phase 4)
 - **Fonctionnalites du référentiel** : pas de filtre `?produit=` côté backend — filtré en frontend
 
@@ -118,7 +128,7 @@ Suite à la décision du 2026-04-18, l'arbre affiché dans `SyncLeftSidebar` rep
 
 ---
 
-# 🔜 Phase 3 — ImpactDocumentaire : modèle et API (À FAIRE — prérequis Nexus)
+# ✅ Phase 3 — ImpactDocumentaire : modèle, API, SyncBottombar, ImpactMapModal, Notes, Usages (LIVRÉ — 2026-04-19)
 
 ### 🎯 Objectifs
 - Implémenter le modèle `ImpactDocumentaire` absent du backend.
@@ -130,27 +140,62 @@ Suite à la décision du 2026-04-18, l'arbre affiché dans `SyncLeftSidebar` rep
 
 #### 3.1 — Backend : modèle `ImpactDocumentaire`
 
-- [ ] Créer le modèle `ImpactDocumentaire` : `EvolutionProduit` → `Rubrique` avec statuts `a_faire / en_cours / pret / valide / ignore`
-- [ ] Exposer `GET/POST/PATCH/DELETE /api/impacts/` (filtrable par `evolution_produit` et `rubrique`)
-- [ ] Modèle et endpoints documentés dans `10_BACKEND_CANONIQUE.md § 9.3` ✅
+- [x] Créer le modèle `ImpactDocumentaire` : `EvolutionProduit` → `Rubrique` avec statuts `a_faire / en_cours / pret / valide / ignore` ✅
+- [x] Exposer `GET/POST/PATCH/DELETE /api/impacts/` + action `PATCH /api/impacts/{id}/update_statut/` ✅
+- [x] Modèle et endpoints documentés dans `10_BACKEND_CANONIQUE.md § 9.3` ✅
+- [x] Services `create_impact_documentaire` et `update_statut_impact` avec logique métier ✅
+- [x] 7 tests d'intégration verts (`ImpactDocumentaireAPITest`) ✅
+- [x] Migration `0013_impactdocumentaire` appliquée ✅
 
 #### 3.2 — Frontend : intégration dans `SyncBottombar`
 
-- [ ] Charger les rubriques impactées par la fonctionnalité sélectionnée
-- [ ] Afficher le statut d'avancement par rubrique
-- [ ] Permettre la mise à jour du statut depuis `SyncBottombar`
+- [x] Charger les rubriques impactées par l'évolution sélectionnée → `GET /api/impacts/?evolution_produit={id}` ✅
+- [x] Afficher le statut d'avancement par rubrique ✅
+- [x] Permettre la mise à jour du statut → `PATCH /api/impacts/{id}/update_statut/` ✅
+- [x] Supprimer l'état local `ImpactItem` — remplacé par `ImpactDocumentaire` depuis `src/api/impacts.ts` ✅
+- [x] Dialog d'ajout : sélection de rubrique via `GET /api/rubriques/` ✅
+- [x] Suppression d'un impact → `DELETE /api/impacts/{id}/` ✅
 
-#### 3.3 — Intégration dans `ImpactMapModal`
+#### 3.3 — Intégration dans `ImpactMapModal` (LIVRÉ ✅ — 2026-04-19)
 
-- [ ] Alimenter `ImpactMapModal` avec les données réelles d'impact
-- [ ] Remplacer les données statiques (si présentes) par un appel `GET /api/impacts/?fonctionnalite={id}`
+- [x] Alimenter `ImpactMapGraph` via `useImpactList(evolutionId)` → `GET /api/impacts/?evolution_produit={id}` ✅
+- [x] Remplacer les données statiques (mock ReactFlow) par les impacts réels ✅
+- [x] Nœud central = évolution sélectionnée ; nœuds feuilles = rubriques impactées colorées par statut ✅
+- [x] Sélection de nœuds → plan de test via `onGenerateTestPlan` ✅
+- [x] États loading / empty / error / evolutionId null gérés ✅
+- [x] `ImpactMapModal` reçoit `evolutionId` + `evolutionLabel` depuis `ProductDocSync` ✅
+
+#### 3.4 — Notes par impact (LIVRÉ ✅ — 2026-04-19)
+
+Décision (2026-04-18) : chaque `ImpactDocumentaire` porte ses propres `notes` — la même évolution peut s'exprimer différemment dans chaque rubrique impactée (ex : mise à jour du module Absences → description différente dans l'écran de saisie, le rapport mensuel, la fiche employé).
+
+- [x] Backend : champ `notes = TextField(blank=True, default="")` sur `ImpactDocumentaire` (migration 0014) ✅
+- [x] Backend : service `update_notes_impact(impact_id, notes)` + action `PATCH /api/impacts/{id}/update_notes/` ✅
+- [x] Frontend : `updateNotesImpact()` dans `src/api/impacts.ts` + hook `useImpactUpdateNotes()` ✅
+- [x] Frontend : clic sur une ligne du tableau SyncBottombar → SyncEditor charge les notes dans TipTap ✅
+- [x] Frontend : prop `selectedImpact` passée de ProductDocSync → SyncEditor ; bouton "Enregistrer les notes" persiste via `update_notes` ✅
+- [x] Tests : 3 cas couverts (`ImpactDocumentaireNotesTest`) ✅
+
+**Implémentation finale (2026-04-19) :** les notes sont éditées directement dans l'éditeur TipTap de SyncEditor avec Toolbar complète et dictée vocale — pas de textarea séparé. Un bandeau contextuel non interactif affiche le nom de la rubrique et le type d'évolution. Le sélecteur Évolution/Correctif de ToolbarCorrection passe en lecture seule (pointer-events-none) quand un impact est sélectionné. En l'absence de sélection, un message d'invite remplace la zone d'édition.
+
+#### 3.5 — Usages d'une rubrique + navigation vers Doc Principale (LIVRÉ ✅ — 2026-04-19)
+
+Objectif : depuis une ligne du tableau, voir dans quels documents une rubrique est utilisée et l'ouvrir dans CentralEditor (Doc Principale).
+
+- [x] Backend : action `GET /api/rubriques/{id}/usages/` sur `RubriqueViewSet` → liste `[{map_id, map_nom, version_projet_id, version_projet_nom, projet_id, projet_nom}]` via `MapRubrique` ✅
+- [x] Frontend : `getRubriqueUsages(rubriqueId)` dans `src/api/rubriques.ts` + hook `useRubriqueUsages(rubriqueId)` ✅
+- [x] Frontend : bouton ExternalLink par ligne → panneau inline `UsagePanel` avec liste des usages ✅
+- [ ] Frontend : câblage navigation vers CentralEditor (dépend du routeur — TODO à préciser)
+- [x] Tests : rubrique dans N maps → N entrées retournées ; rubrique sans usage → liste vide ✅
+
+> ⚠️ **Point ouvert Nexus** : une couche IA de suggestion de rubriques impactées est envisagée pour un horizon futur. À spécifier dans une décision dédiée avant implémentation. Référence : `gov_decision-log.md` entrée 2026-04-18 "Stratégie suggestion rubriques".
 
 ### 📝 Notes
-`ImpactDocumentaire` est l'entité centrale de la valeur Nexus. Son absence bloque le pilotage documentaire complet. Cette phase est un prérequis pour que ProductDocSync soit fonctionnellement utile au-delà de la gestion des fonctionnalités.
+Backend livré le 2026-04-18 (migration `0013`, 7 tests verts, rubrique `on_delete=PROTECT`). `rubrique_titre` dénormalisé en read-only dans le serializer. Frontend `SyncBottombar` branché API le 2026-04-18. §3.4 (notes TipTap) et §3.5 (usages rubrique + `UsagePanel`) livrés le 2026-04-19. §3.3 (`ImpactMapGraph` données réelles, sélection nœuds, `onGenerateTestPlan`) livré le 2026-04-19 — Phase 3 intégralement complète. Voir `gov_decision-log.md` entrées 2026-04-18 / 2026-04-19.
 
 ---
 
-# 🔜 Phase 4 — Plan de test et carte d'impact (À FAIRE)
+# ⚠️ Phase 4 — Plan de test et carte d'impact (PARTIELLEMENT LIVRÉ — 2026-04-19)
 
 ### 🎯 Objectifs
 - Brancher la génération du plan de test sur une action backend réelle.
@@ -158,43 +203,56 @@ Suite à la décision du 2026-04-18, l'arbre affiché dans `SyncLeftSidebar` rep
 
 ### 🧩 Tâches
 
-#### 4.1 — `TestPlanModal` : génération réelle
+#### 4.1 — `TestPlanModal` : génération réelle (BLOQUÉ — dépend Gestion de Production)
 
 - [ ] Définir l'action backend cible (génération d'une map de test ? export ? simple enregistrement ?)
 - [ ] Remplacer `console.log("Plan de test validé :", tasks)` par l'appel backend
 - [ ] Gérer le retour (toast succès / erreur, fermeture conditionnelle)
 
-#### 4.2 — `ImpactMapModal` : graphe d'impact réel
+> ⛔ **Bloqué** : la génération d'un plan de test implique le module **Gestion de Production** de Documentum Nexus, qui n'est pas encore développé. Cette tâche est déplacée en dépendance de ce module. Voir `gov_decision-log.md` entrée 2026-04-19.
 
-- [ ] Alimenter `ImpactMapGraph` avec des données réelles depuis `GET /api/impacts/` (Phase 3)
-- [ ] Relier les nœuds du graphe aux entités backend réelles
+#### 4.2 — `ImpactMapModal` : graphe d'impact réel (LIVRÉ ✅ — 2026-04-19 — avancé en Phase 3)
+
+- [x] Alimenter `ImpactMapGraph` avec des données réelles depuis `GET /api/impacts/?evolution_produit={id}` via `useImpactList` ✅
+- [x] Relier les nœuds du graphe aux entités backend réelles (colorisation par statut, nœud central = évolution) ✅
+
+#### 4.3 — `ImpactMapModal` : vue multi-évolutions (REPORTÉ)
+
+- [ ] Permettre l'affichage de toutes les évolutions d'une version produit (et non d'une seule `EvolutionProduit`)
+- [ ] Adapter le graphe ReactFlow : nœud central = version produit ; nœuds intermédiaires = évolutions ; feuilles = rubriques impactées
+- [ ] Adapter `useImpactList` ou créer `useImpactListByVersion(versionId)` → `GET /api/impacts/?version_produit={id}`
+- [ ] Adapter `ImpactMapModal` pour recevoir `versionId` en alternative à `evolutionId`
+
+> 📋 Cette tâche est reportée. Elle sera conduite lors d'une itération dédiée à la vue "version produit complète".
 
 ### 📝 Notes
-Cette phase est dépendante de la Phase 3 (ImpactDocumentaire). La sémantique exacte de "générer un plan de test" reste à définir dans `03_PILOTAGE/`.
+Phase 4 sautée : §4.2 livré en avance (Phase 3 §3.3). §4.1 bloqué par l'absence du module Gestion de Production (Nexus). §4.3 (vue multi-évolutions) identifiée et reportée — la carte d'impact fonctionne pour une évolution sélectionnée, l'extension à la vue version est une amélioration future. Décision actée le 2026-04-19.
 
 ---
 
-# 🔜 Phase 5 — Nettoyage et stabilisation technique (À FAIRE)
+# ✅ Phase 5 — Nettoyage et stabilisation technique (LIVRÉ — 2026-04-19)
 
 ### 🧩 Tâches
 
-#### 5.1 — Correction `console.log` production
+#### 5.1 — Suppression `console.log` production (LIVRÉ ✅)
 
-- [ ] Supprimer `console.log("Fonctionnalité collée :", newFeature.name)` (ligne 144)
-- [ ] Supprimer `console.log("Plan de test validé :", tasks)` (ligne 210, dans `TestPlanModal.onGenerate`)
+- [x] Supprimer les `console.log` debug dans `apiClient.ts` (bloc `[FLOW][CreateProject]` — payload + raw response) ✅
+- [x] Supprimer les `console.log` debug dans `xmlToTiptap.ts` (xmlString brut, conteneur, JSON TipTap généré) ✅
+- Note : `handleCopyFeature` et `TestPlanModal.onGenerate` étaient déjà propres au moment de l'audit
 
-#### 5.2 — `TOTAL_HEIGHT` recalculé à chaque rendu
+#### 5.2 — `TOTAL_HEIGHT` recalculé à chaque rendu (LIVRÉ ✅)
 
-- [ ] `const TOTAL_HEIGHT = window.innerHeight - 130` est calculé une seule fois au montage
-- [ ] Envisager un `useEffect` sur `resize` ou un hook `useWindowHeight` si le panneau doit s'adapter au redimensionnement
+- [x] `const TOTAL_HEIGHT = window.innerHeight - 130` est calculé une seule fois au montage
+- [x] Hook `useWindowHeight` créé dans `src/hooks/useWindowHeight.ts` — resize listener avec cleanup ✅
 
-#### 5.3 — Type `MinimalTask` délocalisé
+#### 5.3 — Type `MinimalTask` délocalisé (LIVRÉ ✅)
 
-- [ ] Déplacer `type MinimalTask = { id: string; label: string }` (défini localement ligne 147) vers `src/types/`
+- [x] Type `MinimalTask` déplacé vers `src/types/MinimalTask.ts` — import ajouté dans `ProductDocSync.tsx` ✅
 
-#### 5.4 — Classe CSS incorrecte dans `SyncRightSidebar`
+#### 5.4 — Classe CSS incorrecte sur la div conteneur `SyncRightSidebar` (LIVRÉ ✅)
 
-- [ ] La div conteneur SyncRightSidebar utilise `` `$${isRightSidebarExpanded ? "w-[248px]" : "w-0"}` `` (double `$`) — bug de template literal, la classe ne s'applique probablement pas correctement
+- [x] La div wrapper dans `ProductDocSync.tsx` utilisait un template literal dynamique `` `${isRightSidebarExpanded ? "w-[248px]" : "w-0"} ...` `` — remplacé par `cn("transition-all duration-300 h-full", isRightSidebarExpanded ? "w-[248px]" : "w-0")` + import `cn` ajouté ✅
+- Note : `SyncRightSidebar.tsx` utilisait déjà `cn()` correctement — le bug était dans le composant parent
 
 ---
 

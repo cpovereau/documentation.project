@@ -354,6 +354,39 @@ class EvolutionProduit(models.Model):
         )
 
 
+# --- ProductDocSync : ImpactDocumentaire ---
+
+class ImpactDocumentaire(models.Model):
+    STATUT_CHOICES = [
+        ("a_faire", "À faire"),
+        ("en_cours", "En cours"),
+        ("pret", "Prêt"),
+        ("valide", "Validé"),
+        ("ignore", "Ignoré"),
+    ]
+
+    evolution_produit = models.ForeignKey(
+        "EvolutionProduit", on_delete=models.CASCADE, related_name="impacts"
+    )
+    rubrique = models.ForeignKey(
+        "Rubrique", on_delete=models.PROTECT, related_name="impacts_produit"
+    )
+    statut = models.CharField(
+        max_length=20, choices=STATUT_CHOICES, default="a_faire"
+    )
+    notes = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("evolution_produit", "rubrique")]
+        verbose_name = "Impact Documentaire"
+        verbose_name_plural = "Impacts Documentaires"
+
+    def __str__(self):
+        return f"Impact {self.evolution_produit} → {self.rubrique.titre} ({self.statut})"
+
+
 # --- Médias ---
 class Media(models.Model):
     TYPE_MEDIA_CHOICES = [

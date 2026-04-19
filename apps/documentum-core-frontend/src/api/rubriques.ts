@@ -68,6 +68,20 @@ export async function updateRubrique(
   return data
 }
 
+/** ---- Usages d'une Rubrique ---- */
+
+export interface RubriqueUsage {
+  map_id: number;
+  map_nom: string;
+  projet_id: number;
+  projet_nom: string;
+}
+
+export async function getRubriqueUsages(rubriqueId: number): Promise<RubriqueUsage[]> {
+  const { data } = await api.get<RubriqueUsage[]>(`/api/rubriques/${rubriqueId}/usages/`)
+  return data
+}
+
 /** ---- XML Validation ---- */
 
 export interface XmlValidationError {

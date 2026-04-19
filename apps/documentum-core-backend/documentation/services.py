@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 
 from .models import (
     EvolutionProduit,
+    ImpactDocumentaire,
     Map,
     MapRubrique,
     Projet,
@@ -502,7 +503,13 @@ def outdent_map_rubrique(*, map_id: int, map_rubrique_id: int) -> None:
     except MapRubrique.DoesNotExist:
         raise ValidationError({"parent": ["Parent introuvable ou incohérent."]})
 
-    grandparent = parent.parent  # peut être None (racine)
+    grandparent = parent.parent  # peut être None si parent est racine
+
+    # ❌ serait promu racine — créerait une 2ème racine (structure invalide)
+    if grandparent is None:
+        raise ValidationError(
+            {"mapRubriqueId": ["Impossible de désindenter : la rubrique est déjà au premier niveau."]}
+        )
 
     # 🔒 verrouillage des siblings du futur niveau
     siblings_qs = MapRubrique.objects.select_for_update().filter(
@@ -909,3 +916,84 @@ def reorder_evolutions_produit(ordered_ids: list) -> None:
         "[EvolutionProduit] Réordonnancement de %s évolutions.",
         len(ordered_ids),
     )
+
+
+# ---------------------------------------------------------------------------
+# ProductDocSync — ImpactDocumentaire
+# ---------------------------------------------------------------------------
+
+STATUT_IMPACT_CHOICES = {"a_faire", "en_cours", "pret", "valide", "ignore"}
+
+
+def create_impact_documentaire(
+    evolution_produit_id: int, rubrique_id: int
+) -> ImpactDocumentaire:
+    """
+    Crée un ImpactDocumentaire reliant une EvolutionProduit à une Rubrique.
+
+    Invariants :
+    - Le couple (evolution_produit, rubrique) doit être unique.
+    - Lève ValidationError si le lien existe déjà.
+    - Statut initial : "a_faire".
+    """
+    exists = ImpactDocumentaire.objects.filter(
+        evolution_produit_id=evolution_produit_id,
+        rubrique_id=rubrique_id,
+    ).exists()
+    if exists:
+        raise ValidationError(
+            {"detail": "Un impact entre cette évolution et cette rubrique existe déjà."}
+        )
+    impact = ImpactDocumentaire.objects.create(
+        evolution_produit_id=evolution_produit_id,
+        rubrique_id=rubrique_id,
+    )
+    logger.info(
+        "[ImpactDocumentaire] Créé ID=%s (evolution_produit=%s, rubrique=%s).",
+        impact.pk,
+        evolution_produit_id,
+        rubrique_id,
+    )
+    return impact
+
+
+def update_statut_impact(impact_id: int, statut: str) -> ImpactDocumentaire:
+    """
+    Met à jour le statut d'un ImpactDocumentaire.
+
+    Invariants :
+    - statut doit être dans STATUT_IMPACT_CHOICES.
+    - Lève ValidationError pour un statut invalide ou un ID introuvable.
+    """
+    if statut not in STATUT_IMPACT_CHOICES:
+        raise ValidationError(
+            {"statut": f"Statut invalide. Valeurs acceptées : {sorted(STATUT_IMPACT_CHOICES)}."}
+        )
+    try:
+        impact = ImpactDocumentaire.objects.get(pk=impact_id)
+    except ImpactDocumentaire.DoesNotExist:
+        raise ValidationError({"detail": f"ImpactDocumentaire ID={impact_id} introuvable."})
+    impact.statut = statut
+    impact.save(update_fields=["statut", "updated_at"])
+    logger.info(
+        "[ImpactDocumentaire] Statut mis à jour ID=%s → %s.", impact.pk, statut
+    )
+    return impact
+
+
+def update_notes_impact(impact_id: int, notes: str) -> ImpactDocumentaire:
+    """
+    Met à jour les notes d'un ImpactDocumentaire.
+
+    Invariants :
+    - notes peut être vide (blank=True sur le modèle).
+    - Lève ValidationError si l'ID est introuvable.
+    """
+    try:
+        impact = ImpactDocumentaire.objects.get(pk=impact_id)
+    except ImpactDocumentaire.DoesNotExist:
+        raise ValidationError({"detail": f"ImpactDocumentaire ID={impact_id} introuvable."})
+    impact.notes = notes
+    impact.save(update_fields=["notes", "updated_at"])
+    logger.info("[ImpactDocumentaire] Notes mises à jour ID=%s.", impact.pk)
+    return impact

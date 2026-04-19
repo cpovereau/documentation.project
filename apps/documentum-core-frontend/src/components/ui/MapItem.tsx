@@ -26,9 +26,12 @@ function canIndent(item: MapItemType, idx: number, items: MapItemType[]) {
   return items[idx - 1].level >= item.level;
 }
 
-function canOutdent(item: MapItemType) {
+function canOutdent(item: MapItemType, items: MapItemType[]) {
   if (isStructuralOnlyNode(item)) return false;
-  return item.level > 1;
+  // Interdit si le parent est lui-même racine : l'outdent créerait une 2ème racine
+  const parent = items.find((i) => i.id === item.parentId);
+  if (parent?.parentId == null) return false;
+  return true;
 }
 
 function hasChildren(items: MapItemType[], idx: number): boolean {
@@ -66,7 +69,7 @@ export const MapItem: React.FC<MapItemProps> = ({
     zIndex: isDragging ? 20 : "auto",
     background: isDragging ? "rgba(96,165,250,0.20)" : undefined,
     borderBottom: isOver ? "2px solid #2563eb" : undefined,
-    paddingLeft: `${item.level * 28}px`,
+    paddingLeft: `${(item.level - 1) * 16}px`,
   };
 
   return (
@@ -117,17 +120,17 @@ export const MapItem: React.FC<MapItemProps> = ({
             e.stopPropagation();
             onRename(item.id);
           }}
-          className="cursor-text"
+          className="cursor-text flex-1 min-w-0 flex items-center gap-1"
           title="Double-clic pour renommer"
         >
-          {item.title}
+          <span className="truncate">{item.title}</span>
           {item.isMaster && (
-            <span className="ml-2 px-2 py-0.5 rounded bg-blue-200 text-blue-800 text-[10px] font-semibold">
+            <span className="flex-shrink-0 px-2 py-0.5 rounded bg-blue-200 text-blue-800 text-[10px] font-semibold">
               maître
             </span>
           )}
           {item.versionOrigine && (
-            <span className="ml-2 text-[10px] text-gray-500">v{item.versionOrigine}</span>
+            <span className="flex-shrink-0 text-[10px] text-gray-500">v{item.versionOrigine}</span>
           )}
         </div>
       )}
@@ -136,12 +139,12 @@ export const MapItem: React.FC<MapItemProps> = ({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            canOutdent(item) && onOutdent(item.id);
+            canOutdent(item, mapItems) && onOutdent(item.id);
           }}
-          disabled={!canOutdent(item)}
+          disabled={!canOutdent(item, mapItems)}
           className={cn(
             "w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200",
-            !canOutdent(item) && "opacity-30 cursor-not-allowed",
+            !canOutdent(item, mapItems) && "opacity-30 cursor-not-allowed",
           )}
         >
           <ChevronLeft size={14} />

@@ -279,3 +279,254 @@ class EvolutionProduitAPITest(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         for e in resp.data:
             self.assertEqual(e["version_produit"], self.version.pk)
+
+
+# ---------------------------------------------------------------------------
+# Tests API ImpactDocumentaire
+# ---------------------------------------------------------------------------
+
+from documentation.models import ImpactDocumentaire, Projet, Rubrique
+
+
+def _make_projet(gamme) -> Projet:
+    return Projet.objects.create(nom="Projet Test", description="Test")
+
+
+def _make_rubrique(projet: Projet, titre: str = "Rubrique Test") -> Rubrique:
+    return Rubrique.objects.create(
+        titre=titre,
+        contenu_xml="<topic><title>Test</title></topic>",
+        projet=projet,
+    )
+
+
+class ImpactDocumentaireAPITest(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="test3", password="test")
+        self.client.force_authenticate(user=self.user)
+        gamme = Gamme.objects.create(nom="Gamme Impact Test")
+        self.produit = Produit.objects.create(
+            nom="Produit Impact", abreviation="PI", gamme=gamme
+        )
+        self.fonctionnalite = Fonctionnalite.objects.create(
+            produit=self.produit,
+            nom="Fonctionnalité Impact",
+            id_fonctionnalite="FI001",
+            code="FI",
+        )
+        self.version = VersionProduit.objects.create(
+            produit=self.produit, numero="1.0"
+        )
+        self.evolution = EvolutionProduit.objects.create(
+            version_produit=self.version,
+            fonctionnalite=self.fonctionnalite,
+            type="evolution",
+        )
+        self.projet = _make_projet(gamme)
+        self.rubrique = _make_rubrique(self.projet)
+
+    def _post_impact(self):
+        return self.client.post("/api/impacts/", {
+            "evolution_produit": self.evolution.pk,
+            "rubrique": self.rubrique.pk,
+        })
+
+    # 1. Création
+    def test_creation_impact(self):
+        resp = self._post_impact()
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data["statut"], "a_faire")
+        self.assertEqual(resp.data["rubrique_titre"], self.rubrique.titre)
+
+    # 2. Filtrage par evolution_produit
+    def test_filtrage_par_evolution_produit(self):
+        self._post_impact()
+        autre_rubrique = _make_rubrique(self.projet, titre="Autre Rubrique")
+        autre_evolution = EvolutionProduit.objects.create(
+            version_produit=self.version,
+            fonctionnalite=self.fonctionnalite,
+            type="correctif",
+        )
+        self.client.post("/api/impacts/", {
+            "evolution_produit": autre_evolution.pk,
+            "rubrique": autre_rubrique.pk,
+        })
+        resp = self.client.get(
+            f"/api/impacts/?evolution_produit={self.evolution.pk}"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for item in resp.data:
+            self.assertEqual(item["evolution_produit"], self.evolution.pk)
+
+    # 3. Filtrage par rubrique
+    def test_filtrage_par_rubrique(self):
+        self._post_impact()
+        autre_rubrique = _make_rubrique(self.projet, titre="Autre Rubrique 2")
+        autre_evolution = EvolutionProduit.objects.create(
+            version_produit=self.version,
+            fonctionnalite=self.fonctionnalite,
+            type="correctif",
+        )
+        self.client.post("/api/impacts/", {
+            "evolution_produit": autre_evolution.pk,
+            "rubrique": autre_rubrique.pk,
+        })
+        resp = self.client.get(f"/api/impacts/?rubrique={self.rubrique.pk}")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for item in resp.data:
+            self.assertEqual(item["rubrique"], self.rubrique.pk)
+
+    # 4. Mise à jour du statut
+    def test_update_statut(self):
+        impact = ImpactDocumentaire.objects.create(
+            evolution_produit=self.evolution,
+            rubrique=self.rubrique,
+        )
+        resp = self.client.patch(
+            f"/api/impacts/{impact.pk}/update_statut/",
+            {"statut": "en_cours"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["statut"], "en_cours")
+        impact.refresh_from_db()
+        self.assertEqual(impact.statut, "en_cours")
+
+    # 5. Doublon interdit
+    def test_doublon_interdit(self):
+        self._post_impact()
+        resp = self._post_impact()
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    # 6. Statut invalide refusé
+    def test_statut_invalide_refuse(self):
+        impact = ImpactDocumentaire.objects.create(
+            evolution_produit=self.evolution,
+            rubrique=self.rubrique,
+        )
+        resp = self.client.patch(
+            f"/api/impacts/{impact.pk}/update_statut/",
+            {"statut": "inconnu"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    # 7. Suppression
+    def test_suppression(self):
+        resp_create = self._post_impact()
+        impact_id = resp_create.data["id"]
+        resp_delete = self.client.delete(f"/api/impacts/{impact_id}/")
+        self.assertEqual(resp_delete.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(
+            ImpactDocumentaire.objects.filter(pk=impact_id).exists()
+        )
+
+
+# ---------------------------------------------------------------------------
+# Tests ImpactDocumentaire — champ notes
+# ---------------------------------------------------------------------------
+
+class ImpactDocumentaireNotesTest(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="test4", password="test")
+        self.client.force_authenticate(user=self.user)
+        gamme = Gamme.objects.create(nom="Gamme Notes Test")
+        produit = Produit.objects.create(nom="Produit Notes", abreviation="PN", gamme=gamme)
+        fonctionnalite = Fonctionnalite.objects.create(
+            produit=produit, nom="Fonctionnalité Notes", id_fonctionnalite="FN001", code="FN"
+        )
+        version = VersionProduit.objects.create(produit=produit, numero="1.0")
+        evolution = EvolutionProduit.objects.create(
+            version_produit=version, fonctionnalite=fonctionnalite, type="evolution"
+        )
+        projet = Projet.objects.create(nom="Projet Notes", description="Test")
+        rubrique = Rubrique.objects.create(
+            titre="Rubrique Notes", contenu_xml="<topic><title>Notes</title></topic>", projet=projet
+        )
+        self.impact = ImpactDocumentaire.objects.create(
+            evolution_produit=evolution, rubrique=rubrique
+        )
+
+    # 1. Mise à jour des notes
+    def test_update_notes(self):
+        resp = self.client.patch(
+            f"/api/impacts/{self.impact.pk}/update_notes/",
+            {"notes": "Mettre à jour la section 3.2"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["notes"], "Mettre à jour la section 3.2")
+        self.impact.refresh_from_db()
+        self.assertEqual(self.impact.notes, "Mettre à jour la section 3.2")
+
+    # 2. Notes vides autorisées
+    def test_notes_vide_autorise(self):
+        self.impact.notes = "Ancienne note"
+        self.impact.save()
+        resp = self.client.patch(
+            f"/api/impacts/{self.impact.pk}/update_notes/",
+            {"notes": ""},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["notes"], "")
+
+    # 3. update_statut ne touche pas aux notes (pas d'interférence)
+    def test_update_statut_ne_modifie_pas_notes(self):
+        self.impact.notes = "Note importante"
+        self.impact.save()
+        self.client.patch(
+            f"/api/impacts/{self.impact.pk}/update_statut/",
+            {"statut": "en_cours"},
+            format="json",
+        )
+        self.impact.refresh_from_db()
+        self.assertEqual(self.impact.notes, "Note importante")
+        self.assertEqual(self.impact.statut, "en_cours")
+
+
+# ---------------------------------------------------------------------------
+# Tests API Rubrique — action usages
+# ---------------------------------------------------------------------------
+
+from documentation.models import Map, MapRubrique
+
+
+class RubriqueUsagesTest(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="test5", password="test")
+        self.client.force_authenticate(user=self.user)
+        gamme = Gamme.objects.create(nom="Gamme Usages")
+        self.projet = Projet.objects.create(nom="Projet Usages", description="Test")
+        self.rubrique = Rubrique.objects.create(
+            titre="Rubrique Usages",
+            contenu_xml="<topic><title>Usages</title></topic>",
+            projet=self.projet,
+        )
+
+    # 1. Rubrique dans 2 maps → 2 entrées
+    def test_usages_deux_maps(self):
+        map1 = Map.objects.create(nom="Map A", projet=self.projet)
+        map2 = Map.objects.create(nom="Map B", projet=self.projet)
+        MapRubrique.objects.create(map=map1, rubrique=self.rubrique, ordre=1)
+        MapRubrique.objects.create(map=map2, rubrique=self.rubrique, ordre=1)
+
+        resp = self.client.get(f"/api/rubriques/{self.rubrique.pk}/usages/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data), 2)
+        map_ids = {entry["map_id"] for entry in resp.data}
+        self.assertIn(map1.pk, map_ids)
+        self.assertIn(map2.pk, map_ids)
+        for entry in resp.data:
+            self.assertIn("map_nom", entry)
+            self.assertIn("projet_id", entry)
+            self.assertIn("projet_nom", entry)
+
+    # 2. Rubrique dans aucune map → liste vide
+    def test_usages_aucune_map(self):
+        resp = self.client.get(f"/api/rubriques/{self.rubrique.pk}/usages/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data, [])

@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import { Button } from "components/ui/button";
 import { MediaPanel } from "components/ui/MediaPanel";
 import { ArrowRightCircle, Move, ArrowLeftFromLine } from "lucide-react";
+import usePendingMediaStore from "@/store/usePendingMediaStore";
+import type { MediaItem } from "@/hooks/useMedias";
 
 interface RightSidebarProps {
   isExpanded: boolean;
@@ -36,6 +38,13 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     edge: null as "left" | "right" | null,
   });
 
+
+  const setPendingImage = usePendingMediaStore((s) => s.setPendingImage);
+
+  const handleInsertImage = useCallback(
+    (item: MediaItem) => { setPendingImage(item); },
+    [setPendingImage],
+  );
 
   const toggleSwitch = useCallback(() => setIsImageMode((prev) => !prev), []);
 
@@ -129,6 +138,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           prev === "grid" ? "small" : prev === "small" ? "list" : "grid"
         );
       }}
+      onInsertImage={handleInsertImage}
     />
   );
 

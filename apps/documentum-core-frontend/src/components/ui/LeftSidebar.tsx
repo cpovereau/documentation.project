@@ -276,6 +276,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       return;
     }
 
+    if (selectedProjectId === project.id) return;
+
     setSelectedProjectId(project.id);
     setProjectMaps(project.maps ?? []);
     setCurrentMapId(null);
@@ -387,6 +389,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   };
 
   const handleOutdent = async (mapRubriqueId: number) => {
+    const mr = mapRubriques.find((r) => r.id === mapRubriqueId);
+    if (mr?.parent == null) return;
+    const parentMr = mapRubriques.find((r) => r.id === mr.parent);
+    if (parentMr?.parent == null) {
+      toast.error("Désindentation impossible : la rubrique est déjà au premier niveau.");
+      return;
+    }
     try {
       assertMapId(currentMapId);
       await mapStructure.outdent.mutateAsync(mapRubriqueId);

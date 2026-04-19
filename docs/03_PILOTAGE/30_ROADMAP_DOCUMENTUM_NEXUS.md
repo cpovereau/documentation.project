@@ -20,6 +20,9 @@ Aligner progressivement Documentum avec Documentum Nexus en priorisant la **vale
 
 ## 🚀 2. Phases
 
+### Phase 0 — Généralisation Nexus (transverse)
+👉 Poser les bases conceptuelles et documentaires permettant à Nexus de dépasser le seul contexte ingénierie logicielle
+
 ### Phase 1 — Finaliser la valeur Core
 👉 Rendre Documentum utilisable en production (édition + publication)
 
@@ -36,6 +39,20 @@ Aligner progressivement Documentum avec Documentum Nexus en priorisant la **vale
 
 ## 🔧 3. Détail des phases
 
+### 🔹 Phase 0 — Généralisation Nexus (chantier transverse)
+
+À conduire avant ou en parallèle des phases d'implémentation avancées :
+
+- Introduire et documenter le concept de `context_produit` dans l'architecture
+- Généraliser le module Pilotage documentaire (schéma `ObjetMétier → ÉvénementMétier → ImpactDocumentaire`)
+- Harmoniser la documentation pour distinguer socle générique / spécialisation logicielle actuelle
+- Formaliser la nomenclature des modules Nexus (Pilotage documentaire, Publipostage, Gestion de production…)
+- Préparer l'activation contextuelle des modules dans le frontend
+
+> ⚠️ Cette phase ne bloque pas les phases 1 et 2, mais elle doit être conduite avant de multiplier des modules spécifiques non généralisables.
+
+---
+
 ### 🔹 Phase 1 — Valeur Core (court terme)
 
 - Implémenter API export backend
@@ -48,10 +65,12 @@ Aligner progressivement Documentum avec Documentum Nexus en priorisant la **vale
 
 ### 🔹 Phase 2 — Pilotage documentaire
 
-- Brancher `ProductDocSync` sur API réelle
-- Implémenter modèle `ImpactDocumentaire`
-- Lier fonctionnalités ↔ rubriques
-- Suivre statut documentaire (à faire, en cours, validé…)
+- ~~Brancher `ProductDocSync` sur API réelle~~ ✅ (2026-04-19)
+- ~~Implémenter modèle `ImpactDocumentaire`~~ ✅ (2026-04-18)
+- ~~Lier fonctionnalités ↔ rubriques~~ ✅ (2026-04-19)
+- ~~Suivre statut documentaire (à faire, en cours, validé…)~~ ✅ (2026-04-19)
+- **Module Gestion de Production** — prérequis pour `TestPlanModal` (ProductDocSync §4.1) ← à développer
+- **Vue multi-évolutions `ImpactMapModal`** — (ProductDocSync §4.3) ← reporté
 
 ---
 
@@ -102,8 +121,12 @@ Aligner progressivement Documentum avec Documentum Nexus en priorisant la **vale
 
 ### 🟡 P2 — Activation valeur Nexus
 
-- ProductDocSync connecté
-- ImpactDocumentaire
+- ~~ProductDocSync connecté~~ — livré (Phase 3 ✅, 2026-04-19)
+- ~~ImpactDocumentaire~~ — livré (migrations 0013 + 0014, 10 tests, 2026-04-18/19)
+
+### 🟠 P1 bis — Prérequis ProductDocSync §4.1
+
+- **Module Gestion de Production** — à spécifier et développer pour débloquer `TestPlanModal` dans ProductDocSync Phase 4 §4.1. Voir `gov_decision-log.md` entrée 2026-04-19.
 
 ---
 
@@ -121,6 +144,8 @@ Aligner progressivement Documentum avec Documentum Nexus en priorisant la **vale
 ## 📊 7. Vision globale
 
 ```
+Phase 0 — Généralisation Nexus (transverse)
+    ↕
 Core documentaire (solide)
     → Publication réelle
         → Pilotage documentaire

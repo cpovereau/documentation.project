@@ -8,6 +8,7 @@ interface MediaCardProps {
   imageUrl?: string;
   className?: string;
   isListMode?: boolean;
+  onInsert?: () => void;
 }
 
 export const MediaCard: React.FC<MediaCardProps> = ({
@@ -16,6 +17,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   imageUrl,
   className = "",
   isListMode = false,
+  onInsert,
 }) => {
   return (
     <Card className={`h-full border-none shadow-none p-0 ${className}`}>
@@ -36,6 +38,15 @@ export const MediaCard: React.FC<MediaCardProps> = ({
           <p className="text-m3-body-small text-m3syslighton-surface-variant overflow-hidden text-ellipsis whitespace-nowrap">
             {updatedText}
           </p>
+          {onInsert && (
+            <button
+              type="button"
+              onClick={onInsert}
+              className="mt-1 self-start text-[10px] px-2 py-0.5 rounded bg-[#65558f] text-white hover:bg-[#4e3f72] transition-colors"
+            >
+              Insérer
+            </button>
+          )}
         </div>
       </CardContent>
     </Card>

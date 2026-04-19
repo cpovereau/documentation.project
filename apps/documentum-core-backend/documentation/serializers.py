@@ -6,6 +6,7 @@ from .models import (
     EvolutionProduit,
     Fonctionnalite,
     Gamme,
+    ImpactDocumentaire,
     InterfaceUtilisateur,
     Map,
     MapRubrique,
@@ -395,6 +396,44 @@ class ReorderEvolutionsProduitSerializer(serializers.Serializer):
         child=serializers.IntegerField(),
         allow_empty=False,
     )
+
+
+# ---------------------------------------------------------------------------
+# ProductDocSync — ImpactDocumentaire
+# ---------------------------------------------------------------------------
+
+class ImpactDocumentaireSerializer(serializers.ModelSerializer):
+    rubrique_titre = serializers.CharField(source="rubrique.titre", read_only=True)
+    evolution_produit = serializers.PrimaryKeyRelatedField(
+        queryset=EvolutionProduit.objects.all()
+    )
+    rubrique = serializers.PrimaryKeyRelatedField(
+        queryset=Rubrique.objects.all()
+    )
+
+    class Meta:
+        model = ImpactDocumentaire
+        fields = [
+            "id",
+            "evolution_produit",
+            "rubrique",
+            "rubrique_titre",
+            "statut",
+            "notes",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["created_at", "updated_at"]
+
+
+class UpdateStatutImpactSerializer(serializers.Serializer):
+    statut = serializers.ChoiceField(
+        choices=[c[0] for c in ImpactDocumentaire.STATUT_CHOICES]
+    )
+
+
+class UpdateNotesImpactSerializer(serializers.Serializer):
+    notes = serializers.CharField(allow_blank=True, default="")
 
 
 # ---------------------------------------------------------------------------

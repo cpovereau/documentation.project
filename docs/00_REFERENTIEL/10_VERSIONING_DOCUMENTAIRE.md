@@ -102,16 +102,25 @@ Caractéristiques :
 
 ---
 
-### 3.2 Phase 2 – Pilotage produit (ProductDocSync)
+### 3.2 Phase 2 – Pilotage documentaire
 
-Dans ProductDocSync :
+Le module Pilotage documentaire permet de déclarer des impacts sur la documentation sans modifier directement le contenu.
 
-- on enregistre des **évolutions de fonctionnalités**,
-- on rattache des **rubriques existantes** à ces fonctionnalités,
+Dans l'implémentation actuelle (`ProductDocSync`, contexte Ingénierie Logicielle) :
+
+- on enregistre des **évolutions de fonctionnalités** (`EvolutionProduit`),
+- on rattache des **rubriques existantes** à ces évolutions,
 - on déclare des **impacts documentaires**.
 
+Ce principe est générique : les impacts documentaires peuvent être déclenchés par différents types d'événements métier selon le contexte actif :
+- évolution produit / correctif (contexte logiciel actuel)
+- incident ou signalement
+- changement réglementaire
+- défaut qualité
+- mise à jour de procédure
+
 Important :
-- ProductDocSync **ne modifie pas le contenu XML**,
+- Le module Pilotage documentaire **ne modifie pas le contenu XML**,
 - il **ne crée pas de révision**,
 - il **déclare un besoin de révision**.
 
@@ -139,17 +148,19 @@ Lors d’une publication :
 
 ---
 
-## 4. ProductDocSync : rôle exact
+## 4. Pilotage documentaire : rôle exact
 
-ProductDocSync est un **outil de pilotage documentaire**, pas un éditeur.
+Le module Pilotage documentaire est un **outil de suivi**, pas un éditeur.
+
+Il est implémenté aujourd’hui sous la forme de l’écran `ProductDocSync` pour le contexte Ingénierie Logicielle.
 
 Il permet :
-- d’anticiper les impacts documentaires des évolutions produit,
-- de suivre la couverture fonctionnelle de la documentation,
+- d’anticiper les impacts documentaires des événements métier,
+- de suivre la couverture documentaire par objet ou version,
 - de préparer une future publication.
 
 Il manipule :
-- des fonctionnalités,
+- des objets métier (fonctionnalités dans le contexte logiciel),
 - des rubriques existantes,
 - des **états d’impact**.
 

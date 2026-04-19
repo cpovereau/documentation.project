@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { cn } from "@/lib/utils";
 import { SyncLeftSidebar } from "components/ui/SyncLeftSidebar";
 import { SyncEditor } from "components/ui/SyncEditor";
 import { SyncBottombar } from "components/ui/SyncBottombar";
@@ -21,12 +22,10 @@ import { useFonctionnaliteList } from "hooks/useFonctionnaliteList";
 import { useVersionProduitList, useVersionProduitCreate, useVersionProduitPublier } from "@/hooks/useVersionProduit";
 import { useEvolutionProduitList, useEvolutionProduitCreate, useEvolutionProduitArchive, useEvolutionProduitReorder } from "@/hooks/useEvolutionProduit";
 import type { EvolutionProduit } from "@/api/versionsProduit";
-
-// TODO(backend): MinimalTask à déplacer dans src/types/ une fois stabilisé
-type MinimalTask = {
-  id: string;
-  label: string;
-};
+import type { ImpactDocumentaire } from "@/api/impacts";
+import type { MinimalTask } from "@/types/MinimalTask";
+import { useWindowHeight } from "@/hooks/useWindowHeight";
+import { useImpactUpdateNotes } from "@/hooks/useImpactDocumentaire";
 
 export const ProductDocSync: React.FC = () => {
   // ── Source de vérité produit : number | null ─────────────────────────────
@@ -80,12 +79,31 @@ export const ProductDocSync: React.FC = () => {
 
   // ── États UI ─────────────────────────────────────────────────────────────
   const [selectedFeature, setSelectedFeature] = useState<number | null>(null);
+  const [selectedImpact, setSelectedImpact] = useState<ImpactDocumentaire | null>(null);
+
+  // Type de l'évolution sélectionnée — dérivé depuis evolutions (source de vérité API)
+  const selectedEvolution = evolutions.find((e) => e.id === selectedFeature) ?? null;
+  const evolutionType: "evolution" | "correctif" | null = selectedEvolution?.type ?? null;
+
+  const { updateNotes } = useImpactUpdateNotes();
+
+  const handleSelectFeature = (id: number) => {
+    setSelectedFeature(id);
+    setSelectedImpact(null);
+  };
+
+  const handleNotesChange = (impactId: number, notes: string) => {
+    if (!selectedImpact) return;
+    updateNotes(impactId, notes, selectedImpact.evolution_produit, {
+      onSuccess: (updated) => setSelectedImpact(updated),
+    });
+  };
   const [isLeftSidebarExpanded, setIsLeftSidebarExpanded] = useState(true);
   const [isRightSidebarExpanded, setIsRightSidebarExpanded] = useState(true);
   const [copiedEvolution, setCopiedEvolution] = useState<EvolutionProduit | null>(null);
 
-  // TODO(Phase 5): TOTAL_HEIGHT calculé une seule fois au montage — ajouter resize listener si nécessaire
-  const TOTAL_HEIGHT = window.innerHeight - 130;
+  const windowHeight = useWindowHeight();
+  const TOTAL_HEIGHT = windowHeight - 130;
   const [bottomBarHeight, setBottomBarHeight] = useState(
     () => window.innerHeight - 130 - 300
   );
@@ -101,8 +119,9 @@ export const ProductDocSync: React.FC = () => {
   // ── Changement de produit ────────────────────────────────────────────────
   const handleSelectProduct = (id: number | null) => {
     setSelectedProductId(id);
-    setSelectedVersion(""); // reset : les versions sont liées au produit
+    setSelectedVersion("");
     setSelectedFeature(null);
+    setSelectedImpact(null);
   };
 
   // ── Dialog : ajout d'une version ─────────────────────────────────────────
@@ -184,7 +203,10 @@ export const ProductDocSync: React.FC = () => {
   const handleDeleteFeature = (id: number) => {
     if (selectedVersionId === null) return;
     archiveEvolution(id, selectedVersionId);
-    if (selectedFeature === id) setSelectedFeature(null);
+    if (selectedFeature === id) {
+      setSelectedFeature(null);
+      setSelectedImpact(null);
+    }
   };
 
   // ── Copier / coller ───────────────────────────────────────────────────────
@@ -268,7 +290,7 @@ export const ProductDocSync: React.FC = () => {
             features={features}
             showFeatures={showFeatures}
             selectedFeature={selectedFeature}
-            onSelectFeature={setSelectedFeature}
+            onSelectFeature={handleSelectFeature}
             onReorderFeatures={handleReorder}
             onDeleteFeature={handleDeleteFeature}
             onAddFeature={handleAddFeature}
@@ -284,6 +306,12 @@ export const ProductDocSync: React.FC = () => {
             onClose={() => setShowImpactMap(false)}
             product={selectedProductLabel}
             version={selectedVersionData?.numero ?? selectedVersion}
+            evolutionId={selectedFeature}
+            evolutionLabel={
+              selectedFeature
+                ? (features.find((f) => f.id === selectedFeature)?.name ?? "Évolution")
+                : undefined
+            }
             height={impactMapHeight}
             onGenerateTestPlan={handleGenerateTestPlan}
           />
@@ -308,22 +336,27 @@ export const ProductDocSync: React.FC = () => {
                 ? features.find((f) => f.id === selectedFeature)?.name ?? "-"
                 : "-"
             }
-            features={features}
+            selectedEvolutionId={selectedFeature}
             height={bottomBarHeight}
             onResize={(newHeight) => setBottomBarHeight(newHeight)}
+            onImpactSelect={setSelectedImpact}
           />
           <SyncEditor
             selectedType={selectedArticleType}
             onTypeChange={setSelectedArticleType}
+            evolutionType={evolutionType}
             height={editorHeight}
+            selectedImpact={selectedImpact}
+            onNotesChange={handleNotesChange}
           />
         </div>
 
         {/* ── Sidebar droite ───────────────────────────────────────────────── */}
         <div
-          className={`${
+          className={cn(
+            "transition-all duration-300 h-full",
             isRightSidebarExpanded ? "w-[248px]" : "w-0"
-          } transition-all duration-300 h-full`}
+          )}
         >
           <SyncRightSidebar
             isExpanded={isRightSidebarExpanded}

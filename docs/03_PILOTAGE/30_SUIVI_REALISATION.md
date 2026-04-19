@@ -238,6 +238,153 @@ Mettre en place un modèle de versioning métier cohérent et exploitable :
 
 ---
 
+---
+
+## Chantier 4 — Socle frontend (apiClient, TanStack Query v5)
+
+### Objectif
+Centraliser tous les appels API via `apiClient`, migrer l'ensemble des hooks vers TanStack Query v5, supprimer tout appel direct dans les composants React.
+
+### Statut
+✅ TERMINÉ — 2026-04-17
+
+### Résultats
+
+- `apiClient` Axios centralisé avec auth + CSRF, préfixe `/api/` systématique
+- Tous les hooks métier migrent vers `useQuery` + `useMutation` + `invalidateQueries` ciblé
+- Pattern `EMPTY_*` (tableaux stables en module) pour éviter les re-renders sur `?? []` inline
+- Zéro appel `fetch` ou Axios direct dans les composants React
+
+### Correctifs bloquants associés (2026-04-17)
+
+| Bug | Solution |
+|---|---|
+| XML invalide (wrapper `<body>` manquant, attributs null) | Wrapper `<body>` systématique, `serializeAttributes` filtre null, `useDitaLoader` refondu |
+| Chargement rubrique défaillant | `useDitaLoader` point de charge unique |
+| Vidage session à la déconnexion | `AuthContext.logout()` vide les stores + QueryClient cache |
+| Render loop LeftSidebar | `EMPTY_RUBRIQUES` stable dans `useMapStructure.ts` |
+
+---
+
+## CentralEditor — Phases 1 à 5
+
+### Statut
+✅ TERMINÉ — toutes phases soldées (2026-04-17)
+
+📄 [CENTRALEDITOR_REFACTOR_ROADMAP.md](../01_OPERATIONNEL/CentralEditor/CENTRALEDITOR_REFACTOR_ROADMAP.md)
+
+| Phase | Contenu | Statut |
+|---|---|---|
+| Phase 1 — Buffer & sync TipTap | Stabilisation du buffer XML, cycle lecture/écriture TipTap fiabilisé | ✅ Terminée |
+| Phase 2 — Allègement structurel | Découpage composants, extraction hooks | ✅ Terminée |
+| Phase 3 — Parsing XML ⇄ TipTap | `serializeAttributes` filtre null, `useDitaLoader` refondu, conversion bidirectionnelle stable | ✅ Terminée |
+| Phase 4 — Sauvegarde backend + validation XML | `PUT /api/rubriques/{id}/` branché, validation XML avant sauvegarde | ✅ Terminée |
+| Phase 5 — Sécurisation guard navigation | Modale "Quitter sans enregistrer", guard `hasUnsavedChanges` actif | ✅ Terminée |
+
+---
+
+## LeftSidebar — Lots 1 à 5
+
+### Statut
+✅ TERMINÉ — Lots 1–5 soldés (2026-04-10)
+
+📄 [LEFTSIDEBAR_ROADMAP.md](../01_OPERATIONNEL/LeftSidebar/LEFTSIDEBAR_ROADMAP.md)
+
+| Lot | Contenu | Statut |
+|---|---|---|
+| Lot 1 — Chaîne de sélection | `selectionStore.ts` Zustand, CentralEditor alimenté correctement | ✅ Terminé |
+| Lot 2 — Routes canoniques | Tous appels API sur routes `/api/...` canoniques | ✅ Terminé |
+| Lot 3 — CRUD projets & rubriques | Renommage, suppression, création persistés | ✅ Terminé |
+| Lot 4 — Qualité code & hooks | `useNewRubriqueXml`, suppression état mort, logs debug retirés | ✅ Terminé |
+| Lot 5 — Publication / Export | `publishMap()` branché `POST /api/publier-map/{id}/`, feedback utilisateur réel | ✅ Terminé |
+
+---
+
+## Map — Sprint 4
+
+### Statut
+✅ TERMINÉ — Sprint 4 soldé (2026-04-16)
+
+📄 [FRONTEND_MAP_ROADMAP.md](../01_OPERATIONNEL/Frontend/FRONTEND_MAP_ROADMAP.md)
+
+| Lot | Contenu | Statut |
+|---|---|---|
+| Stabilisation structure | Rechargement systématique après chaque opération structurelle | ✅ Terminé |
+| Création rubrique | Route canonique atomique `POST /api/maps/{id}/structure/create/` | ✅ Terminé |
+| Reorder / indent / outdent | Persistance backend, guard anti-root-multiple | ✅ Terminé |
+| Rechargement systématique | Source de vérité backend après toute mutation | ✅ Terminé |
+
+Restant (non prioritaire) : clone/suppression toolbar (stubs v1), route `attach`, drag & drop cross-niveau.
+
+---
+
+## RightSidebar — Phase 1
+
+### Statut
+✅ TERMINÉ — Phase 1 soldée (2026-04-18)
+
+📄 [RIGHTSIDEBAR_ROADMAP.md](../01_OPERATIONNEL/RightSidebar/RIGHTSIDEBAR_ROADMAP.md)
+
+- API médiathèque branchée (`GET /api/mediatheque/`)
+- Composant mutualisé Desktop + ProductDocSync
+- Import d'image fonctionnel
+
+---
+
+## Settings — DataTab (Phase 1)
+
+### Statut
+✅ TERMINÉ
+
+- DataTab opérationnel : gammes, produits, fonctionnalités, audiences, tags, profils-publication, interfaces
+- Archivage/restauration branché sur `ArchivableModelViewSet` (`?archived=true|false`, `/{id}/archive/`, `/{id}/restore/`)
+- Préfixe `/api/` corrigé dans `useArchivableList` (Chantier 2BIS — 2026-04-13)
+
+---
+
+## ProductDocSync — Phases 1, 2, 3
+
+### Statut
+✅ TERMINÉ — Phases 1+2+3 intégralement livrées (2026-04-18/19)
+
+📄 [PRODUCTDOCSYNC_ROADMAP.md](../01_OPERATIONNEL/ProductDocSync/PRODUCTDOCSYNC_ROADMAP.md)
+
+### Phase 1 — Branchement API évolutions (2026-04-18)
+- `useEvolutionProduitList`, `useEvolutionProduitArchive`, `useEvolutionProduitReorder`, copy/paste évolution persisté
+- `EvolutionProduit` remplace `Fonctionnalite` comme unité d'évolution dans SyncLeftSidebar
+
+### Phase 2 — Branchement API produits & versions (2026-04-18)
+- `useProduits`, `useVersionProduitList`, `useVersionProduitCreate`, `useVersionProduitPublier`
+- 21/21 tests backend — `VersionProduit` + `EvolutionProduit` modèles, services, ViewSets
+
+### Phase 3 — ImpactDocumentaire (2026-04-18/19)
+
+**Backend (2026-04-18)**
+- Modèle `ImpactDocumentaire` : `EvolutionProduit → Rubrique`, statuts `a_faire / en_cours / pret / valide / ignore`
+- Services `create_impact_documentaire`, `update_statut_impact`, `update_notes_impact`
+- ViewSet avec filtres `?evolution_produit` + `?rubrique`, actions `update_statut`, `update_notes`
+- Migrations `0013_impactdocumentaire` + `0014_impactdocumentaire_notes`
+- 10 tests verts (`ImpactDocumentaireAPITest` + `ImpactDocumentaireNotesTest`)
+- `rubrique_titre` dénormalisé en read-only dans le serializer
+- Endpoint usages : `GET /api/rubriques/{id}/usages/` → `MapRubrique` → liste `[{map_id, …}]`
+
+**Frontend (2026-04-18/19)**
+- `src/api/impacts.ts` : `ImpactDocumentaire`, `StatutImpact`, 5 fonctions CRUD + actions
+- `useImpactDocumentaire.ts` : 5 hooks TanStack Query v5 (`useImpactList`, `useImpactCreate`, `useImpactUpdateStatut`, `useImpactDelete`, `useImpactUpdateNotes`)
+- `useRubriqueUsages(rubriqueId)` : hook avec `EMPTY_USAGES` module-level
+- `SyncBottombar` : `ImpactItem` local supprimé, sélection ligne → `onImpactSelect`, `UsagePanel` sous-composant, ExternalLink par ligne
+- `SyncEditor` : mode notes TipTap avec Toolbar complète + dictée (`useDictation`), bandeau contextuel, `notesBaselineRef` dirty detection, `evolutionType` dérivé de l'API
+- `ImpactMapGraph` : ReactFlow données réelles via `useImpactList`, colorisation 5 statuts, sélection nœuds → `onGenerateTestPlan`
+- `ImpactMapModal` : reçoit `evolutionId` + `evolutionLabel` depuis `ProductDocSync`
+
+### Phase 4 — Partiellement traitée / Sautée (2026-04-19)
+- §4.2 livré en avance (§3.3)
+- §4.1 (`TestPlanModal` backend) bloqué — module Gestion de Production Nexus requis
+- §4.3 (vue multi-évolutions `ImpactMapModal`) reporté
+- Décision actée dans `gov_decision-log.md` entrée 2026-04-19
+
+---
+
 ## 📋 Journal de bord
 
 | Date | Chantier | Avancée |
@@ -254,3 +401,16 @@ Mettre en place un modèle de versioning métier cohérent et exploitable :
 | 2026-04-12 | Chantier 8 — Lot 3 | Service `publish_project()` : versionnage atomique + export DITA délégué hors transaction. Endpoint `publication-diff`. 37 nouveaux tests — 117/117. |
 | 2026-04-12 | Chantier 8 — Lot 4 | `RevisionRubriqueSerializer`. Action `revisions` sur `RubriqueViewSet`. 13 nouveaux tests — 130/130. |
 | 2026-04-13 | Chantier 2BIS | Cause racine : préfixe `/api/` manquant dans `useArchivableList`. Archivage backend pleinement opérationnel. Option A retenue — toggle conservé. |
+| 2026-04-18 | ProductDocSync Phases 1+2 backend | `VersionProduit` + `EvolutionProduit` : modèles, services, ViewSets, 21/21 tests, migration 0012. |
+| 2026-04-18 | ProductDocSync Phase A frontend | Hooks `useVersionProduitList`, `useVersionProduitCreate`, `useVersionProduitPublier`, `useEvolutionProduit*` branchés. Build 0 erreur TypeScript. |
+| 2026-04-18 | RightSidebar Phase 1 | Branchement API médiathèque. Mutualisé Desktop + ProductDocSync. Import fonctionnel. |
+| 2026-04-18 | ProductDocSync Phase 5 partiel | `useWindowHeight` hook créé (resize listener). `MinimalTask` déplacé dans `src/types/`. Bug CSS SyncRightSidebar restant. |
+| 2026-04-18 | ProductDocSync Phase 3 backend | `ImpactDocumentaire` : modèle, services `create_impact_documentaire` + `update_statut_impact`, `ImpactDocumentaireViewSet` (filtres `?evolution_produit` + `?rubrique`, action `update_statut`), migration 0013, 7 tests verts. `rubrique on_delete=PROTECT`. Documenté dans `10_BACKEND_CANONIQUE.md § 9.3` et `gov_decision-log.md`. |
+| 2026-04-18 | ProductDocSync Phase 3 frontend | `src/api/impacts.ts` (4 fonctions), `useImpactDocumentaire.ts` (5 hooks TanStack Query v5). `SyncBottombar` réécrit : `ImpactItem` local supprimé, prop `selectedEvolutionId`, statut inline persisté, dialog rubrique depuis API. `rubrique_titre` dénormalisé. |
+| 2026-04-18 | ProductDocSync Phase 3 cadrage §3.4+§3.5 | Décisions documentées : notes par impact (granularité rubrique-spécifique), usages rubrique + navigation Doc Principale. Prompts backend + frontend préparés. Point ouvert Nexus : suggestion IA rubriques impactées (horizon futur). |
+| 2026-04-19 | ProductDocSync Phase 3 §3.4 — Notes par impact | Backend : `notes = TextField(blank=True)` sur `ImpactDocumentaire` (migration 0014), service `update_notes_impact`, action `PATCH /api/impacts/{id}/update_notes/`, 3 tests. Frontend : `useImpactUpdateNotes` hook, `selectedImpact` propagé de ProductDocSync vers SyncEditor. SyncEditor : mode notes via TipTap avec Toolbar complète + dictée vocale (`useDictation`), bandeau contextuel (rubrique + type d'évolution) en lecture seule, `notesBaselineRef` pour détection dirty, bouton "Enregistrer les notes". |
+| 2026-04-19 | ProductDocSync Phase 3 §3.5 — Usages rubrique | Backend : action `GET /api/rubriques/{id}/usages/` sur `RubriqueViewSet` → `MapRubrique` → liste `[{map_id, map_nom, version_projet_id, …}]`. Frontend : `getRubriqueUsages` dans `src/api/rubriques.ts`, hook `useRubriqueUsages`, composant `UsagePanel` (sous-composant module-level pour respecter les règles-of-hooks), bouton ExternalLink par ligne dans SyncBottombar. Navigation CentralEditor reportée (dépend routeur). |
+| 2026-04-19 | ProductDocSync — SyncEditor restauration Toolbar | `EditorToolbar` (copie CentralEditor) réintégrée dans SyncEditor avec dictée vocale. `useDictation(editor)` au niveau composant (pas de double-appel `useSpeechCommands`). `ToolbarCorrection` en lecture seule via `pointer-events-none` quand un impact est sélectionné. |
+| 2026-04-19 | ProductDocSync — SyncEditor indicateur Évolution/Correctif | `selectedArticleType` (useState standalone) remplacé par `evolutionType` dérivé de `evolutions.find(e => e.id === selectedFeature)?.type` — synchronisé avec l'API, réactif aux changements de données. |
+| 2026-04-19 | ProductDocSync Phase 3 §3.3 — ImpactMapModal données réelles | `ImpactMapGraph` entièrement réécrit : `useImpactList(evolutionId)` remplace les données mock. Nœud central = évolution sélectionnée, nœuds feuilles = rubriques impactées colorées par statut (5 couleurs). Arêtes animées si `en_cours`. Sélection multi-nœuds → `onGenerateTestPlan`. États null / loading / error / empty gérés. `ImpactMapModal` reçoit `evolutionId` + `evolutionLabel` depuis `ProductDocSync`. |
+| 2026-04-19 | ProductDocSync Phase 4 — sautée (partielle) | §4.2 livré en §3.3. §4.1 (`TestPlanModal` backend) bloqué — dépend du module Gestion de Production (Nexus, non développé). §4.3 (vue multi-évolutions `ImpactMapModal`) reporté. Décision actée dans `gov_decision-log.md`. |

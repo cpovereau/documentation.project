@@ -8,6 +8,12 @@ import ReactFlow, {
   useEdgesState,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import { useImpactList } from "@/hooks/useImpactDocumentaire";
+import type { StatutImpact } from "@/api/impacts";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface TaskNode {
   id: string;
@@ -15,220 +21,228 @@ interface TaskNode {
 }
 
 interface ImpactMapGraphProps {
+  evolutionId: number | null;
+  evolutionLabel?: string;
   onGenerateTestPlan?: (tasks: TaskNode[]) => void;
 }
 
-/**
- * Ce composant affiche une carte mentale simulée pour l'arbre d'impact d'une version.
- * L'utilisateur peut sélectionner les rubriques de type `task` pour construire un plan de test.
- * Les fonctionnalités sans `task` sont surlignées.
- */
+// ---------------------------------------------------------------------------
+// Statut styling
+// ---------------------------------------------------------------------------
 
-const initialNodes: Node[] = [
-  {
-    id: "1",
-    position: { x: 0, y: 100 },
-    data: { label: "Fonctionnalité A", type: "feature" },
-    type: "default",
-  },
-  {
-    id: "2",
-    position: { x: 200, y: 0 },
-    data: { label: "Rubrique : Connexion (task)", type: "task", parent: "1" },
-    type: "default",
-  },
-  {
-    id: "3",
-    position: { x: 200, y: 200 },
-    data: {
-      label: "Rubrique : Sécurité (concept)",
-      type: "concept",
-      parent: "1",
-    },
-    type: "default",
-  },
-  {
-    id: "4",
-    position: { x: 450, y: 100 },
-    data: { label: "Fonctionnalité B", type: "feature" },
-    type: "default",
-  },
-  {
-    id: "5",
-    position: { x: 650, y: 0 },
-    data: { label: "Rubrique : Export PDF (task)", type: "task", parent: "4" },
-    type: "default",
-  },
-  {
-    id: "6",
-    position: { x: 650, y: 200 },
-    data: {
-      label: "Rubrique : Liens externes (reference)",
-      type: "reference",
-      parent: "4",
-    },
-    type: "default",
-  },
-  {
-    id: "7",
-    position: { x: 0, y: 350 },
-    data: { label: "Fonctionnalité C (sans task)", type: "feature" },
-    type: "default",
-  },
-  {
-    id: "8",
-    position: { x: 200, y: 350 },
-    data: {
-      label: "Rubrique : Préambule (concept)",
-      type: "concept",
-      parent: "7",
-    },
-    type: "default",
-  },
-];
+const STATUT_LABELS: Record<StatutImpact, string> = {
+  a_faire: "À faire",
+  en_cours: "En cours",
+  pret: "Prêt",
+  valide: "Validé",
+  ignore: "Ignoré",
+};
 
-const initialEdges: Edge[] = [
-  { id: "e1-2", source: "1", target: "2", animated: true },
-  { id: "e1-3", source: "1", target: "3", animated: true },
-  { id: "e1-4", source: "1", target: "4", animated: false },
-  { id: "e4-5", source: "4", target: "5", animated: true },
-  { id: "e4-6", source: "4", target: "6", animated: true },
-  { id: "e7-8", source: "7", target: "8", animated: false },
-];
+const STATUT_NODE_STYLE: Record<StatutImpact, React.CSSProperties> = {
+  a_faire:  { background: "#fff7ed", border: "2px solid #fb923c", color: "#9a3412" },
+  en_cours: { background: "#eff6ff", border: "2px solid #60a5fa", color: "#1e3a8a" },
+  pret:     { background: "#fefce8", border: "2px solid #facc15", color: "#713f12" },
+  valide:   { background: "#f0fdf4", border: "2px solid #4ade80", color: "#14532d" },
+  ignore:   { background: "#f9fafb", border: "2px solid #d1d5db", color: "#6b7280" },
+};
+
+const BASE_NODE_STYLE: React.CSSProperties = {
+  borderRadius: 8,
+  padding: "6px 10px",
+  fontSize: 12,
+  minWidth: 160,
+};
+
+const EVOLUTION_NODE_STYLE: React.CSSProperties = {
+  ...BASE_NODE_STYLE,
+  background: "#f0f9ff",
+  border: "2px solid #0284c7",
+  color: "#0c4a6e",
+  fontWeight: 700,
+  minWidth: 180,
+};
+
+// ---------------------------------------------------------------------------
+// ImpactMapGraph
+// ---------------------------------------------------------------------------
 
 export const ImpactMapGraph: React.FC<ImpactMapGraphProps> = ({
+  evolutionId,
+  evolutionLabel = "Évolution",
   onGenerateTestPlan,
 }) => {
-  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
-  const [nodes] = useNodesState(initialNodes);
-  const [edges] = useEdgesState(initialEdges);
+  const { impacts, isLoading, isError } = useImpactList(evolutionId);
+
+  const [selectedImpactIds, setSelectedImpactIds] = useState<string[]>([]);
+
+  // ── Construction des nœuds et arêtes depuis les données réelles ───────────
+  const { nodes: builtNodes, edges: builtEdges } = useMemo(() => {
+    const verticalSpacing = 90;
+    const totalHeight = Math.max(impacts.length - 1, 0) * verticalSpacing;
+    const centerY = totalHeight / 2;
+
+    const evolutionNode: Node = {
+      id: "evolution",
+      position: { x: 0, y: centerY },
+      data: { label: evolutionLabel },
+      type: "default",
+      style: EVOLUTION_NODE_STYLE,
+    };
+
+    const impactNodes: Node[] = impacts.map((impact, i) => ({
+      id: String(impact.id),
+      position: { x: 320, y: i * verticalSpacing },
+      data: {
+        label: `${impact.rubrique_titre}\n${STATUT_LABELS[impact.statut]}`,
+        impactId: impact.id,
+        statut: impact.statut,
+      },
+      type: "default",
+      style: {
+        ...BASE_NODE_STYLE,
+        ...STATUT_NODE_STYLE[impact.statut],
+      },
+    }));
+
+    const impactEdges: Edge[] = impacts.map((impact) => ({
+      id: `e-ev-${impact.id}`,
+      source: "evolution",
+      target: String(impact.id),
+      animated: impact.statut === "en_cours",
+      style: { stroke: "#94a3b8" },
+    }));
+
+    return {
+      nodes: [evolutionNode, ...impactNodes],
+      edges: impactEdges,
+    };
+  }, [impacts, evolutionLabel]);
+
+  const [nodes, , onNodesChange] = useNodesState(builtNodes);
+  const [edges, , onEdgesChange] = useEdgesState(builtEdges);
+
+  // Synchronise les nœuds quand les données changent (impact de rechargement TanStack Query)
+  const syncedNodes = builtNodes.map((node) => {
+    if (node.id === "evolution") return node;
+    const isSelected = selectedImpactIds.includes(node.id);
+    if (!isSelected) return node;
+    return {
+      ...node,
+      style: {
+        ...node.style,
+        outline: "3px solid #6366f1",
+        outlineOffset: 2,
+      },
+    };
+  });
 
   const handleNodeClick = (_event: React.MouseEvent, node: Node) => {
-    if (node.data.type !== "task") return;
-    setSelectedTaskIds((prev) =>
+    if (node.id === "evolution") return;
+    setSelectedImpactIds((prev) =>
       prev.includes(node.id)
         ? prev.filter((id) => id !== node.id)
         : [...prev, node.id]
     );
   };
 
-  const featureHasTask: Record<string, boolean> = useMemo(() => {
-    const map: Record<string, boolean> = {};
-    nodes.forEach((n) => {
-      if (n.data.type === "feature") map[n.id] = false;
-    });
-    nodes.forEach((n) => {
-      if (n.data.type === "task" && n.data.parent) {
-        map[n.data.parent] = true;
-      }
-    });
-    return map;
-  }, [nodes]);
-
-  const styledNodes = nodes.map((node) => {
-    let style: React.CSSProperties = {
-      border: "1px solid #ccc",
-      padding: 8,
-      borderRadius: 6,
-    };
-
-    if (node.data.type === "task") {
-      if (selectedTaskIds.includes(node.id)) {
-        style = {
-          ...style,
-          backgroundColor: "#fff3cd",
-          border: "2px solid #f0ad4e",
-        };
-      }
-    } else if (node.data.type === "feature") {
-      if (!featureHasTask[node.id]) {
-        style = {
-          ...style,
-          border: "2px dashed red",
-          backgroundColor: "#ffe6e6",
-        };
-      }
-    }
-
-    return {
-      ...node,
-      style,
-    };
-  });
-
-  const selectedTasks = nodes.filter(
-    (n) => selectedTaskIds.includes(n.id) && n.data.type === "task"
+  const selectedImpacts = impacts.filter((impact) =>
+    selectedImpactIds.includes(String(impact.id))
   );
-
-  const orphanFeatures = nodes.filter(
-    (n) => n.data.type === "feature" && !featureHasTask[n.id]
-  );
-
-  const allTaskIds = nodes
-    .filter((n) => n.data.type === "task")
-    .map((n) => n.id);
 
   const handleGenerateClick = () => {
-    const payload: TaskNode[] = selectedTasks.map((t) => ({
-      id: t.id,
-      label: t.data.label,
+    if (!onGenerateTestPlan) return;
+    const payload: TaskNode[] = selectedImpacts.map((impact) => ({
+      id: String(impact.id),
+      label: impact.rubrique_titre,
     }));
-    if (payload.length > 0 && onGenerateTestPlan) {
-      onGenerateTestPlan(payload);
-    }
+    if (payload.length > 0) onGenerateTestPlan(payload);
   };
+
+  // ── États loading / empty / error ─────────────────────────────────────────
+  if (evolutionId === null) {
+    return (
+      <div className="flex items-center justify-center h-full text-gray-400 italic text-sm">
+        Sélectionnez une évolution dans la liste pour afficher sa carte d'impact.
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full text-gray-400 text-sm animate-pulse">
+        Chargement de la carte d'impact…
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center h-full text-red-500 text-sm">
+        Erreur lors du chargement des impacts. Réessayez.
+      </div>
+    );
+  }
+
+  if (impacts.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full text-gray-400 italic text-sm">
+        Aucun impact documentaire déclaré pour cette évolution.
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full relative">
       <ReactFlow
-        nodes={styledNodes}
-        edges={edges}
+        nodes={syncedNodes}
+        edges={builtEdges}
         onNodeClick={handleNodeClick}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.25 }}
       >
         <Background color="#f5f5f5" gap={16} />
         <Controls position="bottom-right" />
       </ReactFlow>
 
-      <div className="absolute bottom-1 left-6 max-w-xs bg-white border shadow-lg rounded-md p-4 text-sm z-50">
-        {selectedTasks.length < allTaskIds.length && (
+      {/* Panneau latéral de sélection */}
+      <div className="absolute bottom-4 left-4 max-w-xs bg-white border shadow-lg rounded-lg p-4 text-sm z-50">
+        <p className="font-semibold mb-2 text-gray-700">
+          Impacts sélectionnés ({selectedImpacts.length}/{impacts.length})
+        </p>
+
+        {impacts.length > 0 && selectedImpacts.length < impacts.length && (
           <button
-            onClick={() => setSelectedTaskIds(allTaskIds)}
-            className="mb-3 text-sm text-blue-600 hover:underline"
+            onClick={() =>
+              setSelectedImpactIds(impacts.map((i) => String(i.id)))
+            }
+            className="mb-3 text-xs text-blue-600 hover:underline"
           >
-            Sélectionner toutes les tâches
+            Tout sélectionner
           </button>
         )}
 
-        <p className="font-semibold mb-2">Tâches sélectionnées :</p>
-        <ul className="list-disc list-inside text-gray-700 mb-3">
-          {selectedTasks.map((t) => (
-            <li key={t.id}>{t.data.label}</li>
+        <ul className="list-disc list-inside text-gray-700 mb-3 max-h-40 overflow-y-auto">
+          {selectedImpacts.map((impact) => (
+            <li key={impact.id} className="text-xs leading-5">
+              {impact.rubrique_titre}
+              <span className="ml-1 text-gray-400">
+                ({STATUT_LABELS[impact.statut]})
+              </span>
+            </li>
           ))}
-          {selectedTasks.length === 0 && (
-            <li className="italic text-gray-400">Aucune</li>
+          {selectedImpacts.length === 0 && (
+            <li className="italic text-gray-400 text-xs">
+              Cliquez sur un nœud pour le sélectionner.
+            </li>
           )}
         </ul>
 
-        <p className="font-semibold mb-2">
-          Fonctionnalités sans tâches descript. :
-        </p>
-        <ul className="list-disc list-inside text-red-600 mb-3">
-          {orphanFeatures.map((f) => (
-            <li key={f.id}>{f.data.label}</li>
-          ))}
-          {orphanFeatures.length === 0 && (
-            <li className="italic text-gray-400">Aucune</li>
-          )}
-        </ul>
-
-        {selectedTasks.length > 0 && (
+        {selectedImpacts.length > 0 && onGenerateTestPlan && (
           <button
             onClick={handleGenerateClick}
-            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            className="mt-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-xs hover:bg-blue-700 w-full"
           >
-            Générer le plan de test
+            Générer le plan de test ({selectedImpacts.length})
           </button>
         )}
       </div>

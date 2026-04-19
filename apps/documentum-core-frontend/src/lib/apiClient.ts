@@ -100,12 +100,6 @@ export async function createProjectValidated(
 ): Promise<CreateProjectResponseZ> {
   const res = await api.post("/api/projets/", payload);
 
-  console.group("[FLOW][CreateProject]");
-  console.log("payload sent", payload);
-  console.log("raw response", res.data);
-  console.groupEnd();
-
-
   return parseOrThrow(
     CreateProjectResponseSchema,
     res.data,

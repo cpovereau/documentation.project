@@ -1,5 +1,7 @@
 // extensions/Image.ts
 import { Node, mergeAttributes } from '@tiptap/core'
+import { ReactNodeViewRenderer } from '@tiptap/react'
+import { ImageNodeView } from './ImageNodeView'
 
 export interface ImageOptions {
   inline: boolean
@@ -48,27 +50,13 @@ export const Image = Node.create<ImageOptions>({
 
   addAttributes() {
     return {
-      src: {
-        default: null,
-      },
-      alt: {
-        default: null,
-      },
-      ref: {
-        default: null,
-      },
-      width: {
-        default: null,
-      },
-      height: {
-        default: null,
-      },
-      float: {
-        default: null,
-      },
-      role: {
-        default: null,
-      },
+      src: { default: null },
+      alt: { default: null },
+      ref: { default: null },
+      width: { default: null },
+      height: { default: null },
+      float: { default: null },
+      role: { default: null },
     }
   },
 
@@ -80,13 +68,13 @@ export const Image = Node.create<ImageOptions>({
           if (!(node instanceof HTMLElement)) return false
           if (!this.options.allowBase64 && node.getAttribute('src')?.startsWith('data:')) return false
           return {
-            src: node.getAttribute('src'),
-            alt: node.getAttribute('alt'),
-            ref: node.getAttribute('ref'),
-            width: node.getAttribute('width'),
+            src:    node.getAttribute('src'),
+            alt:    node.getAttribute('alt'),
+            ref:    node.getAttribute('ref'),
+            width:  node.getAttribute('width'),
             height: node.getAttribute('height'),
-            float: node.getAttribute('float'),
-            role: node.getAttribute('role'),
+            float:  node.getAttribute('float'),
+            role:   node.getAttribute('role'),
           }
         },
       },
@@ -95,6 +83,10 @@ export const Image = Node.create<ImageOptions>({
 
   renderHTML({ HTMLAttributes }) {
     return ['image', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageNodeView)
   },
 
   addCommands() {

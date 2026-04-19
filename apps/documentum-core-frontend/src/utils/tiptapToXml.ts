@@ -291,6 +291,23 @@ function serializeNode(node: TiptapNode, level = 0): string {
   ].join("\n");
   }
 
+  // Cas spécial : image (DITA utilise href, TipTap stocke src)
+  if (node.type === "image") {
+    const { src, alt, ref, width, height, float: floatAttr, role, ...rest } = node.attrs ?? {};
+    const href = alt ?? src ?? null;
+    const xmlAttrs: Record<string, any> = {};
+    if (href)      xmlAttrs.href  = href;
+    if (alt)       xmlAttrs.alt   = alt;
+    if (ref)       xmlAttrs.ref   = ref;
+    if (width)     xmlAttrs.width = width;
+    if (height)    xmlAttrs.height = height;
+    if (floatAttr) xmlAttrs.float = floatAttr;
+    if (role)      xmlAttrs.role  = role;
+    Object.assign(xmlAttrs, rest);
+    const attrs = serializeAttributes(xmlAttrs);
+    return indent(level) + (attrs ? `<image ${attrs} />` : `<image />`);
+  }
+
   // Cas spécial : glossentry (auto-fermante)
   if (node.type === "glossentry") {
     const attrs = serializeAttributes(node.attrs);

@@ -120,10 +120,11 @@ La sélection différée après création (`pendingSelectId`) utilise `setSelect
 
 Ces bugs sont documentés ici pour traçabilité. Ils doivent être résolus dans **ProductDocSync Phase 5** (nettoyage technique).
 
-| Bug | Composant | Description | Impact |
-|---|---|---|---|
-| Double `$$` dans template literal | `SyncRightSidebar` | `` `$${isRightSidebarExpanded ? "w-[248px]" : "w-0"}` `` — double `$` : la classe Tailwind ne s'applique probablement pas | UI : sidebar droite ne se redimensionne pas correctement |
-| `TOTAL_HEIGHT` recalculé au montage uniquement | `ProductDocSync` | `const TOTAL_HEIGHT = window.innerHeight - 130` calculé une seule fois — non réactif au redimensionnement de la fenêtre | UX : hauteur incorrecte après resize |
+| Bug | Composant | Description | Impact | Statut |
+|---|---|---|---|---|
+| Double `$$` dans template literal | `SyncRightSidebar` | `` `$${isRightSidebarExpanded ? "w-[248px]" : "w-0"}` `` — double `$` : la classe Tailwind ne s'applique probablement pas | UI : sidebar droite ne se redimensionne pas correctement | 🔜 À corriger |
+| `TOTAL_HEIGHT` recalculé au montage uniquement | `ProductDocSync` | `const TOTAL_HEIGHT = window.innerHeight - 130` calculé une seule fois — non réactif au redimensionnement de la fenêtre | UX : hauteur incorrecte après resize | 🔜 À corriger |
+| Outdent créant une 2ème racine | `MapItem` / `LeftSidebar` / `services.py` | Un nœud de niveau 2 pouvait être désindentté → `parent = null` → deux racines → crash `mapRubriquesToMapItems` | Crash structurel bloquant | ✅ Corrigé 2026-04-19 |
 
 👉 Ces corrections sont indépendantes de la logique métier et peuvent être traitées à tout moment (ProductDocSync Phase 5).
 

@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { useAllDictionnaireData } from "@/hooks/useAllDictionnaireData";
 import { useImportModal } from "@/hooks/useImportModal";
-import { useMedias } from "@/hooks/useMedias";
+import { useMedias, type MediaItem } from "@/hooks/useMedias";
 
 interface MediaPanelProps {
   isImageMode: boolean;
@@ -43,6 +43,7 @@ interface MediaPanelProps {
   onToggleSort: () => void;
   onToggleDisplayMode: () => void;
   isFloating?: boolean;
+  onInsertImage?: (item: MediaItem) => void;
 }
 
 export const MediaPanel: React.FC<MediaPanelProps> = ({
@@ -57,6 +58,7 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
   onToggleSort,
   onToggleDisplayMode,
   isFloating = false,
+  onInsertImage,
 }) => {
   type MediaFilterType = "produit" | "fonctionnalite" | "item";
   const [activeFilter, setActiveFilter] = useState<MediaFilterType | null>(
@@ -322,6 +324,7 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
               updatedText={item.description ?? ""}
               imageUrl={item.chemin_acces}
               isListMode={displayMode === "list"}
+              onInsert={onInsertImage ? () => onInsertImage(item) : undefined}
             />
           ))}
         </div>

@@ -102,6 +102,7 @@ DOCS/
 │   ├── 10_GLOSSAIRE.md
 │   ├── 10_MODELE_METIER_BASE_METIER.md
 │   ├── 10_MODELE_METIER_DOCUMENTUM.md
+│   ├── 10_MODELE_METIER_TRANSVERSE_SIMPLIFIE.md
 │   ├── 10_VERSIONING_DOCUMENTAIRE.md
 │   ├── 20_ARCHITECTURE_FRONTEND.md
 |   |── 20_SECURITE_SYSTEME.md
@@ -144,6 +145,7 @@ Le référentiel regroupe les documents qui définissent la vérité du projet.
 * `00_CONTEXTE_PROJET.md` : cadre général, objectifs et périmètre du projet
 * `10_GLOSSAIRE.md` : vocabulaire officiel du projet
 * `10_MODELE_METIER_DOCUMENTUM.md` : concepts métier structurants (orienté logiciel)
+* `10_MODELE_METIER_TRANSVERSE_SIMPLIFIE.md` : modèle métier transverse générique — schéma `ObjetMétier → ÉvénementMétier → ImpactDocumentaire → Rubrique`, spécialisations multi-contextes, limites actuelles de l'implémentation
 * `10_MODELE_METIER_BASE_METIER.md` : modèle canonique du module G — Base Métier
 * `10_VERSIONING_DOCUMENTAIRE.md` : logique de versioning et de publication
 * `20_ARCHITECTURE_FRONTEND.md` : architecture cible et principes frontend
@@ -311,6 +313,7 @@ Cette section regroupe les documents de pilotage opérationnel, les roadmaps et 
 | Comprendre le contexte global du projet  | `00_REFERENTIEL/00_CONTEXTE_PROJET.md`                                              |
 | Comprendre le vocabulaire Documentum     | `00_REFERENTIEL/10_GLOSSAIRE.md`                                                    |
 | Comprendre le modèle métier              | `00_REFERENTIEL/10_MODELE_METIER_DOCUMENTUM.md`                                     |
+| Comprendre le modèle métier générique (multi-contextes) | `00_REFERENTIEL/10_MODELE_METIER_TRANSVERSE_SIMPLIFIE.md`          |
 | Comprendre le versioning                 | `00_REFERENTIEL/10_VERSIONING_DOCUMENTAIRE.md`                                      |
 | Comprendre l'architecture frontend cible | `00_REFERENTIEL/20_ARCHITECTURE_FRONTEND.md`                                        |
 | Comprendre les règles d'édition          | `00_REFERENTIEL/40_EDITION_RUBRIQUE.md`                                             |
@@ -354,7 +357,8 @@ Cette section regroupe les documents de pilotage opérationnel, les roadmaps et 
 2. `00_REFERENTIEL/00_CONTEXTE_PROJET.md`
 3. `00_REFERENTIEL/10_GLOSSAIRE.md`
 4. `00_REFERENTIEL/10_MODELE_METIER_DOCUMENTUM.md`
-5. `00_REFERENTIEL/20_ARCHITECTURE_FRONTEND.md`
+5. `00_REFERENTIEL/10_MODELE_METIER_TRANSVERSE_SIMPLIFIE.md`
+6. `00_REFERENTIEL/20_ARCHITECTURE_FRONTEND.md`
 
 ### Développeur frontend
 

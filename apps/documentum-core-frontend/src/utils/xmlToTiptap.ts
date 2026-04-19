@@ -5,6 +5,8 @@
  * V3 — support des structures DITA (task, concept, reference…)
  */
 
+import { getMediaUrl } from "@/lib/mediaUtils";
+
 export interface TiptapNode {
   type: string;
   attrs?: Record<string, any>;
@@ -117,8 +119,8 @@ function extractAttributes(el: Element, type: string): Record<string, any> | und
   if (type === "image") {
     const href = el.getAttribute("href") ?? el.getAttribute("src");
     if (href) {
-      // Standardisation côté TipTap
-      attrs.src = href;
+      attrs.src = getMediaUrl(href);
+      attrs.alt = attrs.alt ?? href;
     }
   }
 
@@ -391,7 +393,6 @@ export function parseXmlNode(xmlNode: Node): TiptapNode | null {
  */
 export function parseXmlToTiptap(xmlString: string): TiptapNode[] {
   console.groupCollapsed("🔍 [parseXmlToTiptap] Analyse du XML reçu");
-  console.log("📨 xmlString (brut):", xmlString);
 
   if (!xmlString || typeof xmlString !== "string") {
     console.warn("parseXmlToTiptap appelé avec un xml invalide :", xmlString);
@@ -442,8 +443,6 @@ export function parseXmlToTiptap(xmlString: string): TiptapNode[] {
     container = bodyLike ?? root;
   }
 
-  console.log("📥 Élément conteneur utilisé pour la conversion :", container.tagName);
-
   const resultNodes: TiptapNode[] = [];
 
   // Cas particulier : <body> → on aplatit les enfants
@@ -465,7 +464,6 @@ export function parseXmlToTiptap(xmlString: string): TiptapNode[] {
 
   }
 
-  console.log("🧬 JSON TipTap généré (doc.content) :", resultNodes);
   console.groupEnd();
 
   return resultNodes;

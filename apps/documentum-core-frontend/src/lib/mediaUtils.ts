@@ -71,7 +71,7 @@ export function generateNextMediaName(
  *
  */
 export function getMediaUrl(fileName: string) {
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
   return `${API_BASE_URL}/medias/${fileName}`;
 }
 

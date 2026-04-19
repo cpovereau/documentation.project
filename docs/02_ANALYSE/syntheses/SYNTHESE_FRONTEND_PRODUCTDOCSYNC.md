@@ -137,13 +137,19 @@ Le tableau `SyncBottombar` permet d'ajouter/lister ces items localement. Aucune 
 Un tableau liste les fonctionnalités impactées et les éléments créés (correctifs / évolutions).
 Le bouton `+` permet d'ajouter une ligne associée à une fonctionnalité.
 
-### État d'implémentation (2026-04-17)
+### État d'implémentation (2026-04-18)
 
 ✅ **Réorganisation effectuée** — tableau (`SyncBottombar`) en position **principale (haut)**, éditeur (`SyncEditor`) en position **secondaire (bas)**.
 
-⚠️ **Données locales** — `ImpactItem[]` géré en état React local dans `SyncBottombar`. Pas de persistance backend.
+✅ **ImpactDocumentaire branché API** — `SyncBottombar` consomme désormais les données réelles :
+- `GET /api/impacts/?evolution_produit={id}` via `useImpactList(selectedEvolutionId)`
+- `POST /api/impacts/` via `useImpactCreate()` — dialog de sélection de rubrique
+- `PATCH /api/impacts/{id}/update_statut/` via `useImpactUpdateStatut()` — select inline
+- `DELETE /api/impacts/{id}/` via `useImpactDelete()`
+- Type local `ImpactItem` supprimé — remplacé par `ImpactDocumentaire` (`src/api/impacts.ts`)
+- `features: FeatureItem[]` supprimé de `SyncBottombarProps` — la rubrique est sélectionnée depuis l'API
 
-> **TODO (Phase 3 — bloqué sur M1)** : `ImpactDocumentaire` absent du modèle Django. Implémenter modèle + API + intégration avant de brancher ce tableau.
+> **Reste à faire (Phase 3.3)** : brancher `ImpactMapModal` sur les données réelles.
 
 ---
 
@@ -199,7 +205,7 @@ Pour une ligne sélectionnée : afficher / modifier un texte décrivant le corre
 | Produits | hardcodé | ✅ API `GET /api/produits/` |
 | Fonctionnalités | hardcodé | ✅ API `GET /api/fonctionnalites/` |
 | Versions | hardcodé | ⚠️ local — entité backend manquante |
-| Correctifs/Évolutions | hardcodé | ⚠️ local — `ImpactDocumentaire` absent |
+| Correctifs/Évolutions | hardcodé | ✅ API `GET+POST+PATCH+DELETE /api/impacts/` (2026-04-18) |
 
 ---
 
@@ -275,8 +281,8 @@ Pour une ligne sélectionnée : afficher / modifier un texte décrivant le corre
 | Écran cohérent fonctionnellement | ✅ Atteint |
 | Alignement cadrage métier | ✅ Atteint |
 | Produits + Fonctionnalités sur API | ✅ Atteint |
-| Versions Produit sur API | ❌ Bloqué — entité backend manquante |
-| ImpactDocumentaire branché | ❌ Bloqué — modèle Django manquant |
+| Versions Produit sur API | ✅ Atteint (2026-04-18) |
+| ImpactDocumentaire branché | ✅ Atteint — `SyncBottombar` sur API réelle (2026-04-18) |
 | Éditeur lié au tableau | ❌ Non commencé |
 
 ---

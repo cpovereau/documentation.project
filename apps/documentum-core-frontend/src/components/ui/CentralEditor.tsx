@@ -28,6 +28,8 @@ import useEditorDialogs from "components/ui/CentralEditor/hooks/useEditorDialogs
 import useEditorUIState from "components/ui/CentralEditor/hooks/useEditorUIState";
 import { useDictation } from "components/ui/CentralEditor/hooks/useDictation";
 import { useGrammarPopup } from "components/ui/CentralEditor/hooks/useGrammarPopup";
+import usePendingMediaStore from "@/store/usePendingMediaStore";
+import { getMediaUrl } from "@/lib/mediaUtils";
 
 // Props du composant
 interface CentralEditorProps {
@@ -91,6 +93,19 @@ export const CentralEditor: React.FC<CentralEditorProps> = ({
     },
     [rubriqueId],
   );
+
+  // Insertion image depuis la médiathèque (RightSidebar → store → ici)
+  const pendingImage = usePendingMediaStore((s) => s.pendingImage);
+  const clearPendingImage = usePendingMediaStore((s) => s.clearPendingImage);
+
+  useEffect(() => {
+    if (!pendingImage || !editor) return;
+    editor.chain().focus().setImage({
+      src: getMediaUrl(pendingImage.nom_fichier),
+      alt: pendingImage.nom_fichier,
+    }).run();
+    clearPendingImage();
+  }, [pendingImage, editor, clearPendingImage]);
 
   // Synchronisation TipTap ↔ buffer XML
   useXmlBufferSync(editor, rubriqueId);

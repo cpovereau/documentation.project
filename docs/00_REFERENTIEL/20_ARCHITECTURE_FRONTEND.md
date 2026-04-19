@@ -69,8 +69,8 @@ Coordonner les composants et les flux UI
 
 ## Exemples
 
-- Desktop
-- ProductDocSync
+- Desktop (CentralEditor)
+- ProductDocSync (écran de Pilotage documentaire — contexte Ingénierie Logicielle)
 
 ## Responsabilités
 
@@ -188,6 +188,19 @@ useXmlBufferStore :
 - contenu XML
 - statut (dirty, saved, etc.)
 
+usePendingMediaStore :
+- `pendingImage: MediaItem | null` — image en attente d'insertion
+- Écrit par : `RightSidebar` (via `MediaPanel` → `MediaCard` → clic "Insérer")
+- Lu et consommé par : `CentralEditor` (useEffect → `editor.setImage(...)` → `clearPendingImage`)
+- Permet le couplage découplé entre composants sibling sans prop drilling via Desktop
+
+useContextProduitStore (cible) :
+- `context_produit` actif pour l’instance
+- détermine les modules et écrans visibles
+- conditionne les flux et données disponibles
+
+> Note : `useContextProduitStore` est la cible d’architecture. Son implémentation est à définir lors du chantier de généralisation Nexus.
+
 ## Règles
 
 - pas de duplication d’état
@@ -226,6 +239,43 @@ Règles dérivées :
 - `parseXmlToTiptap` gère nativement `<body>` : aplatit les enfants directs en nœuds TipTap.
 
 Voir `gov_decision-log.md` — `2026-04-17 – Format canonique de contenu_xml`.
+
+---
+
+# 🖼️ Flux critique : insertion image depuis la médiathèque
+
+## Déclencheur
+
+Clic sur le bouton "Insérer" d'une `MediaCard` dans `RightSidebar`.
+
+## Chemin complet
+
+```
+MediaCard (onInsert)
+  → MediaPanel (onInsertImage)
+    → RightSidebar (handleInsertImage)
+      → usePendingMediaStore.setPendingImage(item)
+        → CentralEditor useEffect [pendingImage]
+          → editor.chain().focus().setImage({ src: nom_fichier, alt: nom_fichier })
+            → useXmlBufferSync sérialise → tiptapToXml (cas spécial image)
+              → <image href="NOM_FICHIER.ext" alt="NOM_FICHIER.ext" />
+          → clearPendingImage()
+```
+
+## Contrat XML produit
+
+```xml
+<image href="CODE_PRODUIT-CODE_FONCTION-TYPE_OBJET-NNN.ext" alt="CODE_PRODUIT-CODE_FONCTION-TYPE_OBJET-NNN.ext" />
+```
+
+## Invariants
+
+- `nom_fichier` est la clé de référence stable (nomenclature déterministe imposée à l'import).
+- `src` est le nom interne TipTap ; `href` est le nom DITA sérialisé — la conversion est dans `tiptapToXml.ts` (cas spécial `image`).
+- Le parser `xmlToTiptap.ts` lit `href` ou `src` indifféremment (tolérance de lecture) → pas de modification nécessaire.
+- `SyncEditor` n'est pas concerné : il n'utilise pas `getAllExtensions()` et ne consomme pas `usePendingMediaStore`.
+
+Voir `gov_decision-log.md` — `2026-04-19 – RightSidebar Phase 3 : insertion image dans CentralEditor`.
 
 ---
 
@@ -318,12 +368,31 @@ Toute logique doit être visible et traçable
 
 ---
 
+# 🗂 Architecture contextuelle (cible)
+
+Le frontend cible doit être **contextuel** : la navigation, les écrans visibles et les flux disponibles dépendent du `context_produit` actif pour l'instance.
+
+**Principe :**
+- un `contextProduit` est chargé à l'initialisation de la session
+- les modules et écrans sont activés ou désactivés selon ce contexte
+- un futur shell/dashboard contextuel servira de point d'entrée commun
+
+**Application actuelle :**
+- l'écran `ProductDocSync` correspond au Pilotage documentaire dans le contexte `ingenierie_logicielle`
+- aucun autre contexte n'est encore implémenté
+- cette logique est à anticiper avant de multiplier les modules spécifiques
+
+👉 Documenter le besoin d'architecture contextuelle n'implique pas que cette composition soit déjà livrée.
+
+---
+
 # 🧭 Objectif final
 
 Le frontend doit être :
 
 - prévisible
 - modulaire
+- **contextuel** (composition adaptée au `context_produit` actif)
 - aligné avec le backend
 - pilotable par la documentation
 

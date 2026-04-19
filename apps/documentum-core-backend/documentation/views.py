@@ -24,6 +24,7 @@ from django.db.models import Max
 from rest_framework.parsers import MultiPartParser
 from .models import (
     EvolutionProduit,
+    ImpactDocumentaire,
     Projet,
     VersionProjet,
     VersionProduit,
@@ -66,6 +67,9 @@ from .serializers import (
     VersionProduitSerializer,
     EvolutionProduitSerializer,
     ReorderEvolutionsProduitSerializer,
+    ImpactDocumentaireSerializer,
+    UpdateStatutImpactSerializer,
+    UpdateNotesImpactSerializer,
     AudienceSerializer,
     AudienceCreateSerializer,
     TagSerializer,
@@ -95,6 +99,9 @@ from .services import (
     get_publication_diff,
     publier_version_produit,
     reorder_evolutions_produit,
+    create_impact_documentaire,
+    update_statut_impact,
+    update_notes_impact,
 )
 from .utils import compute_xml_hash
 from .exporters import export_map_to_dita
@@ -623,6 +630,29 @@ class RubriqueViewSet(viewsets.ModelViewSet):
         serializer = RevisionRubriqueSerializer(qs, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=["get"], url_path="usages")
+    def usages(self, request, pk=None):
+        """
+        GET /api/rubriques/{id}/usages/
+
+        Retourne la liste des Maps qui contiennent cette rubrique via MapRubrique.
+        Optimisé : une seule requête avec select_related.
+        """
+        map_rubriques = (
+            MapRubrique.objects.filter(rubrique_id=pk)
+            .select_related("map__projet")
+        )
+        result = [
+            {
+                "map_id": mr.map.id,
+                "map_nom": mr.map.nom,
+                "projet_id": mr.map.projet.id,
+                "projet_nom": mr.map.projet.nom,
+            }
+            for mr in map_rubriques
+        ]
+        return Response(result, status=status.HTTP_200_OK)
+
 
 # Vue pour la consultation des projets
 @api_view(["GET"])
@@ -1122,6 +1152,96 @@ class EvolutionProduitViewSet(ArchivableModelViewSet):
             "[EvolutionProduit] Réordonnancement par %s.", request.user.username
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# ProductDocSync — ImpactDocumentaire
+# ---------------------------------------------------------------------------
+
+class ImpactDocumentaireViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour ImpactDocumentaire.
+    Toute logique métier est déléguée aux services.
+
+    Filtrage :
+    - GET /api/impacts/?evolution_produit={id}
+    - GET /api/impacts/?rubrique={id}
+
+    Action custom :
+    - PATCH /api/impacts/{id}/update_statut/ — mise à jour du statut via service
+    """
+    serializer_class = ImpactDocumentaireSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = ImpactDocumentaire.objects.select_related(
+            "evolution_produit", "rubrique"
+        ).all()
+        evolution_produit_id = self.request.query_params.get("evolution_produit")
+        if evolution_produit_id:
+            qs = qs.filter(evolution_produit_id=evolution_produit_id)
+        rubrique_id = self.request.query_params.get("rubrique")
+        if rubrique_id:
+            qs = qs.filter(rubrique_id=rubrique_id)
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        """POST /api/impacts/ — délègue à create_impact_documentaire()."""
+        serializer = ImpactDocumentaireSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            impact = create_impact_documentaire(
+                evolution_produit_id=serializer.validated_data["evolution_produit"].pk,
+                rubrique_id=serializer.validated_data["rubrique"].pk,
+            )
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        logger.info(
+            "[ImpactDocumentaire] Créé ID=%s par %s.", impact.pk, request.user.username
+        )
+        return Response(
+            ImpactDocumentaireSerializer(impact).data, status=status.HTTP_201_CREATED
+        )
+
+    @action(detail=True, methods=["patch"], url_path="update_statut")
+    def update_statut(self, request, pk=None):
+        """PATCH /api/impacts/{id}/update_statut/ — délègue à update_statut_impact()."""
+        serializer = UpdateStatutImpactSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            impact = update_statut_impact(
+                impact_id=int(pk),
+                statut=serializer.validated_data["statut"],
+            )
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        logger.info(
+            "[ImpactDocumentaire] Statut ID=%s → %s par %s.",
+            pk, serializer.validated_data["statut"], request.user.username,
+        )
+        return Response(
+            ImpactDocumentaireSerializer(impact).data, status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=["patch"], url_path="update_notes")
+    def update_notes(self, request, pk=None):
+        """PATCH /api/impacts/{id}/update_notes/ — délègue à update_notes_impact()."""
+        serializer = UpdateNotesImpactSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            impact = update_notes_impact(
+                impact_id=int(pk),
+                notes=serializer.validated_data["notes"],
+            )
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        logger.info(
+            "[ImpactDocumentaire] Notes ID=%s mises à jour par %s.",
+            pk, request.user.username,
+        )
+        return Response(
+            ImpactDocumentaireSerializer(impact).data, status=status.HTTP_200_OK
+        )
 
 
 # ---------------------------------------------------------------------------
